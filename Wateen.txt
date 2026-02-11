@@ -1,0 +1,669 @@
+# 🏥 Wateen — 12-Week Implementation Plan
+### A Simplified Medical Booking Platform for the Egyptian Market
+
+> **Project Type:** Educational MVP — Directory & Booking System  
+> **Tech Stack:** Python (Flask) · SQLite · HTML5/CSS3 · Vanilla JavaScript  
+> **Team Size:** 7 First-Year CS Students  
+> **Duration:** 12 Weeks (3 Phases)
+
+---
+
+## Table of Contents
+1. [System Architecture](#1-system-architecture)
+2. [Database Schema](#2-database-schema)
+3. [Weekly Work Breakdown](#3-weekly-work-breakdown-12-weeks)
+4. [Technical Guidance Notes](#4-technical-guidance-notes)
+
+---
+
+## 1. System Architecture
+
+### 1.1 High-Level Overview
+
+CareLite follows a classic **3-Tier Architecture** — the simplest and most educational pattern for beginners:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        CLIENT (Browser)                         │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
+│  │  HTML Pages   │  │   CSS Styles     │  │  Vanilla JS      │   │
+│  │  (Structure)  │  │   (Appearance)   │  │  (Fetch API)     │   │
+│  └──────┬───────┘  └──────────────────┘  └────────┬─────────┘   │
+│         │                                         │             │
+│         └──────────── HTTP Requests ──────────────┘             │
+└────────────────────────────┬────────────────────────────────────┘
+                             │  JSON (REST API)
+                             ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                     SERVER (Flask — Python)                      │
+│                                                                 │
+│  ┌──────────────┐  ┌──────────────────┐  ┌──────────────────┐   │
+│  │  API Routes  │  │  Business Logic  │  │   AI Modules     │   │
+│  │  /api/auth   │  │  booking_logic   │  │   smart_rating   │   │
+│  │  /api/nurse  │  │  search_engine   │  │   face_verify    │   │
+│  │  /api/book   │  │  rating_calc     │  │   (imported)     │   │
+│  └──────┬───────┘  └────────┬─────────┘  └────────┬─────────┘   │
+│         │                   │                      │            │
+│         └───────────────────┴──────────────────────┘            │
+│                             │                                   │
+│                             ▼                                   │
+│                    ┌─────────────────┐                           │
+│                    │  SQLite Database │                           │
+│                    │  carelite.db     │                           │
+│                    └─────────────────┘                           │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 1.2 How the Parts Connect
+
+| Layer | Technology | Role |
+|-------|-----------|------|
+| **Frontend** | HTML5, CSS3, Vanilla JS | Renders the UI in Arabic (RTL), sends `fetch()` requests to the API |
+| **Flask API** | Python Flask | Receives HTTP requests, runs logic, queries DB, returns JSON |
+| **SQLite DB** | `carelite.db` file | Stores all persistent data (users, profiles, bookings) |
+| **AI Scripts** | Python modules | Imported by Flask routes as helper functions (`from ai.smart_rating import calculate_initial_rating`) |
+
+### 1.3 Where AI Scripts Fit
+
+The AI components are **NOT** separate services. They are plain Python files in an `ai/` folder, imported directly into Flask:
+
+```
+carelite/
+├── app.py                  # Flask entry point
+├── routes/
+│   ├── auth.py             # Login/Register endpoints
+│   ├── nurse.py            # Nurse profile endpoints
+│   ├── booking.py          # Booking flow endpoints
+│   └── search.py           # Search & filter endpoints
+├── ai/
+│   ├── smart_rating.py     # Credential-based rating calculator (Scikit-learn)
+│   └── face_verify.py      # ID vs Selfie comparison (face_recognition + OpenCV)
+├── utils/
+│   ├── security.py         # Password hashing, input sanitization
+│   └── validators.py       # Form validation helpers
+├── static/
+│   ├── css/
+│   ├── js/
+│   └── images/
+├── templates/              # HTML pages (served by Flask or as static)
+│   ├── index.html
+│   ├── login.html
+│   ├── dashboard_patient.html
+│   ├── dashboard_nurse.html
+│   ├── search.html
+│   └── booking.html
+├── database/
+│   ├── schema.sql          # CREATE TABLE statements
+│   └── seed.sql            # Sample data for testing
+└── carelite.db             # SQLite database file
+```
+
+### 1.4 Request Flow Example (Booking a Nurse)
+
+```mermaid
+sequenceDiagram
+    participant Patient as Patient Browser
+    participant API as Flask API
+    participant DB as SQLite DB
+
+    Patient->>API: POST /api/bookings {nurse_id, date, notes}
+    API->>API: Validate session & input
+    API->>DB: INSERT INTO bookings (...)
+    DB-->>API: Success (booking_id)
+    API-->>Patient: 201 {booking_id, status: "pending"}
+    Note over Patient: UI updates to show "Pending" badge
+```
+
+---
+
+## 2. Database Schema
+
+### 2.1 Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    Users ||--o| NurseProfile : "has (if role=nurse)"
+    Users ||--o| MedicalHistory : "has (if role=patient)"
+    Users ||--o{ Bookings : "creates (as patient)"
+    NurseProfile ||--o{ Bookings : "receives"
+
+    Users {
+        INTEGER id PK
+        TEXT full_name
+        TEXT email UK
+        TEXT phone
+        TEXT password_hash
+        TEXT role "patient | nurse"
+        TEXT national_id
+        TEXT profile_photo_path
+        TEXT created_at
+    }
+
+    NurseProfile {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT specialty
+        TEXT zone
+        REAL price_per_visit
+        TEXT education_level
+        INTEGER years_experience
+        REAL smart_rating
+        TEXT bio_ar
+        INTEGER is_active "1=active, 0=inactive"
+        TEXT id_photo_path
+        TEXT selfie_photo_path
+        INTEGER is_verified "0=pending, 1=verified, -1=failed"
+    }
+
+    MedicalHistory {
+        INTEGER id PK
+        INTEGER user_id FK
+        TEXT chronic_diseases
+        TEXT allergies
+        TEXT blood_type
+        TEXT current_medications
+        TEXT notes
+        TEXT updated_at
+    }
+
+    Bookings {
+        INTEGER id PK
+        INTEGER patient_id FK
+        INTEGER nurse_id FK
+        TEXT booking_date
+        TEXT time_slot
+        TEXT status "pending | accepted | rejected | completed | cancelled"
+        TEXT patient_notes
+        TEXT nurse_response
+        TEXT created_at
+        TEXT updated_at
+    }
+```
+
+### 2.2 Table Details
+
+#### `Users` — Core Identity Table
+```sql
+CREATE TABLE Users (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    full_name       TEXT NOT NULL,
+    email           TEXT NOT NULL UNIQUE,
+    phone           TEXT NOT NULL,
+    password_hash   TEXT NOT NULL,
+    role            TEXT NOT NULL CHECK(role IN ('patient', 'nurse')),
+    national_id     TEXT,
+    profile_photo_path TEXT,
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+```
+
+#### `NurseProfile` — Extended Nurse Data
+```sql
+CREATE TABLE NurseProfile (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id             INTEGER NOT NULL UNIQUE,
+    specialty           TEXT NOT NULL,
+    zone                TEXT NOT NULL,
+    price_per_visit     REAL NOT NULL,
+    education_level     TEXT,                -- e.g., "بكالوريوس تمريض"
+    years_experience    INTEGER DEFAULT 0,
+    smart_rating        REAL DEFAULT 0.0,    -- AI-calculated initial rating
+    bio_ar              TEXT,                -- Arabic bio
+    is_active           INTEGER DEFAULT 1,   -- Toggle availability
+    id_photo_path       TEXT,
+    selfie_photo_path   TEXT,
+    is_verified         INTEGER DEFAULT 0,   -- 0=pending, 1=verified, -1=failed
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
+);
+```
+
+#### `MedicalHistory` — Patient Medical Passport
+```sql
+CREATE TABLE MedicalHistory (
+    id                  INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id             INTEGER NOT NULL UNIQUE,
+    chronic_diseases    TEXT,       -- JSON or comma-separated
+    allergies           TEXT,
+    blood_type          TEXT CHECK(blood_type IN ('A+','A-','B+','B-','AB+','AB-','O+','O-', NULL)),
+    current_medications TEXT,
+    notes               TEXT,
+    updated_at          TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES Users(id) ON DELETE CASCADE
+);
+```
+
+#### `Bookings` — The Core Transaction
+```sql
+CREATE TABLE Bookings (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    patient_id      INTEGER NOT NULL,
+    nurse_id        INTEGER NOT NULL,
+    booking_date    TEXT NOT NULL,
+    time_slot       TEXT,
+    status          TEXT DEFAULT 'pending' CHECK(status IN ('pending','accepted','rejected','completed','cancelled')),
+    patient_notes   TEXT,
+    nurse_response  TEXT,
+    created_at      TEXT DEFAULT (datetime('now')),
+    updated_at      TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (patient_id) REFERENCES Users(id),
+    FOREIGN KEY (nurse_id) REFERENCES NurseProfile(id)
+);
+```
+
+### 2.3 Key Relationships Summary
+
+| Relationship | Type | Description |
+|---|---|---|
+| `Users` → `NurseProfile` | One-to-One | Only users with `role='nurse'` have a profile |
+| `Users` → `MedicalHistory` | One-to-One | Only users with `role='patient'` have medical data |
+| `Users` (patient) → `Bookings` | One-to-Many | A patient can create many bookings |
+| `NurseProfile` → `Bookings` | One-to-Many | A nurse can receive many bookings |
+
+---
+
+## 3. Weekly Work Breakdown (12 Weeks)
+
+### Legend
+| Emoji | Meaning |
+|-------|---------|
+| 🗄️ | Database Architect |
+| 🔌 | API Developer |
+| 🎨 | UI Designer |
+| ⚡ | Frontend Logic Integrator |
+| 🧠 | Business Logic Engineer |
+| 🤖 | AI & Computer Vision Engineer |
+| 🔒 | Security & QA Engineer |
+
+---
+
+### Phase 1: Foundation (Weeks 1–4)
+> **Goal:** Set up the environment, build the database, create basic API routes, and design static HTML pages.
+
+---
+
+#### Week 1 — Environment Setup & Planning
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Install SQLite & DB Browser. Write the first draft of `schema.sql` with the `Users` table. Learn PRIMARY KEY vs FOREIGN KEY concepts. |
+| 🔌 **API Developer** | Install Python, Flask, Postman. Create `app.py` with a "Hello World" route. Set up the project folder structure. |
+| 🎨 **UI Designer** | Set up VS Code with Live Server. Create `index.html` boilerplate with Arabic RTL support (`dir="rtl"`, `lang="ar"`). Start a CSS reset file. |
+| ⚡ **Frontend Logic Integrator** | Learn `document.getElementById()`, event listeners. Write a simple test script that logs form data to the console. |
+| 🧠 **Business Logic Engineer** | Install Python & pip. Research the nurse credentialing system in Egypt. Draft the "Smart Rating" formula on paper. |
+| 🤖 **AI & CV Engineer** | Install Python, OpenCV, `face_recognition` library. Run the library's "Hello World" example to verify setup. |
+| 🔒 **Security & QA** | Install all team tools. Create a shared Google Doc for bug tracking. Research `werkzeug.security` for password hashing. |
+
+> [!TIP]
+> **Week 1 Milestone:** Every team member should be able to run a "Hello World" in their domain.
+
+---
+
+#### Week 2 — Database & First API Routes
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Finalize all 4 tables in `schema.sql`. Add `seed.sql` with 5 sample users (3 patients, 2 nurses). Test with DB Browser. |
+| 🔌 **API Developer** | Create `POST /api/register` and `POST /api/login` routes. Connect Flask to SQLite using `sqlite3` module. Return JSON responses. |
+| 🎨 **UI Designer** | Design the **Login** and **Register** pages. Implement a consistent color scheme (medical theme: blues/greens). Add Google Fonts for Arabic (e.g., Cairo, Tajawal). |
+| ⚡ **Frontend Logic Integrator** | Create `auth.js` — capture form submit, prevent default, log form values. Prepare the `fetch()` call structure (don't connect yet). |
+| 🧠 **Business Logic Engineer** | Define the Smart Rating formula: `rating = (education_weight * edu_score) + (experience_weight * exp_score)`. Create a Python function `calculate_initial_rating(education_level, years_experience)`. |
+| 🤖 **AI & CV Engineer** | Write a standalone script `test_face_match.py` that loads two images and compares them using `face_recognition.compare_faces()`. Print match/no-match. |
+| 🔒 **Security & QA** | Implement `hash_password()` and `verify_password()` in `utils/security.py` using `werkzeug.security`. Write `sanitize_input()` to strip HTML tags. |
+
+> [!TIP]
+> **Week 2 Milestone:** Database is created. `/api/register` works in Postman.
+
+---
+
+#### Week 3 — Nurse Profile & Patient Medical Passport
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Add indexes on `NurseProfile.zone` and `NurseProfile.specialty` for faster search queries. Write SQL queries for nurse CRUD operations. |
+| 🔌 **API Developer** | Build `POST /api/nurse/profile` (create/update profile) and `GET /api/nurse/profile/:id`. Implement session management using Flask sessions. |
+| 🎨 **UI Designer** | Design the **Nurse Dashboard** page (profile form with fields: specialty, zone, price, bio, availability toggle). Design the **Medical Passport** form for patients. |
+| ⚡ **Frontend Logic Integrator** | Build form validation in JS for the Nurse profile form (required fields, number range for price). Implement a client-side zone dropdown populated from a JS array. |
+| 🧠 **Business Logic Engineer** | Create a list of Egyptian zones (`القاهرة - مدينة نصر`, `الجيزة - الدقي`, etc.) and nursing specialties. Build `zone_data.py` as a reference module. |
+| 🤖 **AI & CV Engineer** | Refine the face comparison script. Handle edge cases: no face detected, multiple faces detected. Add a confidence score output. |
+| 🔒 **Security & QA** | Test Register/Login API with invalid inputs (empty fields, duplicate emails, SQL injection attempts). Document all findings in the bug tracker. |
+
+> [!TIP]
+> **Week 3 Milestone:** Nurse can save a profile. Patient can fill the Medical Passport form.
+
+---
+
+#### Week 4 — Integration Checkpoint #1
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Review all foreign key constraints. Write complex JOIN queries: "Get nurse profile with user info." Fix any schema issues discovered during API testing. |
+| 🔌 **API Developer** | Create `GET /api/nurses/search?zone=X&specialty=Y` endpoint. Implement pagination (LIMIT/OFFSET). Add proper HTTP status codes to all routes. |
+| 🎨 **UI Designer** | Design the **Search Results** page (card layout showing nurse name, specialty, rating stars, price, zone). Create a reusable "Nurse Card" component in HTML/CSS. |
+| ⚡ **Frontend Logic Integrator** | **CRITICAL INTEGRATION:** Connect Login form → `POST /api/login` via `fetch()`. Store session/token. Redirect to correct dashboard based on `role`. |
+| 🧠 **Business Logic Engineer** | Integrate `calculate_initial_rating()` into the nurse registration flow. When a nurse submits credentials, calculate and store the rating automatically. |
+| 🤖 **AI & CV Engineer** | Package the face comparison function into `ai/face_verify.py` with a clean API: `verify_identity(id_photo_path, selfie_path) -> {match: bool, confidence: float}`. |
+| 🔒 **Security & QA** | 🔴 **Full Integration Test:** Test login flow end-to-end (UI → API → DB → Response). Check for broken sessions, wrong redirects. Write a test checklist. |
+
+> [!IMPORTANT]
+> **Phase 1 Gate:** By end of Week 4, the team should have: a working database, login/register working end-to-end, and a nurse profile page. **Demo to your mentor!**
+
+---
+
+### Phase 2: Core Logic (Weeks 5–8)
+> **Goal:** Connect the frontend and backend fully. Implement the search, booking flow, and nurse dashboard features.
+
+---
+
+#### Week 5 — Search System
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Optimize search query: `SELECT * FROM NurseProfile JOIN Users ON ... WHERE zone=? AND specialty=? AND is_active=1 ORDER BY smart_rating DESC`. |
+| 🔌 **API Developer** | Finalize `GET /api/nurses/search`. Add filters: `min_price`, `max_price`, `min_rating`. Return results sorted by `smart_rating`. |
+| 🎨 **UI Designer** | Build the **Search Page** with: Zone dropdown, Specialty dropdown, Price range inputs, and a "Cards Grid" for results. Add Arabic labels & placeholders. |
+| ⚡ **Frontend Logic Integrator** | Wire the search form to `GET /api/nurses/search`. Dynamically render nurse cards from JSON response. Add a "Loading..." spinner. |
+| 🧠 **Business Logic Engineer** | Build a **Symptom-to-Specialty mapper**: patient enters symptoms (checkboxes), the system suggests which nursing specialty they need. Store mapping in a Python dict. |
+| 🤖 **AI & CV Engineer** | Create the Flask route `POST /api/verify-identity` that receives two image files, calls `face_verify.py`, and returns the result. Handle file uploads. |
+| 🔒 **Security & QA** | Validate all search inputs (prevent SQL injection via parameterized queries). Test search with Arabic text inputs. Verify proper encoding (UTF-8). |
+
+---
+
+#### Week 6 — Booking Flow (Part 1: Request & Pending)
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Write INSERT and SELECT queries for bookings. Create a query: "Get all bookings for nurse_id WHERE status='pending'". |
+| 🔌 **API Developer** | Build `POST /api/bookings` (patient creates a booking). Build `GET /api/bookings/nurse/:id` (nurse sees incoming requests). |
+| 🎨 **UI Designer** | Design the **Booking Modal**: date picker, time slot selector, notes field, confirmation button. Design the nurse's **"Incoming Requests"** panel. |
+| ⚡ **Frontend Logic Integrator** | Implement the booking modal: on "Book Now" click → show modal → collect data → `POST /api/bookings`. Update UI to show "Request Sent ✓". |
+| 🧠 **Business Logic Engineer** | Implement booking validation logic: check if nurse is active, check for time slot conflicts (no double-booking). Return clear error messages in Arabic. |
+| 🤖 **AI & CV Engineer** | Add the identity verification step to the nurse registration flow. On the UI: "Upload ID" + "Take Selfie" → Compare → Show Result. |
+| 🔒 **Security & QA** | Ensure patients can only book active nurses. Ensure patients cannot book themselves. Test booking creation with invalid data. |
+
+---
+
+#### Week 7 — Booking Flow (Part 2: Accept/Reject & Contact Reveal)
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Write UPDATE query for booking status. Create a view/query: "Get booking details with patient and nurse info joined." |
+| 🔌 **API Developer** | Build `PATCH /api/bookings/:id/respond` (nurse accepts/rejects). Build `GET /api/bookings/:id` that reveals contact info ONLY when status is `accepted`. |
+| 🎨 **UI Designer** | Design the **Booking Details** card: shows status badge (colored), patient notes, and Accept/Reject buttons for nurse. Design the "Contact Revealed" view (phone + email appear after acceptance). |
+| ⚡ **Frontend Logic Integrator** | Implement Accept/Reject buttons → `PATCH /api/bookings/:id/respond`. On acceptance: reveal contact info section. On rejection: show "Rejected" badge + optional nurse response. |
+| 🧠 **Business Logic Engineer** | Build notification logic: when a nurse responds, update a `notifications` flag or a simple last-updated field so the patient's dashboard can poll for changes. |
+| 🤖 **AI & CV Engineer** | Enhance the verification flow: add image quality checks (minimum resolution, face centered). Show clear error messages if the photo is blurry or no face is detected. |
+| 🔒 **Security & QA** | 🔴 **Critical:** Verify that contact info (phone/email) is **NEVER** returned to the patient when the booking status is not `accepted`. Test this extensively. |
+
+> [!CAUTION]
+> **Security checkpoint:** Contact info leakage is the #1 privacy risk. The API must enforce this, not the frontend.
+
+---
+
+#### Week 8 — Dashboards & Integration Checkpoint #2
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Write aggregate queries: "Count of bookings per status for a nurse," "Total completed bookings for a nurse." Optimize slow queries. |
+| 🔌 **API Developer** | Build `GET /api/dashboard/patient` (my bookings list) and `GET /api/dashboard/nurse` (statistics + incoming requests). Add proper error handling to all routes. |
+| 🎨 **UI Designer** | Polish the **Patient Dashboard** (booking history list with status badges) and the **Nurse Dashboard** (stats cards + request list + availability toggle). |
+| ⚡ **Frontend Logic Integrator** | Build dashboard rendering: fetch data on page load, populate cards and lists dynamically. Implement the nurse's availability toggle (`is_active` ON/OFF). |
+| 🧠 **Business Logic Engineer** | Implement the **availability toggle** logic: when nurse goes inactive, all future pending bookings should be auto-cancelled (or flagged). |
+| 🤖 **AI & CV Engineer** | Test the full identity verification pipeline end-to-end. Prepare a demo with 3 test cases: matching photos, different people, blurry photo. |
+| 🔒 **Security & QA** | 🔴 **Full System Test:** Test the complete flow Patient registers → Searches → Books → Nurse Accepts → Contact Revealed. Create a comprehensive test script. |
+
+> [!IMPORTANT]
+> **Phase 2 Gate:** By end of Week 8, the core booking flow should work end-to-end. **This is the "feature complete" milestone!**
+
+---
+
+### Phase 3: Intelligence & Polish (Weeks 9–12)
+> **Goal:** Integrate AI features, harden security, fix bugs, polish UI, and prepare for final demo.
+
+---
+
+#### Week 9 — Smart Rating Integration
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Add a `Ratings` table (optional): `(id, booking_id, patient_id, nurse_id, score, review_text, created_at)`. Write query to calculate average rating from patient reviews post-booking. |
+| 🔌 **API Developer** | Build `POST /api/ratings` (patient rates a nurse after a completed booking). Build `GET /api/nurses/:id/ratings` (get a nurse's reviews). |
+| 🎨 **UI Designer** | Design the **Rating Component**: star selection (1–5), optional review text area. Design how ratings appear on nurse cards (stars + review count). |
+| ⚡ **Frontend Logic Integrator** | Implement the star-rating widget (clickable stars using vanilla JS). Submit rating via `POST /api/ratings`. Update nurse cards to show the blended rating. |
+| 🧠 **Business Logic Engineer** | Implement **blended rating**: `final_rating = (smart_rating * weight_ai + avg_patient_rating * weight_human) / total_weight`. New nurses rely more on smart_rating; as reviews increase, patient ratings dominate. |
+| 🤖 **AI & CV Engineer** | Fine-tune the `smart_rating.py` algorithm. Add weighting for Egyptian nursing certifications. Test with various credential combinations. |
+| 🔒 **Security & QA** | Ensure one patient can only rate a nurse once per booking. Validate rating score is between 1–5. Test for rating manipulation. |
+
+---
+
+#### Week 10 — Security Hardening & Arabic Polish
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Add database backup script (copy `carelite.db`). Review all queries for SQL injection vulnerabilities. Add indexes where needed. |
+| 🔌 **API Developer** | Add rate limiting to login endpoint (prevent brute force). Add CORS headers. Add centralized error handling (`@app.errorhandler`). |
+| 🎨 **UI Designer** | Full Arabic UI pass: verify all labels, error messages, and placeholders are in Arabic. Test RTL layout across pages. Add a consistent Footer and "About" page. |
+| ⚡ **Frontend Logic Integrator** | Add **client-side error messages in Arabic** (e.g., "يرجى ملء جميع الحقول"). Add localStorage for session persistence. Add a "loading" state for all API calls. |
+| 🧠 **Business Logic Engineer** | Finalize the symptom-to-specialty mapper. Add at least 15 common symptom → specialty mappings in Arabic. Make it easy to extend. |
+| 🤖 **AI & CV Engineer** | Add a simple **OCR prototype** (optional stretch goal): extract name from the National ID photo using `pytesseract` and compare it with the registered name. |
+| 🔒 **Security & QA** | 🔴 **Security Audit:** Test all endpoints for: SQL injection, XSS, CSRF, broken access control. Document all findings. Fix critical issues. |
+
+> [!WARNING]
+> **Arabic text handling:** Ensure the database connection uses UTF-8 encoding. Test that Arabic data round-trips correctly: Input → DB → API → Display.
+
+---
+
+#### Week 11 — Bug Fixing & Edge Cases
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Fix any data integrity issues found in testing. Add `ON DELETE CASCADE` or `SET NULL` where missing. Verify seed data is comprehensive. |
+| 🔌 **API Developer** | Fix all bugs from QA reports. Add missing validations. Ensure consistent JSON response format across ALL endpoints: `{success: bool, data: {}, message: ""}`. |
+| 🎨 **UI Designer** | Fix responsive design issues (test on mobile viewport). Add subtle animations (button hover effects, card transitions). Polish the color scheme for accessibility. |
+| ⚡ **Frontend Logic Integrator** | Fix all frontend bugs. Add "empty state" views (e.g., "No nurses found" for empty search, "No bookings yet" for new patients). Handle network errors gracefully. |
+| 🧠 **Business Logic Engineer** | Handle edge cases: What if a nurse has 0 experience? What if all nurses in a zone are inactive? Provide sensible defaults and helpful messages. |
+| 🤖 **AI & CV Engineer** | Handle AI edge cases: very low-resolution photos, photos with multiple faces, photos with sunglasses. Return user-friendly error messages in Arabic. |
+| 🔒 **Security & QA** | Final round of regression testing. Create a **Test Report Document** listing: Total tests, Passed, Failed, Known Issues. |
+
+---
+
+#### Week 12 — Final Demo Preparation
+
+| Role | Tasks |
+|------|-------|
+| 🗄️ **Database Architect** | Prepare clean demo database with realistic sample data (10+ nurses, 5+ patients, diverse zones and specialties). Write a reset script. |
+| 🔌 **API Developer** | Write API documentation (simple Markdown file listing all endpoints, methods, parameters, and example responses). Ensure the app starts cleanly with one command. |
+| 🎨 **UI Designer** | Create a **Landing Page** for CareLite (hero section, feature highlights, how-it-works section). Final visual polish across all pages. |
+| ⚡ **Frontend Logic Integrator** | Full flow walkthrough: verify every button, every form, every redirect works. Fix any remaining JS errors in the console. |
+| 🧠 **Business Logic Engineer** | Create a short **presentation/demo script** explaining the Smart Rating algorithm and Symptom Matcher. Include before/after examples. |
+| 🤖 **AI & CV Engineer** | Prepare a **live demo** of the face verification: show a match and a mismatch. Have fallback screenshots ready in case of hardware issues. |
+| 🔒 **Security & QA** | Final acceptance test: walk through the entire app as both a Patient and a Nurse. Sign off on the **Test Report**. Help prepare the demo presentation. |
+
+> [!IMPORTANT]
+> **Week 12 Deliverables:**
+> 1. Working application (runs on `localhost`)
+> 2. Database with sample data
+> 3. API documentation (Markdown)
+> 4. Test report
+> 5. 10-minute demo presentation
+
+---
+
+## 4. Technical Guidance Notes
+
+### 4.1 Role-Specific Learning Tips
+
+#### 🗄️ Database Architect
+> **Focus Concept:** Primary Keys vs. Foreign Keys.
+> - A **Primary Key** is a unique identity for each row (like a National ID for each person).
+> - A **Foreign Key** is a reference to another table's Primary Key (like writing your father's National ID on your birth certificate).
+> - **Practice:** Draw the 4 tables on paper, draw arrows for Foreign Keys. This visual understanding is more important than the SQL syntax.
+
+> **Recommended Tool:** [DB Browser for SQLite](https://sqlitebrowser.org/) — lets you see your data visually.
+
+#### 🔌 API Developer
+> **Focus Concept:** HTTP Methods and Status Codes.
+> - `GET` = Read data, `POST` = Create data, `PATCH` = Update data, `DELETE` = Remove data.
+> - `200` = OK, `201` = Created, `400` = Bad Request, `401` = Unauthorized, `404` = Not Found, `500` = Server Error.
+> - **Practice:** Test every route in Postman BEFORE connecting it to the frontend. Postman is your best friend.
+
+> **Golden Rule:** If you can't test it in Postman, the frontend integration will definitely fail.
+
+#### 🎨 UI Designer
+> **Focus Concept:** CSS Flexbox + RTL Layout.
+> - Arabic text flows Right-to-Left. Always set `dir="rtl"` on the `<html>` tag.
+> - Use `margin-inline-start` / `margin-inline-end` instead of `margin-left` / `margin-right` for RTL compatibility.
+> - **Practice:** Build one page at a time. Finish Login before starting Dashboard.
+
+> **Font Recommendation:** Use Google Fonts — [Cairo](https://fonts.google.com/specimen/Cairo) or [Tajawal](https://fonts.google.com/specimen/Tajawal) for beautiful Arabic text.
+
+#### ⚡ Frontend Logic Integrator
+> **Focus Concept:** The `fetch()` API and Promises.
+> ```javascript
+> // This is the CORE PATTERN you'll use everywhere:
+> fetch('/api/login', {
+>     method: 'POST',
+>     headers: { 'Content-Type': 'application/json' },
+>     body: JSON.stringify({ email: email, password: password })
+> })
+> .then(response => response.json())
+> .then(data => {
+>     if (data.success) {
+>         window.location.href = '/dashboard';
+>     } else {
+>         showError(data.message);
+>     }
+> })
+> .catch(error => showError('حدث خطأ في الاتصال'));
+> ```
+> **Practice:** Console.log EVERYTHING. Check the browser's Network tab to see API calls.
+
+#### 🧠 Business Logic Engineer
+> **Focus Concept:** Weighted Scoring Systems.
+> - The Smart Rating formula should be transparent and fair:
+>   ```python
+>   def calculate_initial_rating(education_level, years_experience):
+>       edu_scores = {
+>           'diploma': 2.0,
+>           'bachelor': 3.0,
+>           'master': 4.0,
+>           'phd': 4.5
+>       }
+>       edu_score = edu_scores.get(education_level, 2.0)
+>       exp_score = min(years_experience * 0.15, 1.0)  # Max 1 point from experience
+>       return round(min(edu_score + exp_score, 5.0), 1)  # Cap at 5.0
+>   ```
+> **Practice:** Test with real examples on paper before coding!
+
+#### 🤖 AI & Computer Vision Engineer
+> **Focus Concept:** How Face Recognition Works at a High Level.
+> - The library converts a face into 128 numbers (a "face encoding").
+> - Two photos are "matched" if their encodings are close enough (Euclidean distance < threshold).
+> - **Practice:** Start with the simplest example first. Don't try to build a full pipeline on Day 1.
+> - **Hardware Note:** `face_recognition` uses `dlib`, which can be slow without GPU. On a student laptop, expect 2-5 seconds per comparison. That's fine for a demo.
+
+#### 🔒 Security & QA Engineer
+> **Focus Concept:** Never Trust User Input.
+> - Always hash passwords (never store plain text).
+> - Always use **parameterized queries** (never concatenate user input into SQL).
+>   ```python
+>   # ❌ DANGEROUS - SQL Injection risk
+>   cursor.execute(f"SELECT * FROM Users WHERE email = '{email}'")
+>   
+>   # ✅ SAFE - Parameterized query
+>   cursor.execute("SELECT * FROM Users WHERE email = ?", (email,))
+>   ```
+> - **Practice:** Try to break the app! That's literally your job. Try weird inputs, empty fields, special characters, and Arabic text.
+
+---
+
+### 4.2 Egyptian Market Context Notes
+
+#### 🌍 Arabic Language Support (All Roles)
+| Concern | Solution |
+|---------|----------|
+| Arabic text in database | SQLite supports UTF-8 natively. Just store text normally. Verify with: `PRAGMA encoding;` should return `UTF-8`. |
+| Arabic UI layout | Set `dir="rtl"` and `lang="ar"` on the `<html>` tag. Use CSS logical properties. |
+| Arabic font rendering | Use Google Fonts: Cairo, Tajawal, or Noto Sans Arabic. |
+| Arabic form validation | JS regex for Arabic: `/^[\u0600-\u06FF\s]+$/` to validate Arabic-only input. |
+| Arabic error messages | Store all user-facing strings in an `messages_ar.py` or JSON file for consistency. |
+
+#### 📍 Zone System (Instead of Maps)
+Since we're **NOT** using maps or GPS, zones are predefined text values in a dropdown:
+
+```python
+ZONES = [
+    "القاهرة - مدينة نصر",
+    "القاهرة - المعادي",
+    "القاهرة - مصر الجديدة",
+    "القاهرة - التجمع الخامس",
+    "الجيزة - الدقي",
+    "الجيزة - المهندسين",
+    "الجيزة - ٦ أكتوبر",
+    "الإسكندرية - سموحة",
+    "الإسكندرية - المنتزه",
+    "المنصورة",
+    "طنطا",
+    "أسيوط",
+]
+```
+
+#### 🏥 Nursing Specialties
+```python
+SPECIALTIES = [
+    "تمريض عام",          # General Nursing
+    "تمريض أطفال",        # Pediatric Nursing
+    "تمريض مسنين",        # Geriatric Nursing
+    "تمريض جراحة",        # Surgical Nursing
+    "علاج طبيعي",         # Physiotherapy
+    "تمريض منزلي",        # Home Care Nursing
+    "رعاية جروح",         # Wound Care
+    "حقن ومحاليل",       # Injections & IV
+]
+```
+
+#### 📱 Offline-Friendly Design Tips
+- Keep forms functional even with slow internet: validate on the client-side BEFORE sending.
+- Use `localStorage` to save draft form data so patients don't lose their input.
+- Keep images small (compress before upload, max 2MB).
+- Test with Chrome DevTools Network throttling set to "Slow 3G."
+
+---
+
+### 4.3 Quick Reference: API Endpoints Summary
+
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|:---:|
+| `POST` | `/api/register` | Register new user | No |
+| `POST` | `/api/login` | Log in | No |
+| `POST` | `/api/logout` | Log out | Yes |
+| `GET` | `/api/nurse/profile/:id` | Get nurse profile | Yes |
+| `POST` | `/api/nurse/profile` | Create/Update nurse profile | Nurse |
+| `PATCH` | `/api/nurse/toggle-active` | Toggle availability | Nurse |
+| `GET` | `/api/nurses/search` | Search nurses by zone/specialty | Yes |
+| `POST` | `/api/medical-history` | Save medical passport | Patient |
+| `GET` | `/api/medical-history` | Get own medical history | Patient |
+| `POST` | `/api/bookings` | Create a booking | Patient |
+| `GET` | `/api/bookings/mine` | Get own bookings | Yes |
+| `PATCH` | `/api/bookings/:id/respond` | Accept/Reject booking | Nurse |
+| `GET` | `/api/bookings/:id` | Booking details (contact reveal if accepted) | Yes |
+| `POST` | `/api/ratings` | Rate a nurse | Patient |
+| `POST` | `/api/verify-identity` | Compare ID photo vs selfie | Nurse |
+| `GET` | `/api/dashboard/patient` | Patient dashboard data | Patient |
+| `GET` | `/api/dashboard/nurse` | Nurse dashboard data | Nurse |
+
+---
+
+> [!NOTE]
+> **Final Advice to the Team:**
+> 
+> 🎯 **Communication is everything.** The biggest risk isn't a bug — it's two students building incompatible pieces. Meet weekly. Share progress. Ask for help early.
+> 
+> 📖 **Read each other's code.** The API Developer should understand the database schema. The Frontend Integrator should read the API docs. This cross-understanding prevents 90% of integration bugs.
+> 
+> 🐛 **Bugs are normal.** Your first version will have bugs. Your second version will have fewer. That's how software works. Don't panic. Debug systematically: read the error message, check the line number, use `print()` statements.
+> 
+> 🇪🇬 **Be proud.** You're building something useful for your community. Keep the patient and the nurse in mind with every decision. Make it beautiful, make it work, make it help someone.
+
+---
+
+*Generated as an educational implementation plan for first-year CS students. CareLite is a learning project — simplicity and understanding come first, complexity comes later.* ✨
