@@ -666,4 +666,4 @@ SPECIALTIES = [
 
 ---
 
-*Generated as an educational implementation plan for first-year CS students. CareLite is a learning project — simplicity and understanding come first, complexity comes later.* ✨
+*Generated as an educational implementation plan for first-year CS students. CareLite is a learning projects — simplicity and understanding come first, complexity comes later.* ✨
