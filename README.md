@@ -179,7 +179,7 @@ Wateen/
 
 👥 The Team | فريق العمل
 
-Built with ❤️ by First-Year CS Students (Class of 2028):
+Built with Stoics team:
 
 Name
 
