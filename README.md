@@ -1,8 +1,5 @@
-<div align="center">
+![Uploading image.png…]()
 
-<!-- استبدل الرابط أدناه برابط الشعار الخاص بكم إذا وجد -->
-
-<img src="https://www.google.com/search?q=https://via.placeholder.com/150/2ecc71/FFFFFF%3Ftext%3DWateen" alt="Wateen Logo" width="150" height="150" />
 
 Wateen | وتين
 
