@@ -22,51 +22,51 @@ Wateen is a centralized web platform designed to structure and regulate the home
 
 وتين هو مشروع يهدف إلى حل فوضى سوق التمريض المنزلي في مصر. بدلاً من الاعتماد على الوسطاء غير الموثوقين، تقدم منصة "وتين" حلاً مركزياً يربط المرضى بالممريضي المؤهلين بناءً على الموقع الجغرافي، التقييم الذكي، والتحقق من الهوية.
 
-💡 The Problem vs. Solution
+The Problem vs. Solution
 
 The Problem (المشكلة)
 
 The Wateen Solution (الحل)
 
-❌ Lack of Trust: Difficulty verifying nurse credentials. 
+ Lack of Trust: Difficulty verifying nurse credentials. 
 
 
 
  (صعوبة التأكد من هوية ومؤهلات الممرض)
 
-✅ AI Verification: Face recognition & ID matching. 
+ AI Verification: Face recognition & ID matching. 
 
 
 
  (تحقق من الهوية بالذكاء الاصطناعي)
 
-❌ Price Variation: Unregulated pricing per visit. 
+ Price Variation: Unregulated pricing per visit. 
 
 
 
  (تفاوت كبير وعشوائي في الأسعار)
 
-✅ Transparent Pricing: Clear hourly/visit rates. 
+ Transparent Pricing: Clear hourly/visit rates. 
 
 
 
  (أسعار واضحة ومحددة لكل ممرض)
 
-❌ Random Availability: Hard to find a nurse nearby. 
+ Random Availability: Hard to find a nurse nearby. 
 
 
 
  (صعوبة العثور على ممرض في نفس المنطقة)
 
-✅ Zone-Based Search: Smart filtering by location. 
+ Zone-Based Search: Smart filtering by location. 
 
 
 
  (بحث ذكي بناءً على المنطقة والتخصص)
 
-🚀 Features | المميزات الرئيسية
+ Features | المميزات الرئيسية
 
-🏥 For Patients (للمرضى)
+ For Patients (للمرضى)
 
 Advanced Search: Filter nurses by Zone (e.g., Nasr City, Maadi), Specialty, and Price.
 
@@ -76,7 +76,7 @@ Smart Booking: Request appointments and track status (Pending -> Accepted -> Com
 
 Rating System: Rate nurses after service completion using a 5-star system.
 
-👨‍⚕️ For Nurses (للممرضين)
+ For Nurses (للممرضين)
 
 Professional Profile: Showcase education, experience, and bio in Arabic.
 
@@ -86,13 +86,13 @@ Request Management: Accept or reject incoming booking requests.
 
 Income Tracking: View completed visits and earnings (simulated dashboard).
 
-🤖 AI & Intelligence (الذكاء الاصطناعي)
+ AI & Intelligence (الذكاء الاصطناعي)
 
 Smart Rating Algorithm: Calculates an initial score for new nurses based on Education Level + Years of Experience.
 
 Face Verification: Uses face_recognition & OpenCV to verify the nurse's identity by comparing their uploaded ID with a live selfie.
 
-🛠 Tech Stack | الأدوات والتقنيات
+Tech Stack | الأدوات والتقنيات
 
 We follow a classic 3-Tier Architecture suitable for educational purposes:
 
@@ -106,7 +106,7 @@ AI/ML Libraries: face_recognition, opencv-python, scikit-learn
 
 Security: Werkzeug for password hashing, Session-based authentication.
 
-🏗 System Architecture
+ System Architecture
 
 The connection between the Client (Browser) and the Server (Flask):
 
@@ -124,7 +124,7 @@ sequenceDiagram
     Note right of User: DOM Update (No Reload)
 
 
-⚡ Installation Guide | دليل التشغيل
+ Installation Guide | دليل التشغيل
 
 To run Wateen locally on your machine, follow these steps:
 
@@ -165,7 +165,7 @@ python app.py
 
 The application will start at: http://127.0.0.1:5000
 
-📂 Project Structure
+ Project Structure
 
 Wateen/
 ├── ai/                     # AI Modules (Face Verify, Smart Rating)
@@ -177,7 +177,7 @@ Wateen/
 └── README.md               # You are here!
 
 
-👥 The Team | فريق العمل
+# The Team | فريق العمل
 
 Built with Stoics team:
 
