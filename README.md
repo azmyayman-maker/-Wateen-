@@ -179,7 +179,8 @@ Wateen/
 
 # The Team | فريق العمل
 
-Built with Stoics team:
+Built with 
+## Stoics team:
 
 Name
 
