@@ -1,5 +1,80 @@
-Django>=5.0
-psycopg2-binary>=2.9
-redis>=5.0
-python-decouple>=3.8
-gunicorn>=21.2
+# =============================================================================
+# Wateen Project - Python Dependencies
+# Production-Grade Requirements with Pinned Versions
+# =============================================================================
+# All dependencies are pinned to exact versions for:
+# - Deterministic builds across all environments
+# - Reproducible deployments
+# - Security and stability guarantees
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Framework
+# -----------------------------------------------------------------------------
+# Django web framework - LTS version for long-term support
+Django==5.0.2
+
+# -----------------------------------------------------------------------------
+# Database Drivers
+# -----------------------------------------------------------------------------
+# PostgreSQL adapter for Django
+# Binary package for easier installation (no compilation required)
+psycopg2-binary==2.9.9
+
+# -----------------------------------------------------------------------------
+# Cache & Message Broker
+# -----------------------------------------------------------------------------
+# Redis Python client for caching and message brokering
+redis==5.0.1
+
+# -----------------------------------------------------------------------------
+# Configuration Management
+# -----------------------------------------------------------------------------
+# Environment variable and configuration management
+python-decouple==3.8
+
+# -----------------------------------------------------------------------------
+# WSGI/ASGI Servers
+# -----------------------------------------------------------------------------
+# Production-grade WSGI HTTP server
+gunicorn==21.2.0
+
+# ASGI server for async support (optional, for future use)
+# uvicorn[standard]==0.27.1
+
+# -----------------------------------------------------------------------------
+# Additional Production Dependencies
+# -----------------------------------------------------------------------------
+# Whitenoise for static file serving (production-ready)
+whitenoise==6.6.0
+
+# Django CORS headers for API support
+django-cors-headers==4.3.1
+
+# For secure password hashing
+argon2-cffi==23.1.0
+
+# -----------------------------------------------------------------------------
+# Development & Debugging (Optional - uncomment if needed)
+# -----------------------------------------------------------------------------
+# Django debug toolbar for development
+# django-debug-toolbar==4.2.0
+
+# IPython for enhanced Django shell
+# ipython==8.21.0
+
+# -----------------------------------------------------------------------------
+# Testing (Optional - uncomment if needed)
+# -----------------------------------------------------------------------------
+# pytest and Django integration
+# pytest==8.0.0
+# pytest-django==4.8.0
+# pytest-cov==4.1.0
+
+# =============================================================================
+# Version Pinning Strategy:
+# - Major.Minor.Patch versions are pinned (e.g., 5.0.2)
+# - Update versions deliberately after security review
+# - Use `pip list --outdated` to check for updates
+# - Test thoroughly before updating any dependency
+# =============================================================================
