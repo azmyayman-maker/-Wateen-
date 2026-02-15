@@ -5,6 +5,11 @@
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-chrome"],
       "enabled": true
+    },
+    "postgresql": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-postgresql", "postgresql://wateen_user:wateen_password@localhost:5432/wateen_db"],
+      "enabled": true
     }
   }
 }
