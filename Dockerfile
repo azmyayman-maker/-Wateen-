@@ -8,10 +8,21 @@ ENV PYTHONUNBUFFERED=1
 WORKDIR /app
 
 # Install system dependencies
-RUN apt-get update && apt-get install -y \
+# --------------------------------------------------------------------------
+# gcc, libpq-dev          → PostgreSQL adapter compilation
+# netcat-openbsd          → TCP health checking in entrypoint.sh
+# gdal-bin, libgdal-dev   → GDAL library for GeoDjango
+# libgeos-dev             → GEOS geometry engine for spatial operations
+# libproj-dev             → PROJ coordinate projection library
+# --------------------------------------------------------------------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     netcat-openbsd \
+    gdal-bin \
+    libgdal-dev \
+    libgeos-dev \
+    libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
