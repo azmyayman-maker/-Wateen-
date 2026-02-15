@@ -1,0 +1,48 @@
+# =============================================================================
+# Wateen Project — .gitignore
+# =============================================================================
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ── Virtual Environments ──
+venv/
+.venv/
+env/
+
+# ── Environment Variables ──
+.env
+!.env.example
+
+# ── Database ──
+db.sqlite3
+*.sqlite3
+
+# ── Django ──
+staticfiles/
+mediafiles/
+
+# ── IDE / Editor ──
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+nul
+
+# ── Docker ──
+# (docker volumes are external, nothing to ignore here)
+
+# ── OS ──
+*.log
+*.pid
+*.seed

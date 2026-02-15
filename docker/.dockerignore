@@ -1,0 +1,16 @@
+.git
+.gitignore
+__pycache__
+*.pyc
+venv/
+.env
+.env.example
+db.sqlite3
+media/
+.vscode/
+.ide/
+docs/
+locale/
+*.md
+mcp_config.json
+opencode.json
