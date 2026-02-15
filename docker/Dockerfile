@@ -26,11 +26,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install -r requirements.txt
+COPY requirements/base.txt requirements/base.txt
+RUN pip install --upgrade pip && pip install -r requirements/base.txt
 
 # Copy project
 COPY . .
 
 # Set entrypoint
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

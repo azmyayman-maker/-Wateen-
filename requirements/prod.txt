@@ -1,0 +1,11 @@
+# =============================================================================
+# Wateen Project - Production Dependencies
+# =============================================================================
+# Inherits all base dependencies
+-r base.txt
+
+# -----------------------------------------------------------------------------
+# Production-Only Dependencies
+# -----------------------------------------------------------------------------
+# Error tracking and monitoring (uncomment when ready)
+# sentry-sdk[django]==1.40.0
