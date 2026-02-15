@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="icon.png" alt="Wateen Logo" width="120" height="120" />
+  <img src="https://github.com/azmyayman-maker/-Wateen-/blob/main/static/images/icon.png" alt="Wateen Logo" width="120" height="120" />
   <h1>Wateen (وَتِين)</h1>
   <p><strong>AI-Powered Healthcare Ecosystem for Egypt</strong></p>
 
