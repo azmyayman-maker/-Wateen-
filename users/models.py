@@ -189,14 +189,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
 
 class VerificationStatus(models.TextChoices):
-    PENDING = 'PENDING', _('Pending')
-    VERIFIED = 'VERIFIED', _('Verified')
-    REJECTED = 'REJECTED', _('Rejected')
+    PENDING = 'PENDING', _('قيد المراجعة')
+    VERIFIED = 'VERIFIED', _('موثق')
+    REJECTED = 'REJECTED', _('مرفوض')
 
 
 class GenderChoices(models.TextChoices):
-    MALE = 'MALE', _('Male')
-    FEMALE = 'FEMALE', _('Female')
+    MALE = 'MALE', _('ذكر')
+    FEMALE = 'FEMALE', _('أنثى')
 
 
 class PatientProfile(models.Model):
