@@ -10,6 +10,7 @@ from .validators import (
     validate_phone_number,
     GOVERNORATE_CODES
 )
+from .models import PatientProfile, NurseProfile, UserRole
 
 
 User = get_user_model()
@@ -461,3 +462,96 @@ class TestUserProperties(TestCase):
         )
         
         self.assertEqual(user.get_full_name(), '29901011234715')
+
+
+class TestPatientProfileSignal(TestCase):
+    """Verify post_save signal creates PatientProfile for PATIENT users."""
+
+    def test_patient_profile_auto_created(self):
+        user = User.objects.create_user(
+            national_id='29901011234800',
+            phone_number='01012345800',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+        self.assertTrue(
+            PatientProfile.objects.filter(user=user).exists(),
+            'PatientProfile was not auto-created for PATIENT user',
+        )
+
+    def test_nurse_does_not_get_patient_profile(self):
+        user = User.objects.create_user(
+            national_id='29901011234801',
+            phone_number='01012345801',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+        self.assertFalse(
+            PatientProfile.objects.filter(user=user).exists(),
+            'PatientProfile should NOT be created for NURSE user',
+        )
+
+
+class TestNurseProfileSignal(TestCase):
+    """Verify post_save signal creates NurseProfile for NURSE users."""
+
+    def test_nurse_profile_auto_created(self):
+        user = User.objects.create_user(
+            national_id='29901011234802',
+            phone_number='01012345802',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+        self.assertTrue(
+            NurseProfile.objects.filter(user=user).exists(),
+            'NurseProfile was not auto-created for NURSE user',
+        )
+
+    def test_patient_does_not_get_nurse_profile(self):
+        user = User.objects.create_user(
+            national_id='29901011234803',
+            phone_number='01012345803',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+        self.assertFalse(
+            NurseProfile.objects.filter(user=user).exists(),
+            'NurseProfile should NOT be created for PATIENT user',
+        )
+
+    def test_nurse_profile_default_values(self):
+        user = User.objects.create_user(
+            national_id='29901011234804',
+            phone_number='01012345804',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+        profile = NurseProfile.objects.get(user=user)
+        self.assertEqual(profile.rating, 5.00)
+        self.assertFalse(profile.is_available)
+        self.assertEqual(profile.verification_status, 'PENDING')
+        self.assertEqual(profile.specializations, [])
+
+
+class TestProfileModelStr(TestCase):
+    """Verify __str__ representations of profile models."""
+
+    def test_patient_profile_str(self):
+        user = User.objects.create_user(
+            national_id='29901011234805',
+            phone_number='01012345805',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+        profile = PatientProfile.objects.get(user=user)
+        self.assertEqual(str(profile), 'PatientProfile(29901011234805)')
+
+    def test_nurse_profile_str(self):
+        user = User.objects.create_user(
+            national_id='29901011234806',
+            phone_number='01012345806',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+        profile = NurseProfile.objects.get(user=user)
+        self.assertEqual(str(profile), 'NurseProfile(29901011234806)')
