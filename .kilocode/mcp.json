@@ -1,0 +1,543 @@
+{
+  "version": "2.0.0",
+  "metadata": {
+    "name": "Wateen Autonomous Agent Pipeline",
+    "description": "Closed-loop autonomous software factory with multi-agent collaboration",
+    "created": "2026-02-16T15:51:00Z",
+    "pipeline_type": "iterative_verification"
+  },
+  "agents": {
+    "antigravity": {
+      "role": "planning_agent",
+      "description": "Primary planning agent responsible for requirement analysis, technical planning, and task decomposition",
+      "capabilities": [
+        "requirement_analysis",
+        "technical_design",
+        "task_decomposition",
+        "architecture_planning",
+        "plan_revision"
+      ],
+      "input_channels": [
+        "user_requests",
+        "reviewer_feedback",
+        "iteration_signals"
+      ],
+      "output_channels": [
+        "implementation_plan",
+        "task_graph",
+        "revision_plan"
+      ],
+      "state_machine": {
+        "initial": "idle",
+        "states": [
+          "idle",
+          "analyzing",
+          "planning",
+          "revising",
+          "completed",
+          "finalizing"
+        ],
+        "transitions": [
+          {"from": "idle", "to": "analyzing", "trigger": "new_task"},
+          {"from": "analyzing", "to": "planning", "trigger": "requirements_understood"},
+          {"from": "planning", "to": "completed", "trigger": "plan_ready"},
+          {"from": "completed", "to": "idle", "trigger": "handoff_complete"},
+          {"from": "completed", "to": "revising", "trigger": "feedback_received"},
+          {"from": "revising", "to": "planning", "trigger": "revision_complete"},
+          {"from": "completed", "to": "finalizing", "trigger": "approval_received"},
+          {"from": "finalizing", "to": "idle", "trigger": "deployment_complete"}
+        ]
+      },
+      "constraints": {
+        "max_iterations": 100,
+        "timeout_seconds": 3600,
+        "requires_approval": false
+      }
+    },
+    "opencode": {
+      "role": "execution_agent",
+      "description": "Primary execution agent responsible for code implementation according to plans",
+      "capabilities": [
+        "code_generation",
+        "code_modification",
+        "test_writing",
+        "documentation",
+        "refactoring"
+      ],
+      "input_channels": [
+        "implementation_plan",
+        "task_graph",
+        "revision_plan"
+      ],
+      "output_channels": [
+        "source_code",
+        "tests",
+        "documentation",
+        "implementation_report"
+      ],
+      "state_machine": {
+        "initial": "idle",
+        "states": [
+          "idle",
+          "receiving_plan",
+          "implementing",
+          "testing",
+          "completed",
+          "error_recovery"
+        ],
+        "transitions": [
+          {"from": "idle", "to": "receiving_plan", "trigger": "plan_received"},
+          {"from": "receiving_plan", "to": "implementing", "trigger": "plan_validated"},
+          {"from": "implementing", "to": "testing", "trigger": "code_complete"},
+          {"from": "testing", "to": "completed", "trigger": "tests_passed"},
+          {"from": "completed", "to": "idle", "trigger": "handoff_complete"},
+          {"from": "implementing", "to": "error_recovery", "trigger": "implementation_error"},
+          {"from": "error_recovery", "to": "implementing", "trigger": "error_resolved"}
+        ]
+      },
+      "constraints": {
+        "max_file_size_kb": 500,
+        "follow_coding_standards": true,
+        "require_tests": true
+      }
+    },
+    "reviewer": {
+      "role": "audit_agent",
+      "description": "Primary audit agent responsible for code review, quality assurance, and approval authority",
+      "capabilities": [
+        "code_review",
+        "security_audit",
+        "architecture_validation",
+        "task_verification",
+        "approval_authority"
+      ],
+      "input_channels": [
+        "source_code",
+        "tests",
+        "implementation_report"
+      ],
+      "output_channels": [
+        "review_feedback",
+        "approval_signal",
+        "rejection_report"
+      ],
+      "state_machine": {
+        "initial": "idle",
+        "states": [
+          "idle",
+          "reviewing",
+          "auditing",
+          "verifying",
+          "approved",
+          "rejected"
+        ],
+        "transitions": [
+          {"from": "idle", "to": "reviewing", "trigger": "code_received"},
+          {"from": "reviewing", "to": "auditing", "trigger": "review_complete"},
+          {"from": "auditing", "to": "verifying", "trigger": "audit_complete"},
+          {"from": "verifying", "to": "approved", "trigger": "all_checks_passed"},
+          {"from": "verifying", "to": "rejected", "trigger": "issues_found"},
+          {"from": "approved", "to": "idle", "trigger": "deployment_initiated"},
+          {"from": "rejected", "to": "idle", "trigger": "feedback_sent"}
+        ]
+      },
+      "constraints": {
+        "strict_mode": true,
+        "check_security": true,
+        "check_architecture": true,
+        "check_coverage": true,
+        "min_coverage_percent": 80
+      },
+      "authority": {
+        "can_approve": true,
+        "can_reject": true,
+        "can_request_revision": true,
+        "final_authority": true
+      }
+    }
+  },
+  "workflows": {
+    "main_pipeline": {
+      "type": "iterative_closed_loop",
+      "description": "Main autonomous development pipeline with iterative verification",
+      "steps": [
+        {
+          "id": "plan_phase",
+          "agent": "antigravity",
+          "action": "create_implementation_plan",
+          "inputs": ["user_requirements"],
+          "outputs": ["implementation_plan", "task_graph"],
+          "next_step": "execute_phase",
+          "on_failure": "plan_phase"
+        },
+        {
+          "id": "execute_phase",
+          "agent": "opencode",
+          "action": "implement_from_plan",
+          "inputs": ["implementation_plan", "task_graph"],
+          "outputs": ["source_code", "tests", "implementation_report"],
+          "next_step": "review_phase",
+          "on_failure": "execute_phase"
+        },
+        {
+          "id": "review_phase",
+          "agent": "reviewer",
+          "action": "audit_implementation",
+          "inputs": ["source_code", "tests", "implementation_report"],
+          "outputs": ["review_result", "feedback"],
+          "next_step": "decision_point"
+        },
+        {
+          "id": "decision_point",
+          "type": "conditional",
+          "conditions": [
+            {
+              "if": "review_result.status == 'approved'",
+              "then": "finalize_phase"
+            },
+            {
+              "if": "review_result.status == 'rejected'",
+              "then": "revision_phase"
+            }
+          ]
+        },
+        {
+          "id": "revision_phase",
+          "agent": "antigravity",
+          "action": "create_revision_plan",
+          "inputs": ["review_result", "feedback", "previous_plan"],
+          "outputs": ["revision_plan"],
+          "next_step": "execute_phase",
+          "iteration_counter": true
+        },
+        {
+          "id": "finalize_phase",
+          "agent": "antigravity",
+          "action": "prepare_final_version",
+          "inputs": ["approved_code", "implementation_plan"],
+          "outputs": ["final_artifacts"],
+          "next_step": "deploy_phase"
+        },
+        {
+          "id": "deploy_phase",
+          "type": "git_deployment",
+          "action": "commit_and_push",
+          "inputs": ["final_artifacts"],
+          "outputs": ["deployment_result"],
+          "terminal": true
+        }
+      ],
+      "iteration_limits": {
+        "max_total_iterations": 100,
+        "max_revision_cycles": 50,
+        "timeout_seconds": 86400
+      },
+      "deadlock_prevention": {
+        "strategy": "priority_escalation",
+        "detection_interval_seconds": 300,
+        "resolution_timeout_seconds": 600
+      }
+    }
+  },
+  "message_routing": {
+    "channels": {
+      "user_requests": {
+        "type": "input",
+        "source": "external",
+        "targets": ["antigravity"]
+      },
+      "implementation_plan": {
+        "type": "internal",
+        "source": "antigravity",
+        "targets": ["opencode"],
+        "schema": {
+          "type": "object",
+          "required": ["tasks", "architecture", "dependencies"],
+          "properties": {
+            "tasks": {"type": "array"},
+            "architecture": {"type": "object"},
+            "dependencies": {"type": "object"},
+            "metadata": {"type": "object"}
+          }
+        }
+      },
+      "task_graph": {
+        "type": "internal",
+        "source": "antigravity",
+        "targets": ["opencode"],
+        "schema": {
+          "type": "object",
+          "required": ["nodes", "edges", "execution_order"],
+          "properties": {
+            "nodes": {"type": "array"},
+            "edges": {"type": "array"},
+            "execution_order": {"type": "array"}
+          }
+        }
+      },
+      "source_code": {
+        "type": "internal",
+        "source": "opencode",
+        "targets": ["reviewer"],
+        "schema": {
+          "type": "object",
+          "required": ["files", "structure"],
+          "properties": {
+            "files": {"type": "array"},
+            "structure": {"type": "object"},
+            "changes": {"type": "array"}
+          }
+        }
+      },
+      "tests": {
+        "type": "internal",
+        "source": "opencode",
+        "targets": ["reviewer"],
+        "schema": {
+          "type": "object",
+          "required": ["test_files", "coverage_report"],
+          "properties": {
+            "test_files": {"type": "array"},
+            "coverage_report": {"type": "object"},
+            "test_results": {"type": "object"}
+          }
+        }
+      },
+      "implementation_report": {
+        "type": "internal",
+        "source": "opencode",
+        "targets": ["reviewer"],
+        "schema": {
+          "type": "object",
+          "required": ["completed_tasks", "status"],
+          "properties": {
+            "completed_tasks": {"type": "array"},
+            "status": {"type": "string"},
+            "notes": {"type": "string"}
+          }
+        }
+      },
+      "review_feedback": {
+        "type": "internal",
+        "source": "reviewer",
+        "targets": ["antigravity"],
+        "schema": {
+          "type": "object",
+          "required": ["status", "issues", "recommendations"],
+          "properties": {
+            "status": {"type": "string", "enum": ["approved", "rejected"]},
+            "issues": {"type": "array"},
+            "recommendations": {"type": "array"},
+            "severity": {"type": "string"}
+          }
+        }
+      },
+      "approval_signal": {
+        "type": "internal",
+        "source": "reviewer",
+        "targets": ["antigravity"],
+        "schema": {
+          "type": "object",
+          "required": ["approved", "timestamp"],
+          "properties": {
+            "approved": {"type": "boolean"},
+            "timestamp": {"type": "string"},
+            "signatures": {"type": "array"}
+          }
+        }
+      },
+      "revision_plan": {
+        "type": "internal",
+        "source": "antigravity",
+        "targets": ["opencode"],
+        "schema": {
+          "type": "object",
+          "required": ["issues_addressed", "updated_tasks"],
+          "properties": {
+            "issues_addressed": {"type": "array"},
+            "updated_tasks": {"type": "array"},
+            "iteration": {"type": "integer"}
+          }
+        }
+      }
+    },
+    "routing_rules": [
+      {
+        "name": "plan_to_execution",
+        "source": "antigravity",
+        "target": "opencode",
+        "condition": "plan_status == 'ready'",
+        "transform": null
+      },
+      {
+        "name": "execution_to_review",
+        "source": "opencode",
+        "target": "reviewer",
+        "condition": "implementation_status == 'complete'",
+        "transform": null
+      },
+      {
+        "name": "review_feedback_routing",
+        "source": "reviewer",
+        "target": "antigravity",
+        "condition": "review_status == 'rejected'",
+        "transform": "extract_issues"
+      },
+      {
+        "name": "approval_routing",
+        "source": "reviewer",
+        "target": "antigravity",
+        "condition": "review_status == 'approved'",
+        "transform": null
+      }
+    ]
+  },
+  "feedback_loop": {
+    "enabled": true,
+    "max_iterations": 100,
+    "iteration_tracking": {
+      "store_history": true,
+      "max_history_size": 1000,
+      "persistence": true
+    },
+    "convergence_criteria": {
+      "conditions": [
+        {"type": "approval", "agent": "reviewer", "value": true},
+        {"type": "no_issues", "count": 0},
+        {"type": "all_tasks_complete", "percentage": 100}
+      ],
+      "require_all": true
+    },
+    "divergence_detection": {
+      "enabled": true,
+      "max_similar_iterations": 5,
+      "action_on_divergence": "escalate"
+    }
+  },
+  "state_management": {
+    "persistence": {
+      "enabled": true,
+      "storage": "file",
+      "path": ".agent/state/pipeline_state.json",
+      "checkpoint_interval_seconds": 60
+    },
+    "recovery": {
+      "enabled": true,
+      "strategy": "last_checkpoint",
+      "max_recovery_attempts": 3
+    }
+  },
+  "error_handling": {
+    "strategies": [
+      {
+        "error_type": "agent_failure",
+        "action": "retry",
+        "max_retries": 3,
+        "backoff_seconds": 10
+      },
+      {
+        "error_type": "validation_error",
+        "action": "feedback_loop",
+        "target_agent": "antigravity"
+      },
+      {
+        "error_type": "timeout",
+        "action": "escalate",
+        "notification": true
+      },
+      {
+        "error_type": "deadlock",
+        "action": "reset_state",
+        "fallback_agent": "antigravity"
+      }
+    ],
+    "global_timeout_seconds": 86400,
+    "agent_timeout_seconds": 3600
+  },
+  "deadlock_prevention": {
+    "detection": {
+      "enabled": true,
+      "interval_seconds": 300,
+      "threshold_seconds": 600
+    },
+    "resolution": {
+      "strategy": "priority_escalation",
+      "escalation_order": ["reviewer", "antigravity", "opencode"],
+      "notification": true
+    }
+  },
+  "security": {
+    "agent_authentication": {
+      "enabled": true,
+      "method": "token",
+      "token_rotation_seconds": 3600
+    },
+    "message_encryption": {
+      "enabled": false,
+      "algorithm": "aes-256-gcm"
+    },
+    "audit_logging": {
+      "enabled": true,
+      "path": ".agent/logs/audit.log",
+      "retention_days": 30
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics": [
+      "iteration_count",
+      "task_completion_rate",
+      "error_rate",
+      "approval_rate",
+      "execution_time"
+    ],
+    "alerts": [
+      {
+        "condition": "iteration_count > 50",
+        "severity": "warning",
+        "message": "High iteration count detected"
+      },
+      {
+        "condition": "error_rate > 0.3",
+        "severity": "critical",
+        "message": "High error rate detected"
+      }
+    ]
+  },
+  "git_integration": {
+    "enabled": true,
+    "repository": {
+      "branch_strategy": "feature_branch",
+      "main_branch": "main",
+      "auto_commit": true,
+      "commit_message_template": "[Auto] ${task_name} - Iteration ${iteration}"
+    },
+    "deployment": {
+      "require_approval": true,
+      "auto_merge": false,
+      "create_pr": true
+    }
+  },
+  "mcpServers": {
+    "chrome-devtools": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-chrome"]
+    },
+    "postgresql": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-postgresql",
+        "postgresql://wateen_user:wateen_password@localhost:5432/wateen_db"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "./"]
+    },
+    "git": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-git"]
+    }
+  }
+}
