@@ -96,9 +96,8 @@ services:
 
     # No external ports exposed for security (internal network only)
     # Uncomment below for external access during development
-    # External access for MCP/Dev tools
-    ports:
-      - "5432:5432"
+    # ports:
+    #   - "127.0.0.1:5432:5432"
 
     # Restart policy: Always restart unless explicitly stopped
     restart: unless-stopped

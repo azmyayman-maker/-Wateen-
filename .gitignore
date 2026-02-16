@@ -42,7 +42,17 @@ nul
 # ── Docker ──
 # (docker volumes are external, nothing to ignore here)
 
+
 # ── OS ──
 *.log
 *.pid
 *.seed
+
+# ── Temporary Test & Debug Output ──
+*_output.txt
+test_errors.txt
+test_failures*.txt
+logs_dump.txt
+remaining_tests.txt
+error_log.txt
+check_output.txt
