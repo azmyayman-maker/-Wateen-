@@ -32,5 +32,6 @@ RUN pip install --upgrade pip && pip install -r requirements/base.txt
 # Copy project
 COPY . .
 
-# Set entrypoint
+# Set entrypoint (ensure execute permissions)
+RUN chmod +x /app/docker/entrypoint.sh
 ENTRYPOINT ["/app/docker/entrypoint.sh"]
