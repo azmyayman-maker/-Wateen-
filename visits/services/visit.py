@@ -2,10 +2,12 @@ from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from .models import Visit, VisitStatus
+from visits.models import Visit, VisitStatus
 
 
-def create_visit_request(patient_profile, latitude: float, longitude: float, service_type: str = '') -> Visit:
+def create_visit_request(
+    patient_profile, latitude: float, longitude: float, service_type: str = ""
+) -> Visit:
     """
     Create a new Visit request for a patient.
 
@@ -23,13 +25,13 @@ def create_visit_request(patient_profile, latitude: float, longitude: float, ser
     """
     if not (-90 <= latitude <= 90):
         raise ValidationError(
-            _('خط العرض يجب أن يكون بين -90 و 90.'),
-            code='invalid_latitude',
+            _("خط العرض يجب أن يكون بين -90 و 90."),
+            code="invalid_latitude",
         )
     if not (-180 <= longitude <= 180):
         raise ValidationError(
-            _('خط الطول يجب أن يكون بين -180 و 180.'),
-            code='invalid_longitude',
+            _("خط الطول يجب أن يكون بين -180 و 180."),
+            code="invalid_longitude",
         )
 
     location = Point(longitude, latitude, srid=4326)
