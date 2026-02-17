@@ -554,6 +554,9 @@ class TestProfileModelStr(TestCase):
             role=UserRole.NURSE,
         )
         profile = NurseProfile.objects.get(user=user)
+
+        self.assertEqual(str(profile), 'NurseProfile(29901011234806)')
+
         self.assertEqual(str(profile), 'NurseProfile(29901011234806)')
 
 
@@ -1044,3 +1047,4 @@ class TestProfileModelMeta(TestCase):
         # The primary key should be the user UUID
         self.assertEqual(profile.pk, nurse.pk)
         self.assertEqual(profile.user_id, nurse.id)
+

@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import CustomUser, UserRole
+from .models import CustomUser, UserRole, PatientProfile, NurseProfile
 
 
 @admin.register(CustomUser)
@@ -98,3 +98,21 @@ class CustomUserAdmin(BaseUserAdmin):
         if not obj:
             return self.add_fieldsets
         return super().get_fieldsets(request, obj)
+
+
+@admin.register(PatientProfile)
+class PatientProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'date_of_birth', 'gender', 'wearables_enabled', 'created_at')
+    list_filter = ('gender', 'wearables_enabled')
+    search_fields = ('user__national_id', 'user__phone_number', 'emergency_contact')
+    readonly_fields = ('created_at', 'updated_at')
+    raw_id_fields = ('user',)
+
+
+@admin.register(NurseProfile)
+class NurseProfileAdmin(admin.ModelAdmin):
+    list_display = ('user', 'syndicate_number', 'rating', 'is_available', 'verification_status', 'created_at')
+    list_filter = ('is_available', 'verification_status')
+    search_fields = ('user__national_id', 'user__phone_number', 'syndicate_number')
+    readonly_fields = ('created_at', 'updated_at')
+    raw_id_fields = ('user',)

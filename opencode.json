@@ -6,10 +6,19 @@
       "command": ["npx", "-y", "@modelcontextprotocol/server-chrome"],
       "enabled": true
     },
-    "postgresql": {
+    "postgres": {
       "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-postgresql", "postgresql://wateen_user:wateen_password@localhost:5432/wateen_db"],
-      "enabled": true
+      "command": [
+        "docker",
+        "run",
+        "-i",
+        "--rm",
+        "--add-host=host.docker.internal:host-gateway",
+        "-e",
+        "DATABASE_URI",
+        "crystaldba/postgres-mcp",
+        "--access-mode=unrestricted"
+      ]
     }
   }
 }

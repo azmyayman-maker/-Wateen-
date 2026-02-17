@@ -1,4 +1,5 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.contrib.gis.db import models as gis_models
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -185,3 +186,142 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     @property
     def is_admin_user(self) -> bool:
         return self.role == UserRole.ADMIN or self.is_superuser
+
+
+class VerificationStatus(models.TextChoices):
+    PENDING = 'PENDING', _('قيد المراجعة')
+    VERIFIED = 'VERIFIED', _('موثق')
+    REJECTED = 'REJECTED', _('مرفوض')
+
+
+class GenderChoices(models.TextChoices):
+    MALE = 'MALE', _('ذكر')
+    FEMALE = 'FEMALE', _('أنثى')
+
+
+class PatientProfile(models.Model):
+    """Profile containing patient-specific medical and personal data."""
+
+    user = models.OneToOneField(
+        'users.CustomUser',
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='patient_profile',
+        verbose_name=_('المستخدم'),
+    )
+    date_of_birth = models.DateField(
+        _('تاريخ الميلاد'),
+        null=True,
+        blank=True,
+    )
+    gender = models.CharField(
+        _('الجنس'),
+        max_length=10,
+        choices=GenderChoices.choices,
+        blank=True,
+        default='',
+    )
+    address_text = models.TextField(
+        _('العنوان'),
+        blank=True,
+        default='',
+    )
+    home_location = gis_models.PointField(
+        _('موقع المنزل'),
+        geography=True,
+        srid=4326,
+        null=True,
+        blank=True,
+    )
+    medical_notes = models.TextField(
+        _('ملاحظات طبية'),
+        blank=True,
+        default='',
+    )
+    emergency_contact = models.CharField(
+        _('رقم الطوارئ'),
+        max_length=15,
+        blank=True,
+        default='',
+    )
+    wearables_enabled = models.BooleanField(
+        _('أجهزة قابلة للارتداء'),
+        default=False,
+    )
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('ملف المريض')
+        verbose_name_plural = _('ملفات المرضى')
+        db_table = 'users_patient_profile'
+
+    def __str__(self) -> str:
+        return f'PatientProfile({self.user.national_id})'
+
+
+class NurseProfile(models.Model):
+    """Profile containing nurse-specific professional and verification data."""
+
+    user = models.OneToOneField(
+        'users.CustomUser',
+        on_delete=models.CASCADE,
+        primary_key=True,
+        related_name='nurse_profile',
+        verbose_name=_('المستخدم'),
+    )
+    national_id_document = models.CharField(
+        _('رقم الهوية المهنية'),
+        max_length=50,
+        blank=True,
+        default='',
+    )
+    syndicate_number = models.CharField(
+        _('رقم النقابة'),
+        max_length=50,
+        blank=True,
+        default='',
+    )
+    syndicate_expiry = models.DateField(
+        _('انتهاء عضوية النقابة'),
+        null=True,
+        blank=True,
+    )
+    specializations = models.JSONField(
+        _('التخصصات'),
+        default=list,
+        blank=True,
+    )
+    rating = models.DecimalField(
+        _('التقييم'),
+        max_digits=3,
+        decimal_places=2,
+        default=5.00,
+    )
+    is_available = models.BooleanField(
+        _('متاح'),
+        default=False,
+    )
+    last_location = gis_models.PointField(
+        _('آخر موقع'),
+        geography=True,
+        srid=4326,
+        null=True,
+        blank=True,
+    )
+    verification_status = models.CharField(
+        _('حالة التحقق'),
+        max_length=10,
+        choices=VerificationStatus.choices,
+        default=VerificationStatus.PENDING,
+    )
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('ملف الممرض/ة')
+        verbose_name_plural = _('ملفات الممرضين')
+        db_table = 'users_nurse_profile'
+
+    def __str__(self) -> str:
+        return f'NurseProfile({self.user.national_id})'
