@@ -1,0 +1,6 @@
+# Execution Logs
+
+This directory stores execution logs including:
+- `audit.log` - Audit trail of all automated actions
+
+See `.agent/workflows/ai_swarm.md` Section 6.5 for logging requirements.

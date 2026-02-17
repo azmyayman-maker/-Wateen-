@@ -62,3 +62,33 @@ This workflow defines the **MANDATORY** standard operating procedure for all tas
 
 // turbo-all
 (This workflow authorizes auto-running `opencode` CLI commands for building).
+
+## 6. Security & Safety
+
+**CRITICAL:** The `turbo-all` automation tag MUST NOT be enabled without the following safeguards:
+
+### 6.1 Security Review Requirement
+- A security review MUST be completed and documented before enabling any automation.
+- Review findings must be addressed and sign-off obtained from at least one designated maintainer.
+
+### 6.2 Prompt File Validation
+- All prompt files in `.agent/tasks/pending/` MUST be validated against the defined schema.
+- Invalid or malformed prompt files MUST be rejected before execution.
+
+### 6.3 Access Control
+- Only designated maintainers (listed in `.agent/MAINTAINERS`) may add or modify the `turbo-all` tag.
+- Unauthorized modifications to automation tags MUST be rejected and logged.
+
+### 6.4 Execution Environment
+- OpenCode MUST run in a sandboxed/restricted execution environment.
+- File system access MUST be scoped to the project directory only.
+- Network access MUST be explicitly whitelisted per task requirement.
+
+### 6.5 Audit Logging
+- All automated actions MUST be recorded to `.agent/logs/audit.log`.
+- Log entries MUST include: timestamp, agent, action, files modified, and outcome.
+
+### 6.6 Manual Approval Gates & Rate Limiting
+- High-risk operations (e.g., deletions, external API calls, privilege changes) MUST require manual approval.
+- Rate limiting MUST be enforced: max 10 automated actions per hour, with exponential backoff on failures.
+- Runaway automation detection: halt after 3 consecutive failures and alert maintainers.

@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
 
-from users.models import UserRole
+from users.models import UserRole, PatientProfile
 from .serializers import VisitRequestSerializer, VisitResponseSerializer
 from .services import create_visit_request
 
@@ -22,7 +22,7 @@ class VisitRequestView(APIView):
         # Check that the user is a patient
         if request.user.role != UserRole.PATIENT:
             return Response(
-                {'detail': _('فقط المرضى يمكنهم طلب زيارة.')},
+                {"detail": _("فقط المرضى يمكنهم طلب زيارة.")},
                 status=status.HTTP_403_FORBIDDEN,
             )
 
@@ -32,17 +32,17 @@ class VisitRequestView(APIView):
         # Get patient profile
         try:
             patient_profile = request.user.patient_profile
-        except Exception:
+        except PatientProfile.DoesNotExist:
             return Response(
-                {'detail': _('لم يتم العثور على ملف المريض.')},
+                {"detail": _("لم يتم العثور على ملف المريض.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
 
         visit = create_visit_request(
             patient_profile=patient_profile,
-            latitude=serializer.validated_data['latitude'],
-            longitude=serializer.validated_data['longitude'],
-            service_type=serializer.validated_data.get('service_type', ''),
+            latitude=serializer.validated_data["latitude"],
+            longitude=serializer.validated_data["longitude"],
+            service_type=serializer.validated_data.get("service_type", ""),
         )
 
         response_serializer = VisitResponseSerializer(visit)

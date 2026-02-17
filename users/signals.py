@@ -7,12 +7,12 @@ from .models import CustomUser, UserRole, PatientProfile, NurseProfile
 
 @receiver(post_save, sender=CustomUser)
 @transaction.atomic
-def create_user_profile(sender, instance, created, **kwargs):
+def create_user_profile(_sender, instance, _created, **_kwargs):
     """
     Automatically create the appropriate profile based on user's role.
     - PATIENT role -> PatientProfile
     - NURSE role -> NurseProfile
-    
+
     Uses get_or_create to be idempotent:
     - Safe for new user creation
     - Safe for role changes on existing users

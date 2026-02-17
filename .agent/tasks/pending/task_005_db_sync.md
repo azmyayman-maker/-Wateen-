@@ -12,7 +12,7 @@ Execute database migrations to apply the changes from Ticket 1.4 (PatientProfile
 
 ## Instructions
 
-Run the following commands strictly from the project root (`d:\projects\Wateen\`) to ensure the `docker-compose.yml` file is located correctly:
+Run the following commands strictly from the project root (the directory containing the `docker/` folder):
 
 1. **Make Migrations for Users App:**
 
