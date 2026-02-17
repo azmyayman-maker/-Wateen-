@@ -1,7 +1,12 @@
 <div align="center">
+
   <img src="icon.png" alt="Wateen Logo" width="120" height="120" />
   <h1>Wateen (وَتِين)</h1> 
   <h2>Primary Domain: wateen.live</h2>
+=======
+  <img src="https://github.com/azmyayman-maker/-Wateen-/blob/main/static/images/icon.png" alt="Wateen Logo" width="120" height="120" />
+  <h1>Wateen (وَتِين)</h1>
+
   <p><strong>AI-Powered Healthcare Ecosystem for Egypt</strong></p>
 
 [![Status](https://img.shields.io/badge/Status-Active_Development-success?style=for-the-badge)](https://github.com/azmyayman-maker/wateen)
@@ -103,102 +108,7 @@ graph TB
 
 ---
 
-## 🛠️ Installation & Setup (Docker-First)
 
-This project strictly follows a Docker-based workflow to ensure environment consistency.
-
-### Prerequisites
-
-- [Docker Desktop](https://www.docker.com/products/docker-desktop)
-- [Python 3.11+](https://www.python.org/)
-- [Make](https://gnuwin32.sourceforge.net/packages/make.htm) (Optional but recommended)
-
-### Quick Start
-
-1.  **Clone the Repository**
-
-    ```bash
-    git clone https://github.com/azmyayman-maker/wateen.git
-    cd wateen
-    ```
-
-2.  **Configure Environment**
-    Copy the example environment file and update secrets (if necessary).
-
-    ```bash
-    cp .env.example .env
-    ```
-
-3.  **Build and Run Containers**
-    All services (Django, Postgres, Redis) are orchestrated via Docker Compose.
-
-    ```bash
-    # Build and start services in the background
-    docker-compose up -d --build
-    ```
-
-4.  **Verify Status**
-    Ensure all containers are healthy.
-
-    ```bash
-    docker-compose ps
-    ```
-
-    > **Note:** The `web` service waits for `db` and `redis` to be healthy before starting.
-
-5.  **Access the Application**
-    - **Backend API:** `http://localhost:8000`
-    - **Admin Panel:** `http://localhost:8000/admin`
-
----
-
-## 🗺️ Roadmap (Implementation Plan v3.2)
-
-We are following a strict 20-Phase execution plan.
-
-- [x] **Phase 1: Project Setup & Auth** (Docker, Geo-Auth)
-- [ ] **Phase 2: Core Visit Management** (State Machine, Matching)
-- [ ] **Phase 3: Frontend Foundation** (Next.js PWA, RTL)
-- [ ] **Phase 4: Testing & Staging** (CI/CD, KYC)
-- [ ] **Phase 5: IoT Foundation** (Wearables Bridge)
-- [ ] **Phase 6: Location Services** (Mapbox, Geocoding)
-- [ ] **Phase 7: AI & Gamification** (Basic NLP, Points)
-- [ ] **Phase 8: Safety & Security** (Shield Basic)
-- [ ] **Phase 9: Blockchain Foundation** (Health Wallet)
-- [ ] **Phase 10-20:** Advanced Features & Scaling (See Master Plan)
-
----
-
-## 📂 Project Structure
-
-Verified directory structure based on `Master Implementation Plan v3.2`.
-
-```
-wateen/
-├── apps/                   # Django Core Modules
-│   ├── users/              # Custom Auth & Profiles
-│   ├── visits/             # Visit Lifecycle & Matching
-│   ├── billing/            # Payments & Pricing
-│   └── notifications/      # SMS & Push Services
-├── config/                 # Project Settings (Django)
-│   ├── settings.py
-│   └── wsgi.py
-├── docker/                 # Container Configurations
-│   ├── django/
-│   └── nginx/
-├── frontend/               # Next.js PWA Application
-│   ├── src/
-│   │   ├── app/            # App Router Pages
-│   │   └── components/     # UI Components
-│   └── public/
-├── tickets/                # Engineering Tickets & Reports
-├── .env.example            # Environment Template
-├── docker-compose.yml      # Orchestration
-├── manage.py               # Django Entry Point
-└── requirements.txt        # Python Dependencies
-```
-
----
 
 ## 🤝 Contribution & Team
 

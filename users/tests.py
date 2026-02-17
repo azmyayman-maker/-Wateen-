@@ -554,4 +554,497 @@ class TestProfileModelStr(TestCase):
             role=UserRole.NURSE,
         )
         profile = NurseProfile.objects.get(user=user)
+
         self.assertEqual(str(profile), 'NurseProfile(29901011234806)')
+
+        self.assertEqual(str(profile), 'NurseProfile(29901011234806)')
+
+
+class TestAdminInterface(TestCase):
+    """Test Django admin functionality for CustomUser and Profiles."""
+
+    def setUp(self):
+        self.admin_user = User.objects.create_superuser(
+            national_id='29901011234900',
+            phone_number='01012345900',
+            password='AdminPass123!'
+        )
+        self.client = APIClient()
+        from django.contrib.admin.sites import AdminSite
+        from users.admin import CustomUserAdmin, PatientProfileAdmin, NurseProfileAdmin
+
+        self.site = AdminSite()
+        self.user_admin = CustomUserAdmin(User, self.site)
+        self.patient_admin = PatientProfileAdmin(PatientProfile, self.site)
+        self.nurse_admin = NurseProfileAdmin(NurseProfile, self.site)
+
+    def test_custom_user_admin_list_display(self):
+        """Verify CustomUserAdmin list_display fields."""
+        expected_fields = (
+            'national_id',
+            'phone_number',
+            'role',
+            'is_active',
+            'is_staff',
+            'date_joined'
+        )
+        self.assertEqual(self.user_admin.list_display, expected_fields)
+
+    def test_custom_user_admin_search_fields(self):
+        """Verify CustomUserAdmin search fields."""
+        expected_fields = (
+            'national_id',
+            'phone_number',
+            'email',
+            'first_name_ar',
+            'last_name_ar'
+        )
+        self.assertEqual(self.user_admin.search_fields, expected_fields)
+
+    def test_custom_user_admin_list_filter(self):
+        """Verify CustomUserAdmin list filters."""
+        expected_filters = (
+            'role',
+            'is_active',
+            'is_staff',
+            'is_superuser'
+        )
+        self.assertEqual(self.user_admin.list_filter, expected_filters)
+
+    def test_patient_profile_admin_list_display(self):
+        """Verify PatientProfileAdmin list_display fields."""
+        expected_fields = ('user', 'date_of_birth', 'gender', 'wearables_enabled', 'created_at')
+        self.assertEqual(self.patient_admin.list_display, expected_fields)
+
+    def test_nurse_profile_admin_list_display(self):
+        """Verify NurseProfileAdmin list_display fields."""
+        expected_fields = ('user', 'syndicate_number', 'rating', 'is_available', 'verification_status', 'created_at')
+        self.assertEqual(self.nurse_admin.list_display, expected_fields)
+
+    def test_patient_profile_admin_search_fields(self):
+        """Verify PatientProfileAdmin search functionality."""
+        expected_fields = ('user__national_id', 'user__phone_number', 'emergency_contact')
+        self.assertEqual(self.patient_admin.search_fields, expected_fields)
+
+    def test_nurse_profile_admin_search_fields(self):
+        """Verify NurseProfileAdmin search functionality."""
+        expected_fields = ('user__national_id', 'user__phone_number', 'syndicate_number')
+        self.assertEqual(self.nurse_admin.search_fields, expected_fields)
+
+
+class TestPatientProfileValidation(TestCase):
+    """Test PatientProfile model field validation and constraints."""
+
+    def test_patient_profile_creation_with_all_fields(self):
+        """Create PatientProfile with all optional fields populated."""
+        from datetime import date
+        from django.contrib.gis.geos import Point
+
+        user = User.objects.create_user(
+            national_id='29901011234810',
+            phone_number='01012345810',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        profile = PatientProfile.objects.get(user=user)
+        profile.date_of_birth = date(1990, 1, 1)
+        profile.gender = 'MALE'
+        profile.address_text = 'Cairo, Egypt'
+        profile.home_location = Point(31.2357, 30.0444)  # Cairo coordinates
+        profile.medical_notes = 'No allergies'
+        profile.emergency_contact = '01012345999'
+        profile.wearables_enabled = True
+        profile.save()
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.gender, 'MALE')
+        self.assertTrue(profile.wearables_enabled)
+        self.assertIsNotNone(profile.home_location)
+
+    def test_patient_profile_gender_choices(self):
+        """Test gender field accepts valid choices."""
+        from users.models import GenderChoices
+
+        user = User.objects.create_user(
+            national_id='29901011234811',
+            phone_number='01012345811',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        profile = PatientProfile.objects.get(user=user)
+
+        # Test MALE choice
+        profile.gender = GenderChoices.MALE
+        profile.save()
+        self.assertEqual(profile.gender, 'MALE')
+
+        # Test FEMALE choice
+        profile.gender = GenderChoices.FEMALE
+        profile.save()
+        self.assertEqual(profile.gender, 'FEMALE')
+
+    def test_patient_profile_cascade_delete(self):
+        """Test that deleting user cascades to profile."""
+        user = User.objects.create_user(
+            national_id='29901011234812',
+            phone_number='01012345812',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        profile_exists = PatientProfile.objects.filter(user=user).exists()
+        self.assertTrue(profile_exists)
+
+        user.delete()
+
+        profile_exists = PatientProfile.objects.filter(user_id=user.id).exists()
+        self.assertFalse(profile_exists)
+
+    def test_patient_profile_nullable_fields(self):
+        """Test that optional fields can be null or blank."""
+        user = User.objects.create_user(
+            national_id='29901011234813',
+            phone_number='01012345813',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        profile = PatientProfile.objects.get(user=user)
+
+        # All these fields should be nullable/blank by default
+        self.assertIsNone(profile.date_of_birth)
+        self.assertEqual(profile.gender, '')
+        self.assertEqual(profile.address_text, '')
+        self.assertIsNone(profile.home_location)
+
+
+class TestNurseProfileValidation(TestCase):
+    """Test NurseProfile model field validation and constraints."""
+
+    def test_nurse_profile_creation_with_all_fields(self):
+        """Create NurseProfile with all optional fields populated."""
+        from datetime import date
+        from django.contrib.gis.geos import Point
+        from users.models import VerificationStatus
+
+        user = User.objects.create_user(
+            national_id='29901011234820',
+            phone_number='01012345820',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+        profile.national_id_document = 'NID-123456'
+        profile.syndicate_number = 'SYN-789'
+        profile.syndicate_expiry = date(2025, 12, 31)
+        profile.specializations = ['ICU', 'Emergency']
+        profile.rating = 4.75
+        profile.is_available = True
+        profile.last_location = Point(31.2357, 30.0444)
+        profile.verification_status = VerificationStatus.VERIFIED
+        profile.save()
+
+        profile.refresh_from_db()
+        self.assertEqual(profile.syndicate_number, 'SYN-789')
+        self.assertEqual(profile.rating, 4.75)
+        self.assertTrue(profile.is_available)
+        self.assertEqual(profile.verification_status, 'VERIFIED')
+        self.assertEqual(len(profile.specializations), 2)
+
+    def test_nurse_profile_verification_status_choices(self):
+        """Test verification_status field accepts valid choices."""
+        from users.models import VerificationStatus
+
+        user = User.objects.create_user(
+            national_id='29901011234821',
+            phone_number='01012345821',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+
+        # Default should be PENDING
+        self.assertEqual(profile.verification_status, VerificationStatus.PENDING)
+
+        # Test VERIFIED
+        profile.verification_status = VerificationStatus.VERIFIED
+        profile.save()
+        self.assertEqual(profile.verification_status, 'VERIFIED')
+
+        # Test REJECTED
+        profile.verification_status = VerificationStatus.REJECTED
+        profile.save()
+        self.assertEqual(profile.verification_status, 'REJECTED')
+
+    def test_nurse_profile_specializations_jsonfield(self):
+        """Test specializations JSONField functionality."""
+        user = User.objects.create_user(
+            national_id='29901011234822',
+            phone_number='01012345822',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+
+        # Default should be empty list
+        self.assertEqual(profile.specializations, [])
+
+        # Test adding specializations
+        profile.specializations = ['Pediatric', 'Geriatric', 'Home Care']
+        profile.save()
+        profile.refresh_from_db()
+
+        self.assertEqual(len(profile.specializations), 3)
+        self.assertIn('Pediatric', profile.specializations)
+
+    def test_nurse_profile_rating_decimal_precision(self):
+        """Test rating field decimal precision."""
+        user = User.objects.create_user(
+            national_id='29901011234823',
+            phone_number='01012345823',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+
+        # Default rating
+        self.assertEqual(profile.rating, 5.00)
+
+        # Test decimal precision (max_digits=3, decimal_places=2)
+        profile.rating = 4.99
+        profile.save()
+        profile.refresh_from_db()
+        self.assertEqual(profile.rating, 4.99)
+
+    def test_nurse_profile_cascade_delete(self):
+        """Test that deleting user cascades to profile."""
+        user = User.objects.create_user(
+            national_id='29901011234824',
+            phone_number='01012345824',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile_exists = NurseProfile.objects.filter(user=user).exists()
+        self.assertTrue(profile_exists)
+
+        user.delete()
+
+        profile_exists = NurseProfile.objects.filter(user_id=user.id).exists()
+        self.assertFalse(profile_exists)
+
+
+class TestGISFields(TestCase):
+    """Test GIS PointField functionality for location data."""
+
+    def test_patient_home_location_point_field(self):
+        """Test PatientProfile home_location PointField."""
+        from django.contrib.gis.geos import Point
+
+        user = User.objects.create_user(
+            national_id='29901011234830',
+            phone_number='01012345830',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        profile = PatientProfile.objects.get(user=user)
+
+        # Set Cairo coordinates (longitude, latitude)
+        cairo_point = Point(31.2357, 30.0444)
+        profile.home_location = cairo_point
+        profile.save()
+
+        profile.refresh_from_db()
+
+        self.assertIsNotNone(profile.home_location)
+        self.assertEqual(profile.home_location.x, 31.2357)
+        self.assertEqual(profile.home_location.y, 30.0444)
+        self.assertEqual(profile.home_location.srid, 4326)
+
+    def test_nurse_last_location_point_field(self):
+        """Test NurseProfile last_location PointField."""
+        from django.contrib.gis.geos import Point
+
+        user = User.objects.create_user(
+            national_id='29901011234831',
+            phone_number='01012345831',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+
+        # Set Alexandria coordinates
+        alex_point = Point(29.9187, 31.2001)
+        profile.last_location = alex_point
+        profile.save()
+
+        profile.refresh_from_db()
+
+        self.assertIsNotNone(profile.last_location)
+        self.assertEqual(profile.last_location.x, 29.9187)
+        self.assertEqual(profile.last_location.y, 31.2001)
+
+    def test_point_field_null_values(self):
+        """Test that PointFields can be null."""
+        patient_user = User.objects.create_user(
+            national_id='29901011234832',
+            phone_number='01012345832',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        nurse_user = User.objects.create_user(
+            national_id='29901011234833',
+            phone_number='01012345833',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        patient_profile = PatientProfile.objects.get(user=patient_user)
+        nurse_profile = NurseProfile.objects.get(user=nurse_user)
+
+        self.assertIsNone(patient_profile.home_location)
+        self.assertIsNone(nurse_profile.last_location)
+
+
+class TestSignalEdgeCases(TestCase):
+    """Test edge cases and error handling in profile creation signals."""
+
+    def test_signal_idempotency(self):
+        """Test that get_or_create makes signal idempotent."""
+        user = User.objects.create_user(
+            national_id='29901011234840',
+            phone_number='01012345840',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        # Profile should be created by signal
+        profile1 = PatientProfile.objects.get(user=user)
+
+        # Manually trigger signal again shouldn't create duplicate
+        from users.signals import create_user_profile
+        create_user_profile(User, user, False)
+
+        # Should still have only one profile
+        profile_count = PatientProfile.objects.filter(user=user).count()
+        self.assertEqual(profile_count, 1)
+
+    def test_no_profile_for_doctor_role(self):
+        """Test that DOCTOR role doesn't create any profile."""
+        user = User.objects.create_user(
+            national_id='29901011234841',
+            phone_number='01012345841',
+            password='TestPass123!',
+            role=UserRole.DOCTOR,
+        )
+
+        patient_profile_exists = PatientProfile.objects.filter(user=user).exists()
+        nurse_profile_exists = NurseProfile.objects.filter(user=user).exists()
+
+        self.assertFalse(patient_profile_exists)
+        self.assertFalse(nurse_profile_exists)
+
+    def test_no_profile_for_admin_role(self):
+        """Test that ADMIN role doesn't create any profile."""
+        user = User.objects.create_superuser(
+            national_id='29901011234842',
+            phone_number='01012345842',
+            password='TestPass123!',
+        )
+
+        patient_profile_exists = PatientProfile.objects.filter(user=user).exists()
+        nurse_profile_exists = NurseProfile.objects.filter(user=user).exists()
+
+        self.assertFalse(patient_profile_exists)
+        self.assertFalse(nurse_profile_exists)
+
+    def test_signal_transaction_rollback(self):
+        """Test that profile creation is part of user creation transaction."""
+        from django.db import transaction, IntegrityError
+
+        # Create a user that will succeed
+        user1 = User.objects.create_user(
+            national_id='29901011234843',
+            phone_number='01012345843',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        # Verify profile was created
+        self.assertTrue(PatientProfile.objects.filter(user=user1).exists())
+
+    def test_profile_timestamps(self):
+        """Test that profile timestamps are set correctly."""
+        user = User.objects.create_user(
+            national_id='29901011234844',
+            phone_number='01012345844',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=user)
+
+        self.assertIsNotNone(profile.created_at)
+        self.assertIsNotNone(profile.updated_at)
+        self.assertEqual(profile.created_at, profile.updated_at)
+
+
+class TestProfileModelMeta(TestCase):
+    """Test model Meta options and database constraints."""
+
+    def test_patient_profile_db_table_name(self):
+        """Test PatientProfile uses correct db_table name."""
+        self.assertEqual(PatientProfile._meta.db_table, 'users_patient_profile')
+
+    def test_nurse_profile_db_table_name(self):
+        """Test NurseProfile uses correct db_table name."""
+        self.assertEqual(NurseProfile._meta.db_table, 'users_nurse_profile')
+
+    def test_patient_profile_verbose_names(self):
+        """Test PatientProfile verbose name translations."""
+        self.assertEqual(str(PatientProfile._meta.verbose_name), 'ملف المريض')
+        self.assertEqual(str(PatientProfile._meta.verbose_name_plural), 'ملفات المرضى')
+
+    def test_nurse_profile_verbose_names(self):
+        """Test NurseProfile verbose name translations."""
+        self.assertEqual(str(NurseProfile._meta.verbose_name), 'ملف الممرض/ة')
+        self.assertEqual(str(NurseProfile._meta.verbose_name_plural), 'ملفات الممرضين')
+
+    def test_profile_one_to_one_relationship(self):
+        """Test that profile has OneToOne relationship with user."""
+        patient = User.objects.create_user(
+            national_id='29901011234850',
+            phone_number='01012345850',
+            password='TestPass123!',
+            role=UserRole.PATIENT,
+        )
+
+        # Access via reverse relationship
+        profile = patient.patient_profile
+        self.assertIsNotNone(profile)
+        self.assertEqual(profile.user, patient)
+
+    def test_profile_primary_key_is_user(self):
+        """Test that profile primary key is the user relationship."""
+        nurse = User.objects.create_user(
+            national_id='29901011234851',
+            phone_number='01012345851',
+            password='TestPass123!',
+            role=UserRole.NURSE,
+        )
+
+        profile = NurseProfile.objects.get(user=nurse)
+
+        # The primary key should be the user UUID
+        self.assertEqual(profile.pk, nurse.pk)
+        self.assertEqual(profile.user_id, nurse.id)
+
