@@ -14,13 +14,10 @@
         "-i",
         "--rm",
         "-e",
-        "DATABASE_URI",
+        "DATABASE_URI=postgresql://username:password@localhost:5432/dbname",
         "crystaldba/postgres-mcp",
         "--access-mode=unrestricted"
-      ],
-      "env": {
-        "DATABASE_URI": "postgresql://username:password@localhost:5432/dbname"
-      }
+      ]
     }
   }
 }

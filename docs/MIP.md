@@ -1,5 +1,6 @@
 # 🏥 Wateen (وَتِين) — Master Implementation Plan v3.2
 
+> **Primary Domain:** wateen.live
 > **Version:** 3.2 — February 2026
 > **Edition:** AI-Native Solo Operator  
 > **Target Market:** Egypt (Arabic-first, RTL)  
@@ -183,7 +184,7 @@ graph TB
 | **Containerization**         | Docker + Docker Compose                               | Consistent dev/prod environments                 |
 | **Reverse Proxy**            | Nginx                                                 | SSL, rate-limiting, static serving               |
 | **CI/CD**                    | GitHub Actions                                        | Free tier, well-integrated                       |
-| **Server OS**                | Fedora Server                                         | Operator preference                                  |
+| **Server OS**                | Fedora Server                                         | Operator preference                              |
 
 ### 2.3 Data Flow: "Enhanced Visit Request" Scenario
 
@@ -3426,68 +3427,71 @@ With proper execution of this plan, Wateen will establish itself as a leader in 
 ## 9.1 Infrastructure Cost Projection
 
 ### Phase 1: Free Tier Strategy (The "Lean" Start)
-*Perfect for development and initial beta testing (0-100 users).*
 
-| Component | Provider | Tier | Cost |
-| :--- | :--- | :--- | :--- |
-| **Frontend Options** | Vercel / Netlify | Hobby Tier | **$0/mo** |
-| **Backend & DB** | Supabase / Railway | Free Tier | **$0/mo** |
-| **Repo & CI/CD** | GitHub | Free Tier (2000 min blocks) | **$0/mo** |
-| **Authentication** | Supabase Auth / Clerk | Free Tier (< 50,000 MAU) | **$0/mo** |
-| **Total** | | | **$0 / month** |
+_Perfect for development and initial beta testing (0-100 users)._
+
+| Component            | Provider              | Tier                        | Cost           |
+| :------------------- | :-------------------- | :-------------------------- | :------------- |
+| **Frontend Options** | Vercel / Netlify      | Hobby Tier                  | **$0/mo**      |
+| **Backend & DB**     | Supabase / Railway    | Free Tier                   | **$0/mo**      |
+| **Repo & CI/CD**     | GitHub                | Free Tier (2000 min blocks) | **$0/mo**      |
+| **Authentication**   | Supabase Auth / Clerk | Free Tier (< 50,000 MAU)    | **$0/mo**      |
+| **Total**            |                       |                             | **$0 / month** |
 
 ### Phase 2: Scale Strategy (Production)
-*Recommended for active launch (100+ active daily users).*
 
-| Component | Provider | Configuration | Est. Cost |
-| :--- | :--- | :--- | :--- |
-| **VPS (Docker)** | DigitalOcean | Basic Droplet (1GB RAM) | **$6/mo** |
-| **Managed DB** | DigitalOcean | Managed Postgres (Essential) | **$15/mo** |
-| **Domain** | Namecheap | .app or .com | **~$1/mo** |
-| **Storage** | DigitalOcean Spaces | 250GB | **$5/mo** |
-| **Total** | | | **~$27 / month** |
+_Recommended for active launch (100+ active daily users)._
+
+| Component        | Provider            | Configuration                | Est. Cost        |
+| :--------------- | :------------------ | :--------------------------- | :--------------- |
+| **VPS (Docker)** | DigitalOcean        | Basic Droplet (1GB RAM)      | **$6/mo**        |
+| **Managed DB**   | DigitalOcean        | Managed Postgres (Essential) | **$15/mo**       |
+| **Domain**       | Namecheap           | .app or .com                 | **~$1/mo**       |
+| **Storage**      | DigitalOcean Spaces | 250GB                        | **$5/mo**        |
+| **Total**        |                     |                              | **~$27 / month** |
 
 ## 9.2 AI Context Maintenance Strategy
 
 To keep **Wateen Gem I** (the AI Architect) effective:
 
 1.  **Weekly Context Refresh:**
-    *   Run `tree /f /a > codebase_structure.txt` (exclude `.git`, `node_modules`, `venv`).
-    *   Upload this file to the AI chat to refresh its understanding of the file structure.
+    - Run `tree /f /a > codebase_structure.txt` (exclude `.git`, `node_modules`, `venv`).
+    - Upload this file to the AI chat to refresh its understanding of the file structure.
 2.  **Daily Implementation Update:**
-    *   At the end of each session, update `task.md` and `implementation_plan_v3.2.md` (mark completed tickets).
-    *   Brief the AI: "We completed Phase X. Status is now Y."
+    - At the end of each session, update `task.md` and `implementation_plan_v3.2.md` (mark completed tickets).
+    - Brief the AI: "We completed Phase X. Status is now Y."
 3.  **Documentation First:**
-    *   Before coding a complex feature, ask the AI to "Update the Architecture Section for Feature X" in a separate doc.
+    - Before coding a complex feature, ask the AI to "Update the Architecture Section for Feature X" in a separate doc.
 
 ## 9.3 The Daily Routine (4-Hour Block)
 
 Suggested schedule to maintain velocity without burnout:
 
-*   **Hour 1: Architecture & Review (The "Lead" Hat)**
-    *   Review yesterday's code.
-    *   Plan the day's *single* ticket.
-    *   Update documentation.
-*   **Hours 2-3: Hyper-Pairing (The "Coding" Hat)**
-    *   Active coding with AI.
-    *   Generate boilerplate, refine logic, debug.
-*   **Hour 4: Testing & Verify (The "QA" Hat)**
-    *   Run tests.
-    *   Manual verification (click through the PWA).
-    *   Commit & Push.
+- **Hour 1: Architecture & Review (The "Lead" Hat)**
+  - Review yesterday's code.
+  - Plan the day's _single_ ticket.
+  - Update documentation.
+- **Hours 2-3: Hyper-Pairing (The "Coding" Hat)**
+  - Active coding with AI.
+  - Generate boilerplate, refine logic, debug.
+- **Hour 4: Testing & Verify (The "QA" Hat)**
+  - Run tests.
+  - Manual verification (click through the PWA).
+  - Commit & Push.
 
 ## 9.4 Disaster Recovery Protocol
-*Goal: Restore regular development environment in < 30 minutes.*
+
+_Goal: Restore regular development environment in < 30 minutes._
 
 1.  **Git Clone:** `git clone <repo_url>`
 2.  **Environment Restore:**
-    *   Find `env.example` file.
-    *   Retrieve secrets from Password Manager (Bitwarden/1Password).
-    *   Create `.env` file.
+    - Find `env.example` file.
+    - Retrieve secrets from Password Manager (Bitwarden/1Password).
+    - Create `.env` file.
 3.  **Docker Up:** `docker-compose up -d --build`
 4.  **Database Restore:**
-    *   Running automated backups? `pg_restore -d wateen < latest_backup.dump`.
-    *   Development seed? `python manage.py loaddata initial_data.json`.
+    - Running automated backups? `pg_restore -d wateen < latest_backup.dump`.
+    - Development seed? `python manage.py loaddata initial_data.json`.
 5.  **Verify:** Run `pytest`. If green, you are back online.
 
 ---
@@ -3502,25 +3506,30 @@ To enforce architectural consistency, add the following `.cursorrules` file to t
 # Wateen Project Rules
 
 ## Context
+
 You are an expert AI software engineer building "Wateen", a Django Modular Monolith + Next.js PWA healthcare platform for Egypt.
 
 ## Tech Stack
+
 - **Backend:** Python 3.11, Django 5.0, Django Ninja (or DRF), PostgreSQL, Redis.
 - **Frontend:** Next.js 14 (App Router), React, Tailwind CSS, TypeScript.
 - **Styling:** Tailwind CSS (RTL enforcement: `dir="rtl"`).
 - **Icons:** Lucide React.
 
 ## Coding Style
+
 - **Python:** Black formatter compliance. Type hints (mypy) are mandatory.
 - **JavaScript:** Prettier compliance. Functional components only.
 - **Communication:** Be concise. Don't explain basic concepts unless asked.
 
 ## Architectural Enforcement
+
 1.  **Modular Monolith:** Functionality is grouped by Django Apps (e.g., `visits`, `users`, `billing`). Do not create circular dependencies between apps.
 2.  **Business Logic:** Keep views thin. Put complex logic in `services.py` or `selectors.py` within the app.
 3.  **Tickets:** Always implement code based on the specific requirements of the active Engineering Ticket. Do not implement features not requested.
 
 ## Critical Rules
+
 - **Never Hallucinate Packages:** Only use packages listed in `requirements.txt` or `package.json`. If a new package is needed, ask for permission first.
 - **Security First:** Never hardcode secrets. Use `os.environ` or `config()` from `decouple`.
 - **RTL Support:** Always ensure UI components support Right-to-Left layouts (margin-start/margin-end instead of left/right).
@@ -3530,7 +3539,7 @@ You are an expert AI software engineer building "Wateen", a Django Modular Monol
 
 # 11. Conclusion
 
-This Master Implementation Plan v3.2 reflects the ultimate "AI-Native" approach. It not only defines *what* to build but explicitly configures *how* the AI and Human Operator will collaborate.
+This Master Implementation Plan v3.2 reflects the ultimate "AI-Native" approach. It not only defines _what_ to build but explicitly configures _how_ the AI and Human Operator will collaborate.
 
 By merging strict engineering tickets with an AI-enforced IDE configuration, Wateen is positioned for rapid, high-quality execution by a solo operator.
 
