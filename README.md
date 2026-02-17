@@ -1,6 +1,9 @@
 <div align="center">
   <img src="icon.png" alt="Wateen Logo" width="120" height="120" />
-  <h1>Wateen (وَتِين)</h1>
+  <h1>Wateen (وَتِين)</h1> 
+  <p>
+  <h1> Primary Domain: wateen.live </h1> 
+  </p>
   <p><strong>AI-Powered Healthcare Ecosystem for Egypt</strong></p>
 
 [![Status](https://img.shields.io/badge/Status-Active_Development-success?style=for-the-badge)](https://github.com/azmyayman-maker/wateen)
