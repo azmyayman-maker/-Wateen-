@@ -5,7 +5,7 @@
   <h2>Primary Domain: wateen.live</h2>
 =======
 
-  <h1>Wateen (وَتِين)</h1>
+
 
   <p><strong>AI-Powered Healthcare Ecosystem for Egypt</strong></p>
 
