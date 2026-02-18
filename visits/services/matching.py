@@ -143,9 +143,19 @@ class GeoMatchingService:
 
             candidates: list[dict[str, Any]] = []
             for member, distance in results:
-                member_str = member.decode() if isinstance(member, bytes) else member
+                # FIX: Decode bytes to string if necessary
+                # Redis client often returns bytes, e.g., b'nurse:123'
+                member_str = member.decode("utf-8") if isinstance(member, bytes) else member
+
                 try:
-                    nurse_id = int(member_str.split(":")[1])
+                    # FIX: Robust ID extraction
+                    # Handle "nurse:123" -> 123
+                    if member_str.startswith("nurse:"):
+                        nurse_id_str = member_str.split(":")[1]
+                    else:
+                        nurse_id_str = member_str
+                    
+                    nurse_id = int(nurse_id_str)
                 except (IndexError, ValueError):
                     logger.warning("Invalid geo member format: %s", member_str)
                     continue

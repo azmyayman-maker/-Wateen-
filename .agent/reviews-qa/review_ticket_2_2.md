@@ -162,7 +162,7 @@ from visits.routing import websocket_urlpatterns  # noqa: E402
 
 ### 3.2 Test Execution Results
 
-```
+```text
 ============================= test session starts ==============================
 platform linux -- Python 3.11.14, pytest-7.4.4, pluggy-1.6.0
 django: version: 5.0.2, settings: config.settings (from ini)

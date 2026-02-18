@@ -2,11 +2,15 @@ from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
+from users.models import PatientProfile
 from visits.models import Visit, VisitStatus
 
 
 def create_visit_request(
-    patient_profile, latitude: float, longitude: float, service_type: str = ""
+    patient_profile: PatientProfile,
+    latitude: float,
+    longitude: float,
+    service_type: str = "",
 ) -> Visit:
     """
     Create a new Visit request for a patient.

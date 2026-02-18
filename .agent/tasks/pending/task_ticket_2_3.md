@@ -256,7 +256,7 @@ class GeoMatchingService:
                 nurse_id, lat, lng,
             )
             return True
-        except (redis.ConnectionError, redis.TimeoutError):
+        except redis.RedisError:
             logger.exception('Redis error updating nurse %s location', nurse_id)
             return False
 
@@ -317,7 +317,7 @@ class GeoMatchingService:
             )
             return candidates
 
-        except (redis.ConnectionError, redis.TimeoutError):
+        except redis.RedisError:
             logger.exception(
                 'Redis error searching candidates near (%.6f, %.6f)',
                 patient_lat, patient_lng,
@@ -347,7 +347,7 @@ class GeoMatchingService:
             lng, lat = positions[0]
             return (float(lat), float(lng))
 
-        except (redis.ConnectionError, redis.TimeoutError):
+        except redis.RedisError:
             logger.exception('Redis error getting nurse %s location', nurse_id)
             return None
 
@@ -370,7 +370,7 @@ class GeoMatchingService:
             if removed:
                 logger.debug('Removed nurse %s from geo index', nurse_id)
             return bool(removed)
-        except (redis.ConnectionError, redis.TimeoutError):
+        except redis.RedisError:
             logger.exception('Redis error removing nurse %s', nurse_id)
             return False
 ```

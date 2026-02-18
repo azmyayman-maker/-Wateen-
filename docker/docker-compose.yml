@@ -2,11 +2,8 @@
 # Wateen Project - Docker Compose Configuration
 # Production-Grade Infrastructure with Self-Healing & Health Monitoring
 # =============================================================================
-# Version: 3.8+ for healthcheck condition support in depends_on
 # Documentation: https://docs.docker.com/compose/compose-file/
 # =============================================================================
-
-version: "3.8"
 
 # =============================================================================
 # Services Definition
@@ -36,6 +33,18 @@ services:
     env_file:
       - ../.env
 
+    # Docker-internal overrides (take precedence over .env)
+    # .env uses localhost + test_user for local dev;
+    # inside Docker we must match the db service credentials exactly.
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_NAME=wateen
+      - DB_USER=wateen
+      - DB_PASSWORD=wateen_secret
+      - REDIS_HOST=redis
+      - DJANGO_SETTINGS_MODULE=config.settings
+
     # Service dependencies with health conditions
     # Web waits for db and redis to be healthy before starting
     depends_on:
@@ -55,10 +64,10 @@ services:
     # Verifies the Django application is responding to HTTP requests
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"]
-      interval: 30s # Check every 30 seconds
-      timeout: 10s # Timeout after 10 seconds
-      retries: 3 # Allow 3 failures before marking unhealthy
-      start_period: 40s # Give the app 40s to start before checking
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
     # Resource limits (adjust based on your infrastructure)
     deploy:
@@ -88,7 +97,10 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data/
 
-    # Environment configuration from .env file
+    # Environment configuration
+    # These use compose-level ${} substitution. Since .env is in the
+    # parent directory (not docker/), variables won't resolve from .env
+    # and will use the defaults specified here.
     environment:
       POSTGRES_DB: ${DB_NAME:-wateen}
       POSTGRES_USER: ${DB_USER:-wateen}
@@ -107,15 +119,13 @@ services:
       - wateen_network
 
     # Health check for PostgreSQL
-    # Uses pg_isready to verify database is accepting connections
-    # This checks at the application level, not just TCP connectivity
     healthcheck:
       test:
         ["CMD-SHELL", "pg_isready -U ${DB_USER:-wateen} -d ${DB_NAME:-wateen}"]
-      interval: 10s # Check every 10 seconds
-      timeout: 5s # Timeout after 5 seconds
-      retries: 5 # Allow 5 failures before marking unhealthy
-      start_period: 30s # Give PostgreSQL 30s to initialize
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
     # Resource limits
     deploy:
@@ -146,11 +156,9 @@ services:
       - redis_data:/data
 
     # Custom Redis configuration
-    # Enable AOF persistence for data durability
     command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
 
-    # No external ports exposed for security (internal network only)
-    # Uncomment below for external access during development
+    # No external ports exposed for security
     # ports:
     #   - "6379:6379"
 
@@ -162,13 +170,12 @@ services:
       - wateen_network
 
     # Health check for Redis
-    # Uses redis-cli ping to verify Redis is responding
     healthcheck:
       test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
-      interval: 10s # Check every 10 seconds
-      timeout: 5s # Timeout after 5 seconds
-      retries: 5 # Allow 5 failures before marking unhealthy
-      start_period: 10s # Give Redis 10s to start
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
     # Resource limits
     deploy:
@@ -192,13 +199,9 @@ services:
 # =============================================================================
 
 networks:
-  # Custom bridge network for service isolation
-  # Provides better DNS resolution and network segmentation
   wateen_network:
     driver: bridge
     name: wateen_network
-    # Enable internal DNS for service discovery
-    # Services can reach each other by service name
     ipam:
       driver: default
       config:
@@ -209,12 +212,10 @@ networks:
 # =============================================================================
 
 volumes:
-  # PostgreSQL persistent storage
   postgres_data:
     driver: local
     name: wateen_postgres_data
 
-  # Redis persistent storage
   redis_data:
     driver: local
     name: wateen_redis_data

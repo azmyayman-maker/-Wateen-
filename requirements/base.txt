@@ -28,7 +28,7 @@ psycopg2-binary==2.9.9
 redis==5.0.1
 
 # Django cache backend for Redis
-django-redis==5.4.0
+django-redis==6.0.0
 
 # -----------------------------------------------------------------------------
 # Real-time / WebSocket

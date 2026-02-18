@@ -7,6 +7,7 @@ Contains the TestConsumer for validating WebSocket infrastructure.
 import logging
 
 from channels.generic.websocket import JsonWebsocketConsumer
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -20,27 +21,44 @@ class TestConsumer(JsonWebsocketConsumer):
     """
 
     def connect(self):
-        """Accept the WebSocket connection."""
-        self.accept()
-        logger.info("TestConsumer: WebSocket connection accepted")
+        """Accept the WebSocket connection if allowed."""
+        user = self.scope.get("user")
+        is_authenticated = user and user.is_authenticated
+
+        if settings.DEBUG or is_authenticated:
+            self.accept()
+            logger.info("TestConsumer: WebSocket connection accepted")
+        else:
+            self.close()
+            logger.warning(
+                "TestConsumer: WebSocket connection rejected (DEBUG=%s, authenticated=%s)",
+                settings.DEBUG,
+                is_authenticated,
+            )
 
     def disconnect(self, close_code):
         """Handle WebSocket disconnection."""
         logger.info("TestConsumer: WebSocket disconnected (code=%s)", close_code)
 
-    def receive_json(self, content, **kwargs):
+    def receive_json(self, content, **_kwargs):
         """
         Handle incoming JSON messages.
 
         Responds to {"type": "ping"} with {"type": "pong"}.
         Unknown message types are logged and ignored.
         """
-        message_type = content.get('type')
+        if not isinstance(content, dict):
+            logger.warning(
+                "TestConsumer: Non-dict JSON payload received: %s",
+                type(content).__name__,
+            )
+            return
 
-        if message_type == 'ping':
-            self.send_json({'type': 'pong'})
+        message_type = content.get("type")
+
+        if message_type == "ping":
+            self.send_json({"type": "pong"})
         else:
             logger.warning(
-                "TestConsumer: Unknown message type received: %s",
-                message_type
+                "TestConsumer: Unknown message type received: %s", message_type
             )
