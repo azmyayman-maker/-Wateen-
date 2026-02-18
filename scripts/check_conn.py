@@ -10,7 +10,6 @@ Usage:
     python scripts/check_conn.py
 """
 
-import os
 import socket
 import sys
 from urllib.parse import urlparse
@@ -21,17 +20,13 @@ def mask_password_from_url(url: str) -> str:
     try:
         parsed = urlparse(url)
         if parsed.password:
-            # Replace password with asterisks
-            netloc = parsed.netloc
-            if parsed.username and parsed.password:
-                # Reconstruct netloc with masked password
-                masked_netloc = netloc.replace(parsed.password, "*****", 1)
-                # Reconstruct URL with masked netloc
-                masked_url = parsed._replace(netloc=masked_netloc).geturl()
-                return masked_url
+            username = parsed.username or ""
+            port_part = f":{parsed.port}" if parsed.port else ""
+            masked_netloc = f"{username}:*****@{parsed.hostname}{port_part}"
+            masked_url = parsed._replace(netloc=masked_netloc).geturl()
+            return masked_url
         return url
     except Exception:
-        # Fallback: return URL without exposing sensitive parts
         return "[URL masked due to parsing error]"
 
 
@@ -51,7 +46,9 @@ def parse_postgres_url(url: str) -> tuple[str, int]:
     return host, port
 
 
-def check_socket_connection(host: str, port: int, timeout: float = 5.0) -> tuple[bool, str]:
+def check_socket_connection(
+    host: str, port: int, timeout: float = 5.0
+) -> tuple[bool, str]:
     """
     Attempt a raw socket connection to verify network connectivity.
 
@@ -59,15 +56,17 @@ def check_socket_connection(host: str, port: int, timeout: float = 5.0) -> tuple
         tuple: (success: bool, message: str)
     """
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(timeout)
-        result = sock.connect_ex((host, port))
-        sock.close()
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((host, port))
 
-        if result == 0:
-            return True, f"[OK] Connection successful to {host}:{port}"
-        else:
-            return False, f"[FAIL] Connection failed to {host}:{port} (error code: {result})"
+            if result == 0:
+                return True, f"[OK] Connection successful to {host}:{port}"
+            else:
+                return (
+                    False,
+                    f"[FAIL] Connection failed to {host}:{port} (error code: {result})",
+                )
     except socket.gaierror as e:
         return False, f"[FAIL] DNS resolution failed for {host}: {e}"
     except socket.timeout:
