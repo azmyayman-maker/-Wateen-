@@ -13,10 +13,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
+import logging
 from typing import Optional
 from zoneinfo import ZoneInfo
 
 from django.utils.translation import gettext_lazy as _
+
+logger = logging.getLogger(__name__)
 
 # Cairo timezone for consistent pricing calculations
 CAIRO_TZ = ZoneInfo("Africa/Cairo")
@@ -109,8 +112,8 @@ class RuleBasedPricingStrategy(PricingStrategy):
             factor = PricingFactor.objects.filter(key=key).first()
             if factor:
                 return factor.value
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning("Failed to fetch PricingFactor '%s': %s", key, e)
 
         return self.DEFAULTS.get(key, Decimal("0"))
 
@@ -143,6 +146,18 @@ class RuleBasedPricingStrategy(PricingStrategy):
             return hour >= night_start or hour < night_end
         else:
             return night_start <= hour < night_end
+
+    def is_night_hours(self, request_time: datetime) -> bool:
+        """
+        Public method to check if the given time falls within night hours.
+
+        Args:
+            request_time: The datetime to check (will be converted to Cairo timezone)
+
+        Returns:
+            True if within night hours, False otherwise.
+        """
+        return self._is_night_hours(request_time)
 
     def get_time_multiplier(self, request_time: datetime) -> Decimal:
         """

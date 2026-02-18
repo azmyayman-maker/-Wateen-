@@ -7,9 +7,10 @@ from decouple import config
 # Add project root to path for relative config loading if needed,
 # but we use decouple which finds .env in parent dirs.
 
+
 def check_postgres():
     print("\n--- Checking PostgreSQL (Neon) ---")
-    db_url = config('DATABASE_URL', default=None)
+    db_url = config("DATABASE_URL", default=None)
     if not db_url:
         print("[FAIL] DATABASE_URL not found in .env")
         return False
@@ -27,9 +28,10 @@ def check_postgres():
         print(f"[FAIL] PostgreSQL Connection Error: {e}")
         return False
 
+
 def check_redis():
     print("\n--- Checking Redis (Cloud) ---")
-    redis_url = config('REDIS_URL', default=None)
+    redis_url = config("REDIS_URL", default=None)
     if not redis_url:
         print("[FAIL] REDIS_URL not found in .env")
         return False
@@ -37,12 +39,12 @@ def check_redis():
     try:
         r = redis.from_url(redis_url)
         r.ping()
-        print(f"[OK] Redis Connected (Ping success)")
-        
+        print("[OK] Redis Connected (Ping success)")
+
         # Geo Test
         key = "audit:geo_test_standalone"
         r.delete(key)
-        
+
         # redis-py expects a flat list: [lon, lat, member, lon, lat, member, ...]
         # Using the correct syntax for redis-py 5.x+
         try:
@@ -54,19 +56,19 @@ def check_redis():
             except Exception as fallback_error:
                 print(f"[FAIL] Redis Geo add failed: {fallback_error}")
                 return False
-             
+
         proxs = r.georadius(key, 31.2357, 30.0444, 1, unit="km")
-        
+
         # Decode if bytes
         proxs = [p.decode() if isinstance(p, bytes) else p for p in proxs]
-        
+
         if "Cairo_Tower" in proxs:
-             print("[OK] Redis Geo module active")
+            print("[OK] Redis Geo module active")
         else:
-             print(f"[FAIL] Redis Geo test returned: {proxs}")
-             r.delete(key)
-             return False
-           
+            print(f"[FAIL] Redis Geo test returned: {proxs}")
+            r.delete(key)
+            return False
+
         r.delete(key)
         return True
 
@@ -74,11 +76,12 @@ def check_redis():
         print(f"[FAIL] Redis Error: {e}")
         return False
 
+
 if __name__ == "__main__":
     print("Starting Standalone Infrastructure Audit...")
     pg_ok = check_postgres()
     redis_ok = check_redis()
-    
+
     if pg_ok and redis_ok:
         print("\n[SUCCESS] Infrastructure Audit Passed.")
         sys.exit(0)
