@@ -1,0 +1,54 @@
+version: "2"
+type: backend
+tech_stack:
+  - Python
+  - Django
+  - Django Rest Framework
+  - PostgreSQL
+  - PostGIS
+  - Redis
+  - Daphne
+features:
+  - name: User Authentication
+    description: Registration, login, token management, and profile access.
+    files:
+      - users/models.py
+      - users/views.py
+      - users/urls.py
+    endpoints:
+      - method: POST
+        path: /api/v1/auth/register/
+        description: Register a new user
+        auth_required: false
+      - method: POST
+        path: /api/v1/auth/token/
+        description: Obtain JWT token pair
+        auth_required: false
+      - method: POST
+        path: /api/v1/auth/token/refresh/
+        description: Refresh JWT token
+        auth_required: false
+      - method: POST
+        path: /api/v1/auth/logout/
+        description: Logout user
+        auth_required: true
+      - method: POST
+        path: /api/v1/auth/change-password/
+        description: Change user password
+        auth_required: true
+      - method: GET
+        path: /api/v1/profile/
+        description: Get user profile
+        auth_required: true
+  - name: Visit Management
+    description: Requesting and managing home nursing visits.
+    files:
+      - visits/models.py
+      - visits/views.py
+      - visits/urls.py
+    endpoints:
+      - method: POST
+        path: /api/v1/visits/request/
+        description: Request a new visit
+        auth_required: true
+known_limitations: []

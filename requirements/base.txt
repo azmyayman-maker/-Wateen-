@@ -27,6 +27,21 @@ psycopg2-binary==2.9.9
 # Redis Python client for caching and message brokering
 redis==5.0.1
 
+# Django cache backend for Redis
+django-redis==6.0.0
+
+# -----------------------------------------------------------------------------
+# Real-time / WebSocket
+# -----------------------------------------------------------------------------
+# Django Channels for WebSocket and async protocol support
+channels==4.0.0
+
+# Daphne ASGI server (HTTP + WebSocket)
+daphne==4.1.0
+
+# Redis channel layer backend for Django Channels
+channels-redis==4.2.0
+
 # -----------------------------------------------------------------------------
 # Configuration Management
 # -----------------------------------------------------------------------------

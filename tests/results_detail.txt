@@ -1,0 +1,149 @@
+============================= test session starts ==============================
+collecting ... collected 24 items
+
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_valid FAILED [  4%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_missing_fields PASSED [  8%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_password_mismatch PASSED [ 12%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_invalid_national_id PASSED [ 16%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_duplicate_national_id FAILED [ 20%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc002_login_valid FAILED [ 25%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc003_login_invalid FAILED [ 29%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc004_token_refresh FAILED [ 33%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc004_token_refresh_invalid PASSED [ 37%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc005_change_password FAILED [ 41%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc005_change_password_wrong_old FAILED [ 45%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc006_logout FAILED [ 50%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc006_logout_no_auth PASSED [ 54%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc007_get_profile FAILED [ 58%]
+tests/test_backend_comprehensive.py::TestAuthFlows::test_tc007_get_profile_no_auth PASSED [ 62%]
+tests/test_backend_comprehensive.py::TestVisitFlows::test_tc008_visit_request_valid FAILED [ 66%]
+tests/test_backend_comprehensive.py::TestVisitFlows::test_tc009_visit_request_no_auth PASSED [ 70%]
+tests/test_backend_comprehensive.py::TestVisitFlows::test_tc010_visit_request_invalid_lat FAILED [ 75%]
+tests/test_backend_comprehensive.py::TestVisitFlows::test_tc010_visit_request_by_nurse FAILED [ 79%]
+tests/test_backend_comprehensive.py::TestVisitStateMachine::test_valid_transition_pending_to_matched FAILED [ 83%]
+tests/test_backend_comprehensive.py::TestVisitStateMachine::test_valid_full_lifecycle FAILED [ 87%]
+tests/test_backend_comprehensive.py::TestVisitStateMachine::test_invalid_transition_pending_to_completed FAILED [ 91%]
+tests/test_backend_comprehensive.py::TestVisitStateMachine::test_cancel_from_any_active_state FAILED [ 95%]
+tests/test_backend_comprehensive.py::TestVisitStateMachine::test_cannot_transition_from_terminal FAILED [100%]
+
+=================================== FAILURES ===================================
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+------------------------------ Captured log call -------------------------------
+ERROR    django.request:log.py:241 Internal Server Error: /api/v1/auth/register/
+Traceback (most recent call last):
+  File "/usr/local/lib/python3.11/site-packages/django/core/handlers/exception.py", line 55, in inner
+    response = get_response(request)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/core/handlers/base.py", line 197, in _get_response
+    response = wrapped_callback(request, *callback_args, **callback_kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/views/decorators/csrf.py", line 65, in _view_wrapper
+    return view_func(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/django/views/generic/base.py", line 104, in view
+    return self.dispatch(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 509, in dispatch
+    response = self.handle_exception(exc)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 469, in handle_exception
+    self.raise_uncaught_exception(exc)
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 480, in raise_uncaught_exception
+    raise exc
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/views.py", line 506, in dispatch
+    response = handler(request, *args, **kwargs)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/generics.py", line 194, in post
+    return self.create(request, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/users/views.py", line 30, in create
+    user = serializer.save()
+           ^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/rest_framework/serializers.py", line 208, in save
+    self.instance = self.create(validated_data)
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/users/serializers.py", line 76, in create
+    user = User.objects.create_user(password=password, **validated_data)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/users/models.py", line 50, in create_user
+    user.save(using=self._db)
+  File "/usr/local/lib/python3.11/site-packages/django/contrib/auth/base_user.py", line 78, in save
+    super().save(*args, **kwargs)
+  File "/usr/local/lib/python3.11/site-packages/django/db/models/base.py", line 822, in save
+    self.save_base(
+  File "/usr/local/lib/python3.11/site-packages/django/db/models/base.py", line 924, in save_base
+    post_save.send(
+  File "/usr/local/lib/python3.11/site-packages/django/dispatch/dispatcher.py", line 189, in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/contextlib.py", line 81, in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+E   TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+/usr/local/lib/python3.11/contextlib.py:81: TypeError: create_user_profile() missing 2 required positional arguments: '_sender' and '_created'
+=============================== warnings summary ===============================
+../usr/local/lib/python3.11/site-packages/_pytest/config/__init__.py:1428
+  /usr/local/lib/python3.11/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+tests/test_backend_comprehensive.py:284
+  /app/tests/test_backend_comprehensive.py:284: PytestUnknownMarkWarning: Unknown pytest.mark.gis - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.gis
+
+tests/test_backend_comprehensive.py:352
+  /app/tests/test_backend_comprehensive.py:352: PytestUnknownMarkWarning: Unknown pytest.mark.gis - is this a typo?  You can register custom marks to avoid this warning - for details, see https://docs.pytest.org/en/stable/how-to/mark.html
+    @pytest.mark.gis
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_valid
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc001_register_duplicate_national_id
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc002_login_valid
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc003_login_invalid
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc004_token_refresh
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc005_change_password
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc005_change_password_wrong_old
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc006_logout
+FAILED tests/test_backend_comprehensive.py::TestAuthFlows::test_tc007_get_profile
+FAILED tests/test_backend_comprehensive.py::TestVisitFlows::test_tc008_visit_request_valid
+FAILED tests/test_backend_comprehensive.py::TestVisitFlows::test_tc010_visit_request_invalid_lat
+FAILED tests/test_backend_comprehensive.py::TestVisitFlows::test_tc010_visit_request_by_nurse
+FAILED tests/test_backend_comprehensive.py::TestVisitStateMachine::test_valid_transition_pending_to_matched
+FAILED tests/test_backend_comprehensive.py::TestVisitStateMachine::test_valid_full_lifecycle
+FAILED tests/test_backend_comprehensive.py::TestVisitStateMachine::test_invalid_transition_pending_to_completed
+FAILED tests/test_backend_comprehensive.py::TestVisitStateMachine::test_cancel_from_any_active_state
+FAILED tests/test_backend_comprehensive.py::TestVisitStateMachine::test_cannot_transition_from_terminal
+=================== 17 failed, 7 passed, 3 warnings in 2.96s ===================
