@@ -25,9 +25,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libproj-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install python dependencies
+# Install python dependencies (base + dev for testing)
 COPY requirements/base.txt requirements/base.txt
-RUN pip install --upgrade pip && pip install -r requirements/base.txt
+COPY requirements/dev.txt requirements/dev.txt
+RUN pip install --upgrade pip && pip install -r requirements/dev.txt
 
 # Copy project
 COPY . .

@@ -37,21 +37,11 @@ services:
     # .env uses localhost + test_user for local dev;
     # inside Docker we must match the db service credentials exactly.
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_NAME=wateen
-      - DB_USER=wateen
-      - DB_PASSWORD=wateen_secret
-      - REDIS_HOST=redis
       - DJANGO_SETTINGS_MODULE=config.settings
 
     # Service dependencies with health conditions
-    # Web waits for db and redis to be healthy before starting
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
+    # Redis Cloud is used instead of local Redis
+    # depends_on removed
 
     # Restart policy: Always restart unless explicitly stopped
     restart: unless-stopped
@@ -86,115 +76,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # ---------------------------------------------------------------------------
-  # PostgreSQL Database Service
-  # ---------------------------------------------------------------------------
-  db:
-    image: postgis/postgis:16-3.4
-    container_name: wateen_db
-
-    # Persistent data storage
-    volumes:
-      - postgres_data:/var/lib/postgresql/data/
-
-    # Environment configuration
-    # These use compose-level ${} substitution. Since .env is in the
-    # parent directory (not docker/), variables won't resolve from .env
-    # and will use the defaults specified here.
-    environment:
-      POSTGRES_DB: ${DB_NAME:-wateen}
-      POSTGRES_USER: ${DB_USER:-wateen}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-wateen_secret}
-
-    # No external ports exposed for security (internal network only)
-    # Uncomment below for external access during development
-    # ports:
-    #   - "127.0.0.1:5432:5432"
-
-    # Restart policy: Always restart unless explicitly stopped
-    restart: unless-stopped
-
-    # Connect to custom network
-    networks:
-      - wateen_network
-
-    # Health check for PostgreSQL
-    healthcheck:
-      test:
-        ["CMD-SHELL", "pg_isready -U ${DB_USER:-wateen} -d ${DB_NAME:-wateen}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
-
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: "1.0"
-          memory: 512M
-        reservations:
-          cpus: "0.25"
-          memory: 128M
-
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-  # ---------------------------------------------------------------------------
-  # Redis Cache/Broker Service
-  # ---------------------------------------------------------------------------
-  redis:
-    image: redis:7-alpine
-    container_name: wateen_redis
-
-    # Persistent data storage for Redis
-    volumes:
-      - redis_data:/data
-
-    # Custom Redis configuration
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
-
-    # No external ports exposed for security
-    # ports:
-    #   - "6379:6379"
-
-    # Restart policy: Always restart unless explicitly stopped
-    restart: unless-stopped
-
-    # Connect to custom network
-    networks:
-      - wateen_network
-
-    # Health check for Redis
-    healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping | grep -q PONG"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
-    # Resource limits
-    deploy:
-      resources:
-        limits:
-          cpus: "0.5"
-          memory: 256M
-        reservations:
-          cpus: "0.1"
-          memory: 64M
-
-    # Logging configuration
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10m"
-        max-file: "3"
-
-# =============================================================================
+  # =============================================================================
 # Networks Definition
 # =============================================================================
 
@@ -212,10 +94,5 @@ networks:
 # =============================================================================
 
 volumes:
-  postgres_data:
-    driver: local
-    name: wateen_postgres_data
-
-  redis_data:
-    driver: local
-    name: wateen_redis_data
+  # Postgres data volume removed as we are using Neon Serverless Postgres
+  {}

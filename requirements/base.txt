@@ -19,7 +19,10 @@ Django==5.0.2
 # -----------------------------------------------------------------------------
 # PostgreSQL adapter for Django
 # Binary package for easier installation (no compilation required)
-psycopg2-binary==2.9.9
+psycopg2-binary>=2.9.9
+
+# Database URL parser for 12-factor apps
+dj-database-url>=2.1.0
 
 # -----------------------------------------------------------------------------
 # Cache & Message Broker

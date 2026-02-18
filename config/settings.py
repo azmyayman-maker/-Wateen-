@@ -12,8 +12,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import sys
 from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
+from config.redis_utils import (
+    get_redis_config,
+    get_caches_config,
+    get_channel_layers_config,
+)
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -44,7 +50,87 @@ ALLOWED_HOSTS = (
 )
 
 
+# =============================================================================
+# GDAL Configuration (Windows Compatibility)
+# =============================================================================
+def _configure_gdal():
+    """Attempt to configure GDAL library path on Windows."""
+    if os.name != "nt":
+        return
+
+    if os.environ.get("GDAL_LIBRARY_PATH"):
+        return
+
+    common_paths = [
+        r"C:\OSGeo4W\bin\gdal304.dll",
+        r"C:\OSGeo4W\bin\gdal303.dll",
+        r"C:\OSGeo4W\bin\gdal302.dll",
+        r"C:\Program Files\QGIS 3.28\bin\gdal304.dll",
+        r"C:\Program Files\QGIS 3.34\bin\gdal304.dll",
+        r"C:\Program Files (x86)\OSGeo4W\bin\gdal304.dll",
+    ]
+
+    for path in common_paths:
+        if os.path.exists(path):
+            os.environ["GDAL_LIBRARY_PATH"] = path
+            return
+
+
+_configure_gdal()
+
+# Check GDAL availability after configuration
+_GDAL_AVAILABLE = True
+_GDAL_WARNING = None
+if os.name == "nt" and not os.environ.get("GDAL_LIBRARY_PATH"):
+    try:
+        from osgeo import gdal
+    except ImportError:
+        _GDAL_AVAILABLE = False
+        _GDAL_WARNING = (
+            "\n"
+            "======================================================================\n"
+            "[WARN] GDAL NOT FOUND\n"
+            "======================================================================\n"
+            "\n"
+            "GeoDjango requires GDAL but it was not found on your system.\n"
+            "\n"
+            "Options:\n"
+            "  1. Install OSGeo4W from https://trac.osgeo.org/osgeo4w/\n"
+            "  2. Set GDAL_LIBRARY_PATH environment variable\n"
+            "  3. Run: python scripts/doctor.py\n"
+            "======================================================================\n"
+        )
+        print(_GDAL_WARNING, file=sys.stderr)
+
+
+# =============================================================================
+# Redis Configuration (Hybrid Strategy)
+# =============================================================================
+_REDIS_CONFIG = get_redis_config(debug=DEBUG)
+
+if _REDIS_CONFIG.backend_type == "redis":
+    print(
+        f"\n[OK] Connected to Cloud Redis ({_REDIS_CONFIG.latency_ms}ms latency)"
+        f"\n     URL: {_REDIS_CONFIG.url_sanitized}\n",
+        file=sys.stderr,
+    )
+elif _REDIS_CONFIG.backend_type == "locmem":
+    if not DEBUG:
+        raise ImproperlyConfigured(
+            "Redis Required: REDIS_URL not configured and DEBUG=False.\n"
+            "Configure REDIS_URL environment variable before deploying to production."
+        )
+    print(
+        f"\n[WARN] Redis Unreachable. Using In-Memory Fallback (Dev Mode)"
+        f"\n       Reason: {_REDIS_CONFIG.fallback_reason}"
+        f"\n       Set REDIS_URL environment variable to enable Redis caching.\n",
+        file=sys.stderr,
+    )
+
+
+# =============================================================================
 # Application definition
+# =============================================================================
 
 INSTALLED_APPS = [
     "daphne",
@@ -92,41 +178,29 @@ TEMPLATES = [
 
 ASGI_APPLICATION = "config.asgi.application"
 
-# Channel Layers configuration (Redis backend for Django Channels)
-CHANNEL_LAYERS = {
-    "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
-        "CONFIG": {
-            "hosts": [("redis", 6379)],
-        },
-    },
-}
+# Channel Layers configuration (hybrid Redis/InMemory)
+CHANNEL_LAYERS = get_channel_layers_config(_REDIS_CONFIG)
 
-# Cache configuration (Redis backend via django-redis)
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": f"redis://{os.environ.get('REDIS_HOST', 'redis')}:6379/1",
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        },
-        "KEY_PREFIX": "wateen",
-    },
-}
+# Cache configuration (hybrid Redis/LocMem)
+CACHES = get_caches_config(_REDIS_CONFIG)
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# Database
+# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+import dj_database_url
+
 DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.postgis",
-        "NAME": os.environ.get("DB_NAME", "wateen"),
-        "USER": os.environ.get("DB_USER", "wateen"),
-        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
-        "HOST": os.environ.get("DB_HOST", "db"),
-        "PORT": os.environ.get("DB_PORT", "5432"),
-    }
+    "default": dj_database_url.config(
+        default=os.environ.get("DATABASE_URL"),
+        conn_max_age=600,
+        conn_health_checks=True,
+        ssl_require=True,
+    )
 }
+# Enforce PostGIS engine for matching logic
+DATABASES["default"]["ENGINE"] = "django.contrib.gis.db.backends.postgis"
 
 
 # Password validation

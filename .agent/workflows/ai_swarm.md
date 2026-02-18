@@ -34,16 +34,17 @@ This workflow defines the **MANDATORY** standard operating procedure for all tas
 2.  **Create Plan:** Write/Update `implementation_plan.md`.
 3.  **Generate Task:** Create a prompt file `.agent/tasks/pending/task_XXX.md`.
 
-### Phase 2: Execution (OpenCode - Automated)
+### Phase 2: Execution (OpenCode - Automated) if i tell you
 
 1.  **Trigger:** Antigravity runs OpenCode CLI.
-    - _Command:_ `opencode --prompt .agent/tasks/pending/task_XXX.md`
+    - _Command:_ `opencode --prompt /speckit.specif.agent/tasks/pending/task_XXX.md`
 2.  **Action:** OpenCode implements the changes .
 3.  **Completion:** Antigravity verifies file creation.
 
 ### Phase 3: Review (Kilo Code - User/Manual)
 
-1.  **Trigger:** User asks Kilo Code to review.
+1.  **Trigger:** User asks Kilo Code to review. if i tell you
+
     - _Prompt to Kilo:_ "Review the changes in [files] based on `.agent/tasks/pending/task_XXX.md`. Save report to `.agent/reviews-qa/review_XXX.md`."
 2.  **Action:** Kilo Code analyzes and writes the report.
 

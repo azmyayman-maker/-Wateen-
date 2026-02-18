@@ -1,0 +1,172 @@
+openapi: 3.0.3
+info:
+  title: Pricing Engine Estimate API
+  description: API for requesting price estimates for home nursing visits
+  version: 1.0.0
+
+paths:
+  /api/v1/visits/estimate/:
+    post:
+      summary: Request price estimate
+      description: |
+        Calculate price estimate based on service type, location, and time.
+        
+        **Changes in v1.1 (Remediation)**:
+        - Distance calculated dynamically from nearest available nurse
+        - Only considers nurses with `is_available=true` AND `verification_status=VERIFIED`
+        - Time-based pricing uses Cairo timezone
+        - Logging is non-blocking
+      operationId: createEstimate
+      tags:
+        - Pricing
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EstimateRequest'
+            examples:
+              basic:
+                summary: Basic estimate request
+                value:
+                  service_type_id: "550e8400-e29b-41d4-a716-446655440000"
+                  latitude: 30.0444
+                  longitude: 31.2357
+              with_time:
+                summary: Estimate with specific time
+                value:
+                  service_type_id: "550e8400-e29b-41d4-a716-446655440000"
+                  latitude: 30.0444
+                  longitude: 31.2357
+                  request_time: "2026-02-18T23:00:00+02:00"
+      responses:
+        '200':
+          description: Price estimate calculated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EstimateResponse'
+              example:
+                service_type:
+                  id: "550e8400-e29b-41d4-a716-446655440000"
+                  name: "Home Nursing"
+                  base_price: "100.00"
+                breakdown:
+                  base_price: "100.00"
+                  distance_km: 2.35
+                  distance_fee: "117.50"
+                  time_multiplier: "1.00"
+                  ai_surge_coefficient: "1.0"
+                  final_price: "217.50"
+                is_night_hours: false
+                currency: "EGP"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_service:
+                  value:
+                    detail: "Service type not found."
+                    code: "service_type_not_found"
+                invalid_coordinates:
+                  value:
+                    latitude: ["Latitude must be between -90 and 90."]
+
+components:
+  schemas:
+    EstimateRequest:
+      type: object
+      required:
+        - service_type_id
+        - latitude
+        - longitude
+      properties:
+        service_type_id:
+          type: string
+          format: uuid
+          description: UUID of the service type
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        latitude:
+          type: number
+          format: float
+          minimum: -90
+          maximum: 90
+          description: Patient's latitude
+          example: 30.0444
+        longitude:
+          type: number
+          format: float
+          minimum: -180
+          maximum: 180
+          description: Patient's longitude
+          example: 31.2357
+        request_time:
+          type: string
+          format: date-time
+          description: |
+            Optional time for the estimate. If not provided, uses current time.
+            Should include timezone offset (e.g., +02:00 for Cairo).
+          example: "2026-02-18T23:00:00+02:00"
+
+    EstimateResponse:
+      type: object
+      properties:
+        service_type:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+            base_price:
+              type: string
+              description: Base price in EGP
+        breakdown:
+          type: object
+          properties:
+            base_price:
+              type: string
+              description: Service base price in EGP
+            distance_km:
+              type: number
+              format: float
+              description: |
+                Distance to nearest available verified nurse in kilometers.
+                Returns 0 if no nurse is available.
+            distance_fee:
+              type: string
+              description: Distance × per_km_rate in EGP
+            time_multiplier:
+              type: string
+              enum: ["1.00", "1.50"]
+              description: |
+                1.00 for day hours (06:00-22:00 Cairo time)
+                1.50 for night hours (22:00-06:00 Cairo time)
+            ai_surge_coefficient:
+              type: string
+              description: AI-based surge multiplier (currently always 1.0)
+            final_price:
+              type: string
+              description: |
+                Formula: (base_price + distance_fee) × time_multiplier × ai_surge_coefficient
+        is_night_hours:
+          type: boolean
+          description: Whether night multiplier was applied
+        currency:
+          type: string
+          enum: [EGP]
+          description: Currency code
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+          description: Human-readable error message
+        code:
+          type: string
+          description: Machine-readable error code

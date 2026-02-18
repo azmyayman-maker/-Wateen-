@@ -1,11 +1,29 @@
 """
 Services package for the visits app.
 Re-exports all service functions for backward compatibility.
+
+T056: Exports pricing engine classes for external use.
 """
 
-from visits.services.matching import GeoMatchingService, GEO_KEY
+from visits.services.matching import GEO_KEY, GeoMatchingService
+from visits.services.pricing import (
+    MLPricingStrategy,
+    PriceBreakdown,
+    PricingStrategy,
+    RuleBasedPricingStrategy,
+    get_default_strategy,
+)
 
-__all__ = ["create_visit_request", "GeoMatchingService", "GEO_KEY"]
+__all__ = [
+    "create_visit_request",
+    "GeoMatchingService",
+    "GEO_KEY",
+    "PricingStrategy",
+    "RuleBasedPricingStrategy",
+    "MLPricingStrategy",
+    "PriceBreakdown",
+    "get_default_strategy",
+]
 
 
 def __getattr__(name):
