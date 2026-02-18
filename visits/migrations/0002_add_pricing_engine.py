@@ -7,6 +7,63 @@ from decimal import Decimal
 from django.db import migrations, models
 
 
+def backfill_service_types(apps, schema_editor):
+    """
+    Backfill ServiceType from existing Visit.service_type string values.
+    Creates ServiceType records for each distinct string value found,
+    then updates the temporary service_type_fk field.
+    
+    Uses bulk_update for performance on large tables (batches of 1000).
+    """
+    Visit = apps.get_model("visits", "Visit")
+    ServiceType = apps.get_model("visits", "ServiceType")
+    
+    # Get distinct non-empty service_type string values
+    distinct_types = Visit.objects.exclude(service_type="").exclude(
+        service_type__isnull=True
+    ).values_list("service_type", flat=True).distinct()
+    
+    # Create ServiceType records for each distinct value
+    service_type_map = {}
+    for type_name in distinct_types:
+        service_type_obj, _ = ServiceType.objects.get_or_create(
+            name=type_name,
+            defaults={
+                "base_price": Decimal("100.00"),  # Default base price
+                "description": f"Migrated from legacy service_type: {type_name}",
+                "is_active": True,
+            }
+        )
+        service_type_map[type_name] = service_type_obj
+    
+    # OPTIMIZED: Use bulk_update with batching for performance
+    # This reduces O(n) individual UPDATE queries to O(n/batch_size) queries
+    visits_to_update = []
+    batch_size = 1000
+    
+    # Use iterator() to save memory on large tables
+    for visit in Visit.objects.filter(service_type__in=service_type_map.keys()).iterator():
+        visit.service_type_fk = service_type_map[visit.service_type]
+        visits_to_update.append(visit)
+        
+        # Batch process every 1000 records
+        if len(visits_to_update) >= batch_size:
+            Visit.objects.bulk_update(visits_to_update, ["service_type_fk"])
+            visits_to_update = []
+    
+    # Commit remaining records
+    if visits_to_update:
+        Visit.objects.bulk_update(visits_to_update, ["service_type_fk"])
+
+
+def reverse_backfill(apps, schema_editor):
+    """
+    Reverse migration: clear the service_type_fk field.
+    """
+    Visit = apps.get_model("visits", "Visit")
+    Visit.objects.update(service_type_fk=None)
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("visits", "0001_initial"),
@@ -188,17 +245,33 @@ class Migration(migrations.Migration):
                 verbose_name="السعر النهائي",
             ),
         ),
-        migrations.AlterField(
+        # Add temporary ForeignKey field for migration
+        migrations.AddField(
             model_name="visit",
-            name="service_type",
+            name="service_type_fk",
             field=models.ForeignKey(
                 blank=True,
-                help_text="نوع الخدمة التمريضية المطلوبة",
                 null=True,
                 on_delete=django.db.models.deletion.SET_NULL,
-                related_name="visits",
+                related_name="visits_temp",
                 to="visits.servicetype",
-                verbose_name="نوع الخدمة",
+                verbose_name="نوع الخدمة (مؤقت)",
             ),
+        ),
+        # Run backfill to populate service_type_fk from string service_type
+        migrations.RunPython(
+            backfill_service_types,
+            reverse_code=reverse_backfill,
+        ),
+        # Remove the old CharField service_type
+        migrations.RemoveField(
+            model_name="visit",
+            name="service_type",
+        ),
+        # Rename service_type_fk to service_type
+        migrations.RenameField(
+            model_name="visit",
+            old_name="service_type_fk",
+            new_name="service_type",
         ),
     ]

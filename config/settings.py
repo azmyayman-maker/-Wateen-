@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import sys
+from decouple import config, Csv
 from datetime import timedelta
 from django.core.exceptions import ImproperlyConfigured
 from config.redis_utils import (
@@ -29,25 +30,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get("SECRET_KEY")
-if not SECRET_KEY:
-    if os.environ.get("DEBUG", "False").lower() in ("true", "1", "yes"):
-        SECRET_KEY = "django-insecure-dev-only-key-do-not-use-in-production"
-    else:
-        from django.core.exceptions import ImproperlyConfigured
+SECRET_KEY = config(
+    "SECRET_KEY",
+    default="django-insecure-dev-only-key-do-not-use-in-production" if config("DEBUG", default=False, cast=bool) else None
+)
 
-        raise ImproperlyConfigured(
-            "SECRET_KEY environment variable is required in production"
-        )
+if not SECRET_KEY:
+    raise ImproperlyConfigured("SECRET_KEY environment variable is required in production")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get("DEBUG", "False").lower() in ("true", "1", "yes")
+DEBUG = config("DEBUG", default=False, cast=bool)
 
-ALLOWED_HOSTS = (
-    os.environ.get("ALLOWED_HOSTS", "").split(",")
-    if os.environ.get("ALLOWED_HOSTS")
-    else []
-)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="", cast=Csv())
 
 
 # =============================================================================
@@ -193,10 +187,10 @@ import dj_database_url
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL"),
+        default=config("DATABASE_URL"),
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=True,
+        ssl_require=False,  # Disabled for local development; enable for production
     )
 }
 # Enforce PostGIS engine for matching logic
@@ -271,7 +265,7 @@ SIMPLE_JWT = {
     "ROTATE_REFRESH_TOKENS": True,
     "BLACKLIST_AFTER_ROTATION": True,
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": os.environ.get("JWT_SECRET_KEY", SECRET_KEY),
+    "SIGNING_KEY": config("JWT_SECRET_KEY", default=config("SECRET_KEY")),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
     "AUTH_TOKEN_CLASSES": ["rest_framework_simplejwt.tokens.AccessToken"],

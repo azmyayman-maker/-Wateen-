@@ -11,14 +11,15 @@ Auto-generated from all feature plans. Last updated: 2026-02-18
 ## Project Structure
 
 ```text
-backend/
-frontend/
+config/
+users/
+visits/
 tests/
 ```
 
 ## Commands
 
-cd src; pytest; ruff check .
+pytest; ruff check .
 
 ## Code Style
 

@@ -3,52 +3,63 @@ type: backend
 tech_stack:
   - Python
   - Django
-  - Django Rest Framework
-  - PostgreSQL
   - PostGIS
   - Redis
-  - Daphne
+  - Django REST Framework
+  - SimpleJWT
 features:
-  - name: User Authentication
-    description: Registration, login, token management, and profile access.
+  - name: User Management
+    description: Authentication and profile management for Patients and Nurses (CustomUser, PatientProfile, NurseProfile)
     files:
       - users/models.py
-      - users/views.py
       - users/urls.py
+      - users/views.py
     endpoints:
       - method: POST
         path: /api/v1/auth/register/
-        description: Register a new user
+        description: Register a new user (Patient or Nurse)
         auth_required: false
       - method: POST
         path: /api/v1/auth/token/
-        description: Obtain JWT token pair
+        description: Obtain JWT access and refresh tokens
         auth_required: false
       - method: POST
         path: /api/v1/auth/token/refresh/
-        description: Refresh JWT token
+        description: Refresh JWT access token
         auth_required: false
       - method: POST
         path: /api/v1/auth/logout/
-        description: Logout user
-        auth_required: true
-      - method: POST
-        path: /api/v1/auth/change-password/
-        description: Change user password
+        description: Logout user (blacklist token)
         auth_required: true
       - method: GET
         path: /api/v1/profile/
-        description: Get user profile
+        description: Retrieve user profile
         auth_required: true
+      - method: PUT
+        path: /api/v1/profile/
+        description: Update user profile
+        auth_required: true
+    depends_on: []
   - name: Visit Management
-    description: Requesting and managing home nursing visits.
+    description: Visit lifecycle management (Request, Estimate, Matching)
     files:
       - visits/models.py
-      - visits/views.py
       - visits/urls.py
+      - visits/views.py
+      - visits/api.py
     endpoints:
       - method: POST
         path: /api/v1/visits/request/
-        description: Request a new visit
+        description: Request a new home nursing visit
         auth_required: true
+      - method: POST
+        path: /api/v1/visits/estimate/
+        description: Get price estimate for a visit
+        auth_required: true
+      - method: POST
+        path: /api/v1/visits/payments/webhook/mock/
+        description: Mock webhook for payment processing
+        auth_required: false
+    depends_on:
+      - User Management
 known_limitations: []

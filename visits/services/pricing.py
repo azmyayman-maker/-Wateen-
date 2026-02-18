@@ -153,6 +153,14 @@ class RuleBasedPricingStrategy(PricingStrategy):
         Returns:
             PriceResult with full breakdown of the calculation.
         """
+        # Coerce all numeric inputs to Decimal to avoid Decimal*float TypeError
+        base_price = Decimal(str(base_price))
+        distance_km = Decimal(str(distance_km))
+        if ai_surge_coefficient is not None:
+            ai_surge_coefficient = Decimal(str(ai_surge_coefficient))
+        else:
+            ai_surge_coefficient = Decimal("1.0")
+
         # Get pricing factors
         per_km_rate = self.get_factor("per_km_rate")
 
@@ -164,10 +172,6 @@ class RuleBasedPricingStrategy(PricingStrategy):
 
         # Calculate distance fee
         distance_fee = (distance_km * per_km_rate).quantize(Decimal("0.01"))
-
-        # AI surge coefficient (placeholder for ML model)
-        if ai_surge_coefficient is None:
-            ai_surge_coefficient = Decimal("1.0")
 
         # Calculate final price
         subtotal = base_price + distance_fee
@@ -257,11 +261,12 @@ def calculate_price(
         For RTL compatibility, error messages should be in Arabic.
         This function uses the service_type.surge_multiplier field.
     """
-    # Placeholder for a configurable rate. In a real app, this comes from PricingFactor.
-    PER_KM_RATE = Decimal("5.0")
+    # Fetch per_km_rate from database via PricingFactor, with fallback to default
+    strategy = RuleBasedPricingStrategy()
+    per_km_rate = strategy.get_factor("per_km_rate")
 
     base = service_type.base_price
-    distance_cost = distance_km * PER_KM_RATE
+    distance_cost = distance_km * per_km_rate
 
     subtotal = base + distance_cost
 

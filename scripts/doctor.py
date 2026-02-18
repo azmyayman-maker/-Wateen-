@@ -1,236 +1,46 @@
 #!/usr/bin/env python
 """
-Wateen Environment Diagnostics Script
+Wateen Doctor Script
 
-Run this script to diagnose your development environment setup.
-Checks Python version, environment file, Redis, database, and GDAL.
+Diagnoses and reports environment configuration issues.
+Run this script to check your development environment setup.
 
 Usage:
     python scripts/doctor.py
-
-Exit codes:
-    0 - All checks passed
-    1 - One or more checks failed
-    2 - Configuration error
 """
 
 import os
 import sys
-import time
-import socket
-from pathlib import Path
-from typing import NamedTuple, Optional, List
+import platform
 
 
-class CheckResult(NamedTuple):
-    """Result of a single diagnostic check."""
-
-    name: str
-    status: str  # 'pass', 'fail', 'warning'
-    message: str
-    fix_command: Optional[str] = None
-    latency_ms: Optional[int] = None
-
-
-PASS = "pass"
-FAIL = "fail"
-WARNING = "warning"
-
-
-def check_python_version() -> CheckResult:
-    """Check that Python version is 3.11 or higher."""
+def check_python_version():
+    """Check Python version is 3.11+."""
     version = sys.version_info
-    version_str = f"{version.major}.{version.minor}.{version.micro}"
-
     if version.major >= 3 and version.minor >= 11:
-        return CheckResult(
-            name="Python Version",
-            status=PASS,
-            message=f"{version_str} (Required: 3.11+)",
-        )
-
-    return CheckResult(
-        name="Python Version",
-        status=FAIL,
-        message=f"{version_str} (Required: 3.11+)",
-        fix_command="Install Python 3.11 or higher from https://www.python.org/downloads/",
-    )
+        return True, f"Python {version.major}.{version.minor}.{version.micro}"
+    return False, f"Python {version.major}.{version.minor}.{version.micro} (need 3.11+)"
 
 
-def check_env_file() -> CheckResult:
-    """Check that .env file exists."""
-    env_path = Path(".env")
-
-    if env_path.exists():
-        return CheckResult(
-            name="Environment File",
-            status=PASS,
-            message=".env found",
-        )
-
-    return CheckResult(
-        name="Environment File",
-        status=FAIL,
-        message=".env not found",
-        fix_command="Copy .env.example to .env and configure your environment variables",
-    )
-
-
-def check_redis() -> CheckResult:
-    """Check Redis connectivity."""
-    redis_url = os.environ.get("REDIS_URL")
-
-    if not redis_url:
-        return CheckResult(
-            name="Redis Connectivity",
-            status=WARNING,
-            message="REDIS_URL not configured",
-            fix_command="Set REDIS_URL environment variable (optional for development)",
-        )
-
-    parsed = _parse_redis_url(redis_url)
-    if not parsed:
-        return CheckResult(
-            name="Redis Connectivity",
-            status=FAIL,
-            message="Invalid REDIS_URL format",
-            fix_command="Ensure REDIS_URL format is: redis://[:password@]host[:port][/db]",
-        )
-
-    host, port = parsed
-
+def check_gdal():
+    """Check if GDAL is installed and configured."""
+    # Check if GDAL_LIBRARY_PATH is set
+    gdal_path = os.environ.get("GDAL_LIBRARY_PATH")
+    if gdal_path:
+        if os.path.exists(gdal_path):
+            return True, f"GDAL configured at {gdal_path}"
+        return False, f"GDAL_LIBRARY_PATH set but file not found: {gdal_path}"
+    
+    # Try to import GDAL
     try:
-        start = time.perf_counter()
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5.0)
-        result = sock.connect_ex((host, port))
-        sock.close()
-        latency_ms = int((time.perf_counter() - start) * 1000)
-
-        if result == 0:
-            return CheckResult(
-                name="Redis Connectivity",
-                status=PASS,
-                message=f"Connected to {host}:{port}",
-                latency_ms=latency_ms,
-            )
-
-        return CheckResult(
-            name="Redis Connectivity",
-            status=FAIL,
-            message=f"Connection refused to {host}:{port}",
-            fix_command="Ensure Redis server is running and accessible",
-        )
-
-    except socket.error as e:
-        return CheckResult(
-            name="Redis Connectivity",
-            status=FAIL,
-            message=f"Connection error: {e}",
-            fix_command="Check network connectivity and Redis server status",
-        )
-
-
-def _parse_redis_url(url: str) -> Optional[tuple]:
-    """Parse Redis URL to extract host and port."""
-    try:
-        from urllib.parse import urlparse
-
-        if url.startswith("rediss://"):
-            url = "https://" + url[9:]
-        elif url.startswith("redis://"):
-            url = "http://" + url[8:]
-        else:
-            return None
-
-        parsed = urlparse(url)
-        host = parsed.hostname or "localhost"
-        port = parsed.port or 6379
-
-        return (host, port)
-    except Exception:
-        return None
-
-
-def check_database() -> CheckResult:
-    """Check database connectivity."""
-    database_url = os.environ.get("DATABASE_URL")
-
-    if not database_url:
-        return CheckResult(
-            name="Database Connectivity",
-            status=WARNING,
-            message="DATABASE_URL not configured",
-            fix_command="Set DATABASE_URL environment variable",
-        )
-
-    try:
-        import dj_database_url
-        import django
-        from django.conf import settings
-
-        if not settings.configured:
-            settings.configure(
-                DEBUG=True,
-                DATABASES={
-                    "default": dj_database_url.config(
-                        default=database_url,
-                        conn_max_age=600,
-                    )
-                },
-                INSTALLED_APPS=[],
-            )
-            django.setup()
-
-        from django.db import connection
-
-        start = time.perf_counter()
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-        latency_ms = int((time.perf_counter() - start) * 1000)
-
-        return CheckResult(
-            name="Database Connectivity",
-            status=PASS,
-            message="Connected",
-            latency_ms=latency_ms,
-        )
-
+        from osgeo import gdal
+        version = gdal.__version__
+        return True, f"GDAL {version} (auto-detected)"
     except ImportError:
-        return CheckResult(
-            name="Database Connectivity",
-            status=FAIL,
-            message="dj-database-url not installed",
-            fix_command="pip install dj-database-url",
-        )
-    except Exception as e:
-        return CheckResult(
-            name="Database Connectivity",
-            status=FAIL,
-            message=f"Connection failed: {str(e)[:50]}",
-            fix_command="Check DATABASE_URL format and database server status",
-        )
-
-
-def check_gdal() -> CheckResult:
-    """Check GDAL availability."""
-    if os.name == "nt":
-        if os.environ.get("GDAL_LIBRARY_PATH"):
-            gdal_path = os.environ["GDAL_LIBRARY_PATH"]
-            if Path(gdal_path).exists():
-                return CheckResult(
-                    name="GDAL",
-                    status=PASS,
-                    message=f"Available at {gdal_path}",
-                )
-
-            return CheckResult(
-                name="GDAL",
-                status=WARNING,
-                message=f"GDAL_LIBRARY_PATH set but file not found: {gdal_path}",
-                fix_command="Verify GDAL installation or reinstall OSGeo4W",
-            )
-
+        pass
+    
+    # On Windows, check common paths
+    if platform.system() == "Windows":
         common_paths = [
             r"C:\OSGeo4W\bin\gdal304.dll",
             r"C:\OSGeo4W\bin\gdal303.dll",
@@ -238,99 +48,192 @@ def check_gdal() -> CheckResult:
             r"C:\Program Files\QGIS 3.28\bin\gdal304.dll",
             r"C:\Program Files\QGIS 3.34\bin\gdal304.dll",
         ]
-
         for path in common_paths:
-            if Path(path).exists():
-                return CheckResult(
-                    name="GDAL",
-                    status=PASS,
-                    message=f"Found at {path}",
-                )
-
-        return CheckResult(
-            name="GDAL",
-            status=WARNING,
-            message="Not found on Windows",
-            fix_command="Install OSGeo4W from https://trac.osgeo.org/osgeo4w/ or set GDAL_LIBRARY_PATH",
-        )
-
-    try:
-        from osgeo import gdal
-
-        version = gdal.__version__
-        return CheckResult(
-            name="GDAL",
-            status=PASS,
-            message=f"Available (version {version})",
-        )
-    except ImportError:
-        return CheckResult(
-            name="GDAL",
-            status=WARNING,
-            message="Not installed",
-            fix_command="Install GDAL via your system package manager (apt install gdal-bin / brew install gdal)",
-        )
+            if os.path.exists(path):
+                return False, f"GDAL found at {path} but not loaded. Set GDAL_LIBRARY_PATH={path}"
+    
+    return False, "GDAL not found. Install OSGeo4W or run in Docker."
 
 
-def run_all_checks() -> List[CheckResult]:
-    """Run all diagnostic checks."""
-    return [
-        check_python_version(),
-        check_env_file(),
-        check_redis(),
-        check_database(),
-        check_gdal(),
+def check_env_file():
+    """Check if .env file exists and has required variables."""
+    env_path = os.path.join(os.getcwd(), ".env")
+    if not os.path.exists(env_path):
+        return False, ".env file not found"
+    
+    # Read and check required variables
+    required_vars = ["SECRET_KEY", "DATABASE_URL", "REDIS_URL"]
+    found = []
+    missing = []
+    
+    with open(env_path, "r") as f:
+        content = f.read()
+    
+    for var in required_vars:
+        if f"{var}=" in content:
+            found.append(var)
+        else:
+            missing.append(var)
+    
+    if not missing:
+        return True, f".env found with all required variables: {', '.join(found)}"
+    return False, f".env missing: {', '.join(missing)}"
+
+
+def check_database_url():
+    """Check DATABASE_URL format."""
+    from urllib.parse import urlparse
+    
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        # Try loading from .env
+        try:
+            from decouple import config
+            database_url = config("DATABASE_URL", default="")
+        except Exception:
+            pass
+    
+    if not database_url:
+        return False, "DATABASE_URL not configured"
+    
+    # Check format
+    if database_url.startswith("postgres://") or database_url.startswith("postgresql://"):
+        parsed = urlparse(database_url)
+        return True, f"PostgreSQL at {parsed.hostname}:{parsed.port}"
+    
+    return False, f"Invalid DATABASE_URL format: {database_url[:30]}..."
+
+
+def check_redis_url():
+    """Check REDIS_URL format."""
+    from urllib.parse import urlparse
+    
+    redis_url = os.environ.get("REDIS_URL")
+    if not redis_url:
+        # Try loading from .env
+        try:
+            from decouple import config
+            redis_url = config("REDIS_URL", default="")
+        except Exception:
+            pass
+    
+    if not redis_url:
+        return False, "REDIS_URL not configured (will use in-memory fallback in DEBUG mode)"
+    
+    # Check format
+    if redis_url.startswith("redis://") or redis_url.startswith("rediss://"):
+        parsed = urlparse(redis_url)
+        scheme = "TLS" if redis_url.startswith("rediss://") else "TCP"
+        return True, f"Redis {scheme} at {parsed.hostname}:{parsed.port}"
+    
+    return False, f"Invalid REDIS_URL format: {redis_url[:30]}..."
+
+
+def check_django_dependencies():
+    """Check if required Python packages are installed."""
+    required = [
+        ("django", "Django"),
+        ("rest_framework", "Django REST Framework"),
+        ("channels", "Django Channels"),
+        ("redis", "Redis Python client"),
+        ("decouple", "Python Decouple"),
     ]
-
-
-def format_result(result: CheckResult) -> str:
-    """Format a single check result for display."""
-    status_icons = {
-        PASS: "[PASS]",
-        FAIL: "[FAIL]",
-        WARNING: "[WARN]",
-    }
-
-    icon = status_icons[result.status]
-    lines = [f"{icon} {result.name}: {result.message}"]
-
-    if result.latency_ms is not None:
-        lines[0] += f" ({result.latency_ms}ms)"
-
-    if result.fix_command:
-        lines.append(f"   Fix: {result.fix_command}")
-
-    return "\n".join(lines)
+    
+    missing = []
+    found = []
+    
+    for module, name in required:
+        try:
+            __import__(module)
+            found.append(name)
+        except ImportError:
+            missing.append(name)
+    
+    if not missing:
+        return True, f"All dependencies installed: {', '.join(found)}"
+    return False, f"Missing packages: {', '.join(missing)}"
 
 
 def main():
-    """Run diagnostics and display results."""
-    print("=" * 70)
-    print("Wateen Environment Diagnostics")
-    print("=" * 70)
+    """Run all checks and report results."""
+    print("=" * 60)
+    print("Wateen Environment Doctor")
+    print("=" * 60)
+    print(f"Platform: {platform.system()} {platform.release()}")
+    print(f"Working Directory: {os.getcwd()}")
     print()
-
-    results = run_all_checks()
-
-    for result in results:
-        print(format_result(result))
+    
+    checks = [
+        ("Python Version", check_python_version),
+        ("GDAL Library", check_gdal),
+        ("Environment File", check_env_file),
+        ("Database URL", check_database_url),
+        ("Redis URL", check_redis_url),
+        ("Django Dependencies", check_django_dependencies),
+    ]
+    
+    results = []
+    for name, check_func in checks:
+        print(f"[Checking {name}]")
+        try:
+            ok, message = check_func()
+            status = "[OK]" if ok else "[FAIL]"
+            print(f"  {status} {message}")
+            results.append((name, ok))
+        except Exception as e:
+            print(f"  [ERROR] {e}")
+            results.append((name, False))
         print()
-
-    passed = sum(1 for r in results if r.status == PASS)
-    failed = sum(1 for r in results if r.status == FAIL)
-    warnings = sum(1 for r in results if r.status == WARNING)
-
-    print("-" * 70)
-    print(f"Summary: {passed} passed, {failed} failed, {warnings} warning(s)")
-    print("-" * 70)
-
-    if failed > 0:
-        sys.exit(1)
-    elif warnings > 0:
-        sys.exit(0)
+    
+    # Summary
+    print("=" * 60)
+    print("Summary")
+    print("=" * 60)
+    passed = sum(1 for _, ok in results if ok)
+    total = len(results)
+    print(f"Passed: {passed}/{total}")
+    
+    for name, ok in results:
+        status = "[OK]" if ok else "[FAIL]"
+        print(f"  {status} {name}")
+    
+    print()
+    
+    # Recommendations
+    failed = [name for name, ok in results if not ok]
+    if failed:
+        print("Recommendations:")
+        if "GDAL Library" in failed:
+            print()
+            print("  [GDAL Installation Options]")
+            print("  1. Install OSGeo4W from https://trac.osgeo.org/osgeo4w/")
+            print("     - Select 'Express Install' -> 'GDAL'")
+            print("     - Add to PATH: C:\\OSGeo4W\\bin")
+            print()
+            print("  2. Or run in Docker:")
+            print("     cd docker && docker-compose up --build")
+            print()
+            print("  3. Or set GDAL_LIBRARY_PATH environment variable:")
+            print("     set GDAL_LIBRARY_PATH=C:\\OSGeo4W\\bin\\gdal304.dll")
+        
+        if "Redis URL" in failed:
+            print()
+            print("  [Redis Configuration]")
+            print("  - Redis is optional in DEBUG mode (uses in-memory fallback)")
+            print("  - For production, set REDIS_URL in .env file")
+            print("  - Example: REDIS_URL=redis://localhost:6379/0")
+        
+        if "Database URL" in failed:
+            print()
+            print("  [Database Configuration]")
+            print("  - Set DATABASE_URL in .env file")
+            print("  - Example: DATABASE_URL=postgres://user:pass@host:5432/db")
+        
+        return 1
     else:
-        sys.exit(0)
+        print("[OK] All checks passed! Environment is ready.")
+        return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

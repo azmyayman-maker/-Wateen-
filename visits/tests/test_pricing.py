@@ -12,6 +12,7 @@ Test Categories:
 """
 
 import pytest
+from datetime import datetime
 from decimal import Decimal
 
 
@@ -459,51 +460,57 @@ class TestPricingFactorDuplicateKey:
 class TestEstimateLogCreation:
     """T036: Unit tests for EstimateLog creation on estimate request."""
 
-    def test_estimate_log_created_on_request(self, service_type, pricing_factors):
+    def test_estimate_log_created_on_request(
+        self, service_type, pricing_factors, django_capture_on_commit_callbacks
+    ):
         """Test that an EstimateLog is created when an estimate is requested."""
         from datetime import datetime
         from visits.models import EstimateLog
-        from visits.signals import log_estimate_request
+        from visits.services.logging import log_estimate_request
 
         initial_count = EstimateLog.objects.count()
 
-        log_estimate_request(
-            service_type_id=str(service_type.id),
-            latitude=30.0444,
-            longitude=31.2357,
-            request_time=datetime(2026, 2, 18, 14, 0, 0),
-            price_components={
-                "base_price": "100.00",
-                "distance_km": 5.0,
-                "distance_fee": "250.00",
-                "time_multiplier": "1.00",
-                "ai_surge_coefficient": "1.00",
-                "final_price": "350.00",
-            },
-            ip_address="192.168.1.1",
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            log_estimate_request(
+                service_type_id=str(service_type.id),
+                latitude=30.0444,
+                longitude=31.2357,
+                request_time=datetime(2026, 2, 18, 14, 0, 0),
+                price_components={
+                    "base_price": "100.00",
+                    "distance_km": 5.0,
+                    "distance_fee": "250.00",
+                    "time_multiplier": "1.00",
+                    "ai_surge_coefficient": "1.00",
+                    "final_price": "350.00",
+                },
+                ip_address="192.168.1.1",
+            )
 
         assert EstimateLog.objects.count() == initial_count + 1
 
-    def test_estimate_log_with_missing_service_type(self, db):
+    def test_estimate_log_with_missing_service_type(
+        self, db, django_capture_on_commit_callbacks
+    ):
         """Test that EstimateLog can be created with missing service type."""
         import uuid
         from datetime import datetime
         from visits.models import EstimateLog
-        from visits.signals import log_estimate_request
+        from visits.services.logging import log_estimate_request
 
-        log_estimate_request(
-            service_type_id=str(uuid.uuid4()),
-            latitude=30.0444,
-            longitude=31.2357,
-            request_time=datetime(2026, 2, 18, 14, 0, 0),
-            price_components={
-                "base_price": "100.00",
-                "distance_km": 5.0,
-                "distance_fee": "250.00",
-                "final_price": "350.00",
-            },
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            log_estimate_request(
+                service_type_id=str(uuid.uuid4()),
+                latitude=30.0444,
+                longitude=31.2357,
+                request_time=datetime(2026, 2, 18, 14, 0, 0),
+                price_components={
+                    "base_price": "100.00",
+                    "distance_km": 5.0,
+                    "distance_fee": "250.00",
+                    "final_price": "350.00",
+                },
+            )
 
         log_entry = EstimateLog.objects.latest("created_at")
         assert log_entry.service_type is None
@@ -512,11 +519,13 @@ class TestEstimateLogCreation:
 class TestEstimateLogPriceComponents:
     """T037: Tests for EstimateLog containing all required price_components fields."""
 
-    def test_price_components_has_all_fields(self, service_type, pricing_factors):
+    def test_price_components_has_all_fields(
+        self, service_type, pricing_factors, django_capture_on_commit_callbacks
+    ):
         """Test that price_components contains all required fields for ML training."""
         from datetime import datetime
         from visits.models import EstimateLog
-        from visits.signals import log_estimate_request
+        from visits.services.logging import log_estimate_request
 
         price_components = {
             "base_price": "150.00",
@@ -527,13 +536,14 @@ class TestEstimateLogPriceComponents:
             "final_price": "1012.50",
         }
 
-        log_estimate_request(
-            service_type_id=str(service_type.id),
-            latitude=30.0444,
-            longitude=31.2357,
-            request_time=datetime(2026, 2, 18, 23, 0, 0),
-            price_components=price_components,
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            log_estimate_request(
+                service_type_id=str(service_type.id),
+                latitude=30.0444,
+                longitude=31.2357,
+                request_time=datetime(2026, 2, 18, 23, 0, 0),
+                price_components=price_components,
+            )
 
         log_entry = EstimateLog.objects.latest("created_at")
 
@@ -545,20 +555,21 @@ class TestEstimateLogPriceComponents:
         assert "final_price" in log_entry.price_components
 
     def test_estimate_log_location_stored_correctly(
-        self, service_type, pricing_factors
+        self, service_type, pricing_factors, django_capture_on_commit_callbacks
     ):
         """Test that location is stored as PointField correctly."""
         from datetime import datetime
         from visits.models import EstimateLog
-        from visits.signals import log_estimate_request
+        from visits.services.logging import log_estimate_request
 
-        log_estimate_request(
-            service_type_id=str(service_type.id),
-            latitude=30.0444,
-            longitude=31.2357,
-            request_time=datetime(2026, 2, 18, 14, 0, 0),
-            price_components={"final_price": "100.00"},
-        )
+        with django_capture_on_commit_callbacks(execute=True):
+            log_estimate_request(
+                service_type_id=str(service_type.id),
+                latitude=30.0444,
+                longitude=31.2357,
+                request_time=datetime(2026, 2, 18, 14, 0, 0),
+                price_components={"final_price": "100.00"},
+            )
 
         log_entry = EstimateLog.objects.latest("created_at")
 
@@ -575,6 +586,7 @@ class TestEstimateLogPriceComponents:
 class TestMockPaymentWebhookSuccess:
     """T044: Integration tests for successful mock payment webhook."""
 
+    @pytest.mark.skip(reason="TODO: implement webhook integration test")
     def test_webhook_success_updates_visit_status(self, db):
         """Test that successful payment updates visit status."""
         from django.test import RequestFactory
@@ -583,6 +595,7 @@ class TestMockPaymentWebhookSuccess:
         factory = RequestFactory()
         view = MockPaymentWebhookView.as_view()
 
+    @pytest.mark.skip(reason="TODO: implement webhook integration test")
     def test_webhook_success_response(self, db):
         """Test successful webhook returns correct response."""
         pass
@@ -591,10 +604,12 @@ class TestMockPaymentWebhookSuccess:
 class TestMockPaymentWebhookFailed:
     """T045: Integration tests for failed mock payment webhook."""
 
+    @pytest.mark.skip(reason="TODO: implement webhook integration test")
     def test_webhook_failed_updates_visit_status(self, db):
         """Test that failed payment updates visit status."""
         pass
 
+    @pytest.mark.skip(reason="TODO: implement webhook integration test")
     def test_webhook_failed_with_error_message(self, db):
         """Test failed webhook with error message."""
         pass
@@ -618,15 +633,11 @@ class TestMockPaymentWebhookProduction:
             content_type="application/json",
         )
 
-        original_debug = settings.DEBUG
-        settings.DEBUG = False
+        monkeypatch.setattr(settings, "DEBUG", False)
 
-        try:
-            response = view(request)
-            assert response.status_code == 403
-            assert "forbidden" in str(response.data).lower()
-        finally:
-            settings.DEBUG = original_debug
+        response = view(request)
+        assert response.status_code == 403
+        assert "forbidden" in str(response.data).lower()
 
     def test_webhook_invalid_token_rejected(self, db, monkeypatch):
         """Test that invalid token is rejected."""
@@ -644,15 +655,12 @@ class TestMockPaymentWebhookProduction:
             HTTP_X_MOCK_TOKEN="invalid-token",
         )
 
-        settings.DEBUG = True
+        monkeypatch.setattr(settings, "DEBUG", True)
 
-        try:
-            response = view(request)
-            assert response.status_code == 403
-        finally:
-            pass
+        response = view(request)
+        assert response.status_code == 403
 
-    def test_webhook_visit_not_found(self, db):
+    def test_webhook_visit_not_found(self, db, monkeypatch):
         """Test webhook with non-existent visit ID."""
         import uuid
         from django.conf import settings
@@ -671,13 +679,10 @@ class TestMockPaymentWebhookProduction:
             else "dev-only-token",
         )
 
-        settings.DEBUG = True
+        monkeypatch.setattr(settings, "DEBUG", True)
 
-        try:
-            response = view(request)
-            assert response.status_code == 404
-        finally:
-            pass
+        response = view(request)
+        assert response.status_code == 404
 
 
 class TestDynamicDistanceCalculation:

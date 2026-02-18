@@ -1,6 +1,8 @@
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
+from visits.models import ServiceType
+
 
 class VisitRequestSerializer(serializers.Serializer):
     """Input serializer for creating a visit request."""
@@ -15,11 +17,11 @@ class VisitRequestSerializer(serializers.Serializer):
         max_value=180,
         help_text=_("خط الطول"),
     )
-    service_type = serializers.CharField(
-        max_length=50,
+    service_type = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceType.objects.all(),
         required=False,
-        default="",
-        help_text=_("نوع الخدمة"),
+        allow_null=True,
+        help_text=_("UUID of the service type"),
     )
 
 
@@ -30,7 +32,7 @@ class VisitResponseSerializer(serializers.Serializer):
     status = serializers.CharField(read_only=True)
     latitude = serializers.SerializerMethodField()
     longitude = serializers.SerializerMethodField()
-    service_type = serializers.CharField(read_only=True)
+    service_type = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_latitude(self, obj) -> float:
@@ -38,6 +40,12 @@ class VisitResponseSerializer(serializers.Serializer):
 
     def get_longitude(self, obj) -> float:
         return obj.location.x if obj.location else None
+
+    def get_service_type(self, obj) -> str | None:
+        """Return service type name or None."""
+        if obj.service_type:
+            return obj.service_type.name
+        return None
 
 
 class EstimateRequestSerializer(serializers.Serializer):

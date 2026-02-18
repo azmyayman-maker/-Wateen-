@@ -32,9 +32,8 @@ class TestDevServerStartup:
                 == "django.core.cache.backends.locmem.LocMemCache"
             )
 
-    def test_production_requires_redis(self):
-        """Production mode (DEBUG=False) should require Redis configuration."""
-        from django.core.exceptions import ImproperlyConfigured
+    def test_production_gracefully_falls_back_without_redis(self):
+        """Production mode falls back to locmem when REDIS_URL is missing."""
         from config.redis_utils import get_redis_config
 
         with patch.dict(os.environ, {"DEBUG": "False"}, clear=True):

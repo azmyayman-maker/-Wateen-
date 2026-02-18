@@ -6,12 +6,13 @@
 # issues. The container has all geospatial libraries installed.
 # =============================================================================
 
+set -e  # Exit on any error
+
 echo "Running tests inside Docker container..."
 echo
 
-# Change to docker directory and run tests
-cd docker
-docker-compose run --rm web python manage.py test visits --verbosity=2
+# Change to docker directory and run tests (exit if cd fails)
+cd docker || exit 1
 
-echo
-echo "Tests completed."
+# Run tests and propagate exit code
+docker-compose run --rm web python manage.py test visits --verbosity=2

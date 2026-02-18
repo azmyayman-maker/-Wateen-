@@ -13,6 +13,8 @@ import socket
 import ssl
 from typing import NamedTuple, Optional
 
+from decouple import config as decouple_config
+
 
 class RedisConfig(NamedTuple):
     """Redis configuration result."""
@@ -179,16 +181,28 @@ def get_caches_config(redis_config: RedisConfig) -> dict:
         Django CACHES dictionary
     """
     if redis_config.backend_type == "redis" and redis_config.url:
+        # Determine if SSL is needed (rediss:// URLs)
+        url = redis_config.url
+        connection_pool_kwargs = {
+            "max_connections": 50,
+        }
+        
+        if url.startswith("rediss://"):
+            # SSL configuration for Redis Cloud and other SSL-enabled Redis servers
+            # Make SSL verification configurable via REDIS_SSL_VERIFY env var
+            # Options: "REQUIRED" (default, secure) or "NONE" (insecure, for some cloud providers)
+            verify_mode = decouple_config("REDIS_SSL_VERIFY", default="REQUIRED", cast=str).upper()
+            connection_pool_kwargs["ssl_cert_reqs"] = (
+                ssl.CERT_NONE if verify_mode == "NONE" else ssl.CERT_REQUIRED
+            )
+        
         return {
             "default": {
                 "BACKEND": "django_redis.cache.RedisCache",
-                "LOCATION": redis_config.url,
+                "LOCATION": url,
                 "OPTIONS": {
                     "CLIENT_CLASS": "django_redis.client.DefaultClient",
-                    "CONNECTION_POOL_KWARGS": {
-                        "max_connections": 50,
-                        "ssl_cert_reqs": None,
-                    },
+                    "CONNECTION_POOL_KWARGS": connection_pool_kwargs,
                     "IGNORE_EXCEPTIONS": True,
                 },
                 "KEY_PREFIX": "wateen",
@@ -220,8 +234,12 @@ def get_channel_layers_config(redis_config: RedisConfig) -> dict:
         
         if url.startswith("rediss://"):
             # SSL configuration for Redis Cloud and other SSL-enabled Redis servers
-            # ssl_cert_reqs=None is required for Windows compatibility with some cloud providers
-            connection_kwargs["ssl_cert_reqs"] = ssl.CERT_NONE
+            # Make SSL verification configurable via REDIS_SSL_VERIFY env var
+            # Options: "REQUIRED" (default, secure) or "NONE" (insecure, for some cloud providers)
+            verify_mode = decouple_config("REDIS_SSL_VERIFY", default="REQUIRED", cast=str).upper()
+            connection_kwargs["ssl_cert_reqs"] = (
+                ssl.CERT_NONE if verify_mode == "NONE" else ssl.CERT_REQUIRED
+            )
         
         return {
             "default": {

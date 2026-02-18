@@ -6,9 +6,10 @@ from unittest.mock import MagicMock, patch
 from decimal import Decimal
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
+from pathlib import Path
 
-# Fix Path
-PROJECT_ROOT = "d:/projects/Wateen"
+# Fix Path - compute project root dynamically
+PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 

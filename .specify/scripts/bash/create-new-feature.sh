@@ -288,7 +288,18 @@ if [ -f "$TEMPLATE" ]; then cp "$TEMPLATE" "$SPEC_FILE"; else touch "$SPEC_FILE"
 export SPECIFY_FEATURE="$BRANCH_NAME"
 
 if $JSON_MODE; then
-    printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$BRANCH_NAME" "$SPEC_FILE" "$FEATURE_NUM"
+    if command -v jq &>/dev/null; then
+        printf '%s\n' "$(jq -c -M -n \
+            --arg bn "$BRANCH_NAME" \
+            --arg sf "$SPEC_FILE" \
+            --arg fn "$FEATURE_NUM" \
+            '{"BRANCH_NAME":$bn,"SPEC_FILE":$sf,"FEATURE_NUM":$fn}')"
+    else
+        # Fallback: manually escape special characters for basic JSON safety
+        escaped_branch=$(printf '%s' "$BRANCH_NAME" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
+        escaped_spec=$(printf '%s' "$SPEC_FILE" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr -d '\n')
+        printf '{"BRANCH_NAME":"%s","SPEC_FILE":"%s","FEATURE_NUM":"%s"}\n' "$escaped_branch" "$escaped_spec" "$FEATURE_NUM"
+    fi
 else
     echo "BRANCH_NAME: $BRANCH_NAME"
     echo "SPEC_FILE: $SPEC_FILE"

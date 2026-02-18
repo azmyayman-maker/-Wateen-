@@ -13,6 +13,12 @@
 # IPython for enhanced Django shell
 # ipython==8.21.0
 
+# Static Analysis & Typing
+flake8
+mypy
+types-requests
+types-redis
+
 # -----------------------------------------------------------------------------
 # Testing
 # -----------------------------------------------------------------------------

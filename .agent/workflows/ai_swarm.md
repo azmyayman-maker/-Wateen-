@@ -37,7 +37,7 @@ This workflow defines the **MANDATORY** standard operating procedure for all tas
 ### Phase 2: Execution (OpenCode - Automated) if i tell you
 
 1.  **Trigger:** Antigravity runs OpenCode CLI.
-    - _Command:_ `opencode --prompt /speckit.specif.agent/tasks/pending/task_XXX.md`
+    - _Command:_ `opencode --prompt .agent/tasks/pending/task_XXX.md`
 2.  **Action:** OpenCode implements the changes .
 3.  **Completion:** Antigravity verifies file creation.
 

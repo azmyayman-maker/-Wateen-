@@ -29,7 +29,6 @@ class Migration(migrations.Migration):
                 (
                     "request_time",
                     models.DateTimeField(
-                        db_index=True,
                         help_text="وقت طلب التسعير",
                         verbose_name="وقت الطلب",
                     ),

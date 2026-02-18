@@ -42,7 +42,7 @@ class VisitRequestView(APIView):
             patient_profile=patient_profile,
             latitude=serializer.validated_data["latitude"],
             longitude=serializer.validated_data["longitude"],
-            service_type=serializer.validated_data.get("service_type", ""),
+            service_type=serializer.validated_data.get("service_type"),
         )
 
         response_serializer = VisitResponseSerializer(visit)

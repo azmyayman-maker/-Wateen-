@@ -2,6 +2,7 @@
 import os
 import redis
 import sys
+from urllib.parse import urlparse
 
 def check_redis():
     # Load .env manually
@@ -17,8 +18,18 @@ def check_redis():
     if not redis_url:
         print("[FAIL] REDIS_URL not found in .env")
         sys.exit(1)
+    
+    # Redact credentials from URL for safe printing
+    parsed = urlparse(redis_url)
+    if parsed.password:
+        redacted_netloc = f"{parsed.username}:***@{parsed.hostname}"
+        if parsed.port:
+            redacted_netloc += f":{parsed.port}"
+        redacted_url = parsed._replace(netloc=redacted_netloc).geturl()
+    else:
+        redacted_url = redis_url
         
-    print(f"Testing connection to: {redis_url}")
+    print(f"Testing connection to: {redacted_url}")
     
     try:
         r = redis.from_url(redis_url, socket_timeout=5)

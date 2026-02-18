@@ -38,10 +38,15 @@ services:
     # inside Docker we must match the db service credentials exactly.
     environment:
       - DJANGO_SETTINGS_MODULE=config.settings
+      - REDIS_URL=redis://redis:6379/1
+      - DATABASE_URL=postgis://wateen:wateen_secret@db:5432/wateen?sslmode=disable
 
     # Service dependencies with health conditions
-    # Redis Cloud is used instead of local Redis
-    # depends_on removed
+    depends_on:
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
 
     # Restart policy: Always restart unless explicitly stopped
     restart: unless-stopped
@@ -76,7 +81,55 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # =============================================================================
+  # ---------------------------------------------------------------------------
+  # Redis Cache & Broker Service
+  # ---------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: wateen_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - wateen_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ---------------------------------------------------------------------------
+  # PostgreSQL Database Service (PostGIS)
+  # ---------------------------------------------------------------------------
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: wateen_db
+    environment:
+      - POSTGRES_DB=wateen
+      - POSTGRES_USER=wateen
+      - POSTGRES_PASSWORD=wateen_secret
+    ports:
+      - "5432:5432"
+    networks:
+      - wateen_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wateen -d wateen"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# =============================================================================
 # Networks Definition
 # =============================================================================
 
@@ -94,5 +147,4 @@ networks:
 # =============================================================================
 
 volumes:
-  # Postgres data volume removed as we are using Neon Serverless Postgres
-  {}
+  postgres_data:

@@ -9,9 +9,12 @@ REM ============================================================================
 echo Running tests inside Docker container...
 echo.
 
-REM Change to docker directory and run tests
-cd docker
+REM Change to docker directory and run tests, then restore directory
+pushd docker
 docker-compose run --rm web python manage.py test visits --verbosity=2
+set TEST_EXIT_CODE=%ERRORLEVEL%
+popd
 
 echo.
 echo Tests completed.
+exit /b %TEST_EXIT_CODE%

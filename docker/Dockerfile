@@ -11,7 +11,10 @@ WORKDIR /app
 # --------------------------------------------------------------------------
 # gcc, libpq-dev          → PostgreSQL adapter compilation
 # netcat-openbsd          → TCP health checking in entrypoint.sh
+# curl                    → HTTP health checking in docker-compose.yml
+# binutils                → Binary utilities (required for GDAL linking)
 # gdal-bin, libgdal-dev   → GDAL library for GeoDjango
+# python3-gdal            → Python GDAL bindings
 # libgeos-dev             → GEOS geometry engine for spatial operations
 # libproj-dev             → PROJ coordinate projection library
 # --------------------------------------------------------------------------
@@ -19,8 +22,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
     netcat-openbsd \
+    curl \
+    binutils \
     gdal-bin \
     libgdal-dev \
+    python3-gdal \
     libgeos-dev \
     libproj-dev \
     && rm -rf /var/lib/apt/lists/*
