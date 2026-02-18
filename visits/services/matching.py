@@ -12,6 +12,8 @@ from typing import Any
 import redis
 from django_redis import get_redis_connection
 
+from users.models import NurseProfile, VerificationStatus
+
 logger = logging.getLogger(__name__)
 
 GEO_KEY: str = "nurse_geo:active_nurses"
@@ -144,20 +146,25 @@ class GeoMatchingService:
             candidates: list[dict[str, Any]] = []
             for member, distance in results:
                 # FIX: Decode bytes to string if necessary
-                # Redis client often returns bytes, e.g., b'nurse:123'
-                member_str = member.decode("utf-8") if isinstance(member, bytes) else member
+                member_str = (
+                    member.decode("utf-8") if isinstance(member, bytes) else member
+                )
 
                 try:
                     # FIX: Robust ID extraction
-                    # Handle "nurse:123" -> 123
+                    # Safe parsing for "nurse:<id>" or just "<id>"
                     if member_str.startswith("nurse:"):
-                        nurse_id_str = member_str.split(":")[1]
+                        nurse_id_str = member_str.split(":", 1)[1]
                     else:
                         nurse_id_str = member_str
-                    
+
+                    if not nurse_id_str.isdigit():
+                         logger.warning("Skipping non-numeric nurse ID in geo set: %s", member_str)
+                         continue
+                         
                     nurse_id = int(nurse_id_str)
-                except (IndexError, ValueError):
-                    logger.warning("Invalid geo member format: %s", member_str)
+                except (IndexError, ValueError, AttributeError) as e:
+                    logger.error("Failed to parse geo member '%s': %s", member_str, e)
                     continue
 
                 candidates.append(
@@ -166,6 +173,20 @@ class GeoMatchingService:
                         "distance_km": round(float(distance), 3),
                     }
                 )
+
+            if not candidates:
+                return []
+
+            nurse_ids = [c["nurse_id"] for c in candidates]
+            available_nurse_ids = set(
+                NurseProfile.objects.filter(
+                    id__in=nurse_ids,
+                    is_available=True,
+                    verification_status=VerificationStatus.VERIFIED,
+                ).values_list("id", flat=True)
+            )
+
+            candidates = [c for c in candidates if c["nurse_id"] in available_nurse_ids]
 
             logger.debug(
                 "Found %d candidates within %.1f km of (%.6f, %.6f)",

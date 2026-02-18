@@ -1,52 +1,47 @@
 [
   {
     "id": "TC001",
-    "title": "post api v1 auth register user with valid data",
-    "description": "Test user registration with valid national_id, phone, password, and role to ensure 201 Created response with user id and role."
+    "title": "post api v1 auth register with valid patient payload",
+    "description": "Test the user registration endpoint with a valid patient payload including phone_number, password, role=patient, and required profile fields. Verify that the response status is 201 Created and the response contains the user id and role."
   },
   {
     "id": "TC002",
     "title": "post api v1 auth token with valid credentials",
-    "description": "Test obtaining JWT token pair with valid national_id and password to receive 200 response with access and refresh tokens."
+    "description": "Test the token obtain endpoint with valid phone_number and password credentials. Verify that the response status is 200 OK and the response contains access and refresh JWT tokens."
   },
   {
     "id": "TC003",
-    "title": "post api v1 auth token with invalid credentials",
-    "description": "Test login attempt with invalid password to verify 401 Unauthorized response with authentication error."
+    "title": "post api v1 auth token refresh with valid refresh token",
+    "description": "Test the token refresh endpoint with a valid refresh token. Verify that the response status is 200 OK and a new access token is returned."
   },
   {
     "id": "TC004",
-    "title": "post api v1 auth token refresh with valid refresh token",
-    "description": "Test refreshing JWT token using a valid refresh token to receive 200 response with new access token."
+    "title": "post api v1 auth logout with valid access token",
+    "description": "Test the logout endpoint with a valid access token in the Authorization header. Verify that the token is blacklisted and the user is logged out successfully."
   },
   {
     "id": "TC005",
-    "title": "post api v1 auth change password with valid old and new passwords",
-    "description": "Test changing user password with valid old_password and new_password to receive 200 response confirming password change and verify old credentials are rejected."
+    "title": "get api v1 profile with valid access token",
+    "description": "Test retrieving the user profile with a valid access token in the Authorization header. Verify that the response status is 200 OK and the user profile data is returned."
   },
   {
     "id": "TC006",
-    "title": "post api v1 auth logout with valid access token",
-    "description": "Test user logout with valid access token to receive 204 No Content and verify token invalidation on subsequent profile access."
+    "title": "put api v1 profile with valid updated profile fields",
+    "description": "Test updating the user profile with valid updated profile fields and a valid access token in the Authorization header. Verify that the response status is 200 OK and the profile is updated accordingly."
   },
   {
     "id": "TC007",
-    "title": "get api v1 profile with valid access token",
-    "description": "Test retrieving user profile with valid JWT access token to receive 200 response with user profile data."
+    "title": "post api v1 visits estimate with valid parameters",
+    "description": "Test the visit price estimation endpoint with valid latitude, longitude, and service_id parameters and a valid access token. Verify that the response status is 200 OK and the price breakdown including base_price, distance_fee, night_fee, and total is returned."
   },
   {
     "id": "TC008",
-    "title": "post api v1 visits request with valid data and authorization",
-    "description": "Test requesting a new home nursing visit with valid service_type, latitude, longitude, notes, and vitals_consent using authorized access token to receive 201 Created with visit_id and status PENDING."
+    "title": "post api v1 visits request with valid visit details",
+    "description": "Test the visit request creation endpoint with valid service_type, latitude, longitude, notes, and vitals_consent parameters and a valid access token. Verify that the response status is 201 Created and the visit id and status=PENDING are returned."
   },
   {
     "id": "TC009",
-    "title": "post api v1 visits request without authorization header",
-    "description": "Test requesting a new visit without providing Authorization header to verify 401 Unauthorized response."
-  },
-  {
-    "id": "TC010",
-    "title": "post api v1 visits request with invalid latitude coordinate",
-    "description": "Test requesting a new visit with latitude out of valid range to verify 400 Bad Request with field validation error."
+    "title": "post api v1 visits payments webhook mock with valid payment event",
+    "description": "Test the mock payment webhook endpoint with a valid payload including visit_id, payment_status, and gateway_ref. Verify that the response status is 200 OK and the transaction status is updated accordingly."
   }
 ]

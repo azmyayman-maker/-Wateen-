@@ -3,14 +3,14 @@ from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from users.models import PatientProfile
-from visits.models import Visit, VisitStatus
+from visits.models import Visit, VisitStatus, ServiceType
 
 
 def create_visit_request(
     patient_profile: PatientProfile,
     latitude: float,
     longitude: float,
-    service_type: str = "",
+    service_type: ServiceType | None = None,
 ) -> Visit:
     """
     Create a new Visit request for a patient.
@@ -19,7 +19,7 @@ def create_visit_request(
         patient_profile: PatientProfile instance of the requesting patient.
         latitude: Latitude of the patient's location (-90 to 90).
         longitude: Longitude of the patient's location (-180 to 180).
-        service_type: Type of nursing service requested.
+        service_type: ServiceType instance (optional).
 
     Returns:
         Visit instance with status PENDING.
