@@ -42,19 +42,18 @@ def check_redis():
         # Geo Test
         key = "audit:geo_test_standalone"
         r.delete(key)
-        # geoadd takes (name, longitude, latitude) or mapping in newer versions.
-        # older redis-py: geoadd(name, longitude, latitude, member) -> deprecated?
-        # standardized: geoadd(name, {member: (lon, lat)}) or similar?
-        # Let's try flexible args: col, lon, lat, member
         
-        # Check redis-py version installed? assuming recent.
-        # r.geoadd(key, (31.2357, 30.0444, "Cairo_Tower")) might fail if syntax differs.
-        # Safe way:
+        # redis-py expects a flat list: [lon, lat, member, lon, lat, member, ...]
+        # Using the correct syntax for redis-py 5.x+
         try:
-             count = r.geoadd(key, (31.2357, 30.0444, "Cairo_Tower"))
-        except redis.exceptions.ResponseError:
-             # Try other signature
-             count = r.geoadd(key, 31.2357, 30.0444, "Cairo_Tower")
+            count = r.geoadd(key, [31.2357, 30.0444, "Cairo_Tower"])
+        except (redis.exceptions.ResponseError, TypeError):
+            # Fallback for older redis-py versions: geoadd(name, lon, lat, member)
+            try:
+                count = r.geoadd(key, 31.2357, 30.0444, "Cairo_Tower")
+            except Exception as fallback_error:
+                print(f"[FAIL] Redis Geo add failed: {fallback_error}")
+                return False
              
         proxs = r.georadius(key, 31.2357, 30.0444, 1, unit="km")
         
@@ -65,6 +64,8 @@ def check_redis():
              print("[OK] Redis Geo module active")
         else:
              print(f"[FAIL] Redis Geo test returned: {proxs}")
+             r.delete(key)
+             return False
            
         r.delete(key)
         return True

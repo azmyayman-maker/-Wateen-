@@ -14,8 +14,12 @@ from dataclasses import dataclass
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional
+from zoneinfo import ZoneInfo
 
 from django.utils.translation import gettext_lazy as _
+
+# Cairo timezone for consistent pricing calculations
+CAIRO_TZ = ZoneInfo("Africa/Cairo")
 
 
 @dataclass
@@ -114,10 +118,10 @@ class RuleBasedPricingStrategy(PricingStrategy):
         """
         Check if the given time falls within night hours.
 
-        Night hours are defined as 22:00 to 06:00.
+        Night hours are defined as 22:00 to 06:00 in Cairo timezone.
 
         Args:
-            request_time: The datetime to check
+            request_time: The datetime to check (will be converted to Cairo timezone)
 
         Returns:
             True if within night hours, False otherwise.
@@ -125,13 +129,36 @@ class RuleBasedPricingStrategy(PricingStrategy):
         night_start = int(self.get_factor("night_start_hour"))
         night_end = int(self.get_factor("night_end_hour"))
 
-        hour = request_time.hour
+        # Convert to Cairo timezone for consistent pricing
+        if request_time.tzinfo is None:
+            # Assume naive datetime is in Cairo timezone
+            cairo_time = request_time.replace(tzinfo=CAIRO_TZ)
+        else:
+            cairo_time = request_time.astimezone(CAIRO_TZ)
+
+        hour = cairo_time.hour
 
         # Night hours span midnight (e.g., 22:00 to 06:00)
         if night_start > night_end:
             return hour >= night_start or hour < night_end
         else:
             return night_start <= hour < night_end
+
+    def get_time_multiplier(self, request_time: datetime) -> Decimal:
+        """
+        Get the time-based multiplier for a given request time.
+
+        Public method for API and test access to time multiplier logic.
+
+        Args:
+            request_time: The datetime to check (will be converted to Cairo timezone)
+
+        Returns:
+            The time multiplier (night_multiplier or day_multiplier).
+        """
+        if self._is_night_hours(request_time):
+            return self.get_factor("night_multiplier")
+        return self.get_factor("day_multiplier")
 
     def calculate_price(
         self,

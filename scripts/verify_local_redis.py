@@ -28,6 +28,23 @@ def verify_pubsub(r):
     channel = "test_channel"
     pubsub.subscribe(channel)
     
+    # Wait for subscription confirmation message before publishing
+    # This fixes the race condition where we publish before subscribe is confirmed
+    start_wait = time.time()
+    subscribed = False
+    while time.time() - start_wait < 2:
+        message = pubsub.get_message()
+        if message and message['type'] == 'subscribe':
+            print(f"Subscription confirmed for channel: {message['channel']}")
+            subscribed = True
+            break
+        time.sleep(0.01)
+    
+    if not subscribed:
+        print("Pub/Sub Verification FAILED: Subscription not confirmed")
+        return False
+    
+    # Now safe to publish after subscription is confirmed
     message_data = "Hello Wateen"
     r.publish(channel, message_data)
     

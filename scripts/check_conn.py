@@ -16,6 +16,25 @@ import sys
 from urllib.parse import urlparse
 
 
+def mask_password_from_url(url: str) -> str:
+    """Safely mask password in a URL using urllib.parse."""
+    try:
+        parsed = urlparse(url)
+        if parsed.password:
+            # Replace password with asterisks
+            netloc = parsed.netloc
+            if parsed.username and parsed.password:
+                # Reconstruct netloc with masked password
+                masked_netloc = netloc.replace(parsed.password, "*****", 1)
+                # Reconstruct URL with masked netloc
+                masked_url = parsed._replace(netloc=masked_netloc).geturl()
+                return masked_url
+        return url
+    except Exception:
+        # Fallback: return URL without exposing sensitive parts
+        return "[URL masked due to parsing error]"
+
+
 def parse_redis_url(url: str) -> tuple[str, int]:
     """Extract host and port from Redis URL."""
     parsed = urlparse(url)
@@ -84,7 +103,8 @@ def main():
     if redis_url:
         try:
             host, port = parse_redis_url(redis_url)
-            print(f"  URL: {redis_url[:50]}..." if len(redis_url) > 50 else f"  URL: {redis_url}")
+            masked_url = mask_password_from_url(redis_url)
+            print(f"  URL: {masked_url}")
             print(f"  Host: {host}, Port: {port}")
 
             # DNS check
@@ -112,9 +132,9 @@ def main():
             # Handle both postgres:// and postgresql:// schemes
             normalized_url = database_url.replace("postgresql://", "postgres://")
             host, port = parse_postgres_url(normalized_url)
-            # Mask password in output
-            display_url = database_url.split("@")[0].rsplit(":", 1)[0] + ":***@" + host
-            print(f"  URL: {display_url}...")
+            # Safely mask password using urllib.parse
+            masked_url = mask_password_from_url(database_url)
+            print(f"  URL: {masked_url}")
             print(f"  Host: {host}, Port: {port}")
 
             # DNS check

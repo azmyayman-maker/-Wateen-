@@ -10,5 +10,6 @@ if PROJECT_ROOT not in sys.path:
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 
-def pytest_configure():
+def pytest_configure(config):
+    """Configure pytest with Django settings."""
     django.setup()

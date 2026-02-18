@@ -3,7 +3,7 @@ from pathlib import Path
 import sys
 import unittest
 import logging
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from decimal import Decimal
 from datetime import datetime, timedelta
 
@@ -119,23 +119,22 @@ class TestEdgeCases(unittest.TestCase):
     def test_ghost_nurse(self):
         """Try to assign a visit to a nurse ID that doesn't exist."""
         # This is a model constraint or service logic.
-        # If I look at `visits/services/matching.py` (GeoMatching), it finds candidates.
-        # If I force an ID that returns nothing from DB.
+        # Using proper patch context manager instead of sys.modules hacking
         
-        service = GeoMatchingService()
-        service._redis = MagicMock()
-        service._is_available = MagicMock(return_value=True)
-        # Redis returns ID 999
-        service._redis.geosearch.return_value = [(b'nurse:999', 1.0)]
-        
-        # DB mock returns empty for 999
-        # user.models.NurseProfile.objects.filter return empty
-        mock_qs = MagicMock()
-        mock_qs.values_list.return_value = set() # No IDs found in DB
-        sys.modules['users.models'].NurseProfile.objects.filter.return_value = mock_qs
-        
-        candidates = service.find_candidates(30.0, 31.0)
-        self.assertEqual(candidates, [], "Ghost nurse (in Redis but not DB) should be filtered out.")
+        with patch('visits.services.matching.NurseProfile') as mock_profile:
+            # Configure the mock to return empty queryset (nurse not in DB)
+            mock_qs = MagicMock()
+            mock_qs.values_list.return_value = []  # No IDs found in DB
+            mock_profile.objects.filter.return_value = mock_qs
+            
+            service = GeoMatchingService()
+            service._redis = MagicMock()
+            service._is_available = MagicMock(return_value=True)
+            # Redis returns ID 999 (ghost nurse - in Redis but not in DB)
+            service._redis.geosearch.return_value = [(b'nurse:999', 1.0)]
+            
+            candidates = service.find_candidates(30.0, 31.0)
+            self.assertEqual(candidates, [], "Ghost nurse (in Redis but not DB) should be filtered out.")
 
     # 4. Money Precision
     def test_money_precision(self):

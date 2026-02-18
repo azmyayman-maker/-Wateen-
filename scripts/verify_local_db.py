@@ -59,7 +59,9 @@ def verify_crud():
         print(f"Retrieved PatientProfile: {profile}")
 
         # 3. Create Visit
-        location = Point(30.0444, 31.2357) # Cairo
+        # GeoDjango Point expects (longitude, latitude) order
+        # Cairo coordinates: lon=31.2357, lat=30.0444
+        location = Point(31.2357, 30.0444)  # (lon, lat) - GeoDjango standard
         visit = Visit.objects.create(
             patient=profile,
             location=location,
@@ -70,7 +72,8 @@ def verify_crud():
         # 4. Read
         retrieved_visit = Visit.objects.get(id=visit.id)
         # Compare coordinates with some tolerance if needed, or exact match
-        if retrieved_visit.location.x == 30.0444 and retrieved_visit.location.y == 31.2357:
+        # GeoDjango: x=longitude, y=latitude
+        if retrieved_visit.location.x == 31.2357 and retrieved_visit.location.y == 30.0444:
             print(f"Read Visit: {retrieved_visit.id} - Location Matches")
         else:
              print(f"Read Visit: {retrieved_visit.id} - Location MISMATCH: {retrieved_visit.location}")
