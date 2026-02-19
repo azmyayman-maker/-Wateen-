@@ -13,7 +13,7 @@ export default function DashboardLayout({
           </nav>
         </div>
       </header>
-      <main className="max-w-7xl mx-auto p-6">
+      <main id="main-content" className="max-w-7xl mx-auto p-6">
         {children}
       </main>
     </div>
