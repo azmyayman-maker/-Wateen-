@@ -7,7 +7,10 @@ Verifies PostgreSQL/PostGIS connectivity and functionality with structured outpu
 import os
 import sys
 import time
+import logging
 import random
+
+logger = logging.getLogger(__name__)
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -69,6 +72,7 @@ class DatabaseVerifier(BaseVerifier):
                 role=UserRole.PATIENT,
             )
             crud.create = True
+            logger.info("CRUD: User created successfully")
 
             profile = PatientProfile.objects.get(user=user)
 
@@ -76,6 +80,7 @@ class DatabaseVerifier(BaseVerifier):
             visit = Visit.objects.create(
                 patient=profile, location=location, status=VisitStatus.PENDING
             )
+            logger.info(f"CRUD: Visit created with ID {visit.id}")
 
             retrieved_visit = Visit.objects.get(id=visit.id)
             if (
@@ -83,22 +88,36 @@ class DatabaseVerifier(BaseVerifier):
                 and retrieved_visit.location.y == 30.0444
             ):
                 crud.read = True
+                logger.info("CRUD: Read verification passed")
 
+            # Update verification
+            visit.status = VisitStatus.COMPLETED
+            visit.save()
+            updated_visit = Visit.objects.get(id=visit.id)
+            if updated_visit.status == VisitStatus.COMPLETED:
+                crud.update = True
+                logger.info("CRUD: Update verification passed")
+            
             visit_id = visit.id
             visit.delete()
+            # Mark visit as None so finally block doesn't try to delete it again if validation fails later (though here it's last)
+            visit = None 
 
             if not Visit.objects.filter(id=visit_id).exists():
                 crud.delete = True
+                logger.info("CRUD: Delete verification passed")
 
         except Exception as e:
-            pass
+            crud.error = str(e)
+            logger.error(f"CRUD verification failed: {e}", exc_info=True)
         finally:
             if user:
                 try:
                     user.delete()
-                except Exception:
-                    pass
-
+                    logger.info("CRUD: Cleanup successful")
+                except Exception as e:
+                    logger.warning(f"CRUD: Cleanup failed: {e}")
+        
         return crud
 
     def verify(self) -> DatabaseVerificationResult:

@@ -15,19 +15,11 @@ from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 
 
-@pytest.fixture
-def json_output_path():
-    """Create a temporary path for JSON output if needed."""
-    if os.environ.get("VERIFICATION_OUTPUT") == "json":
-        with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
-            yield f.name
-        os.unlink(f.name)
-    else:
-        yield None
+
 
 
 @pytest.mark.django_db
-def test_postgres_connection_and_extension(json_output_path=None):
+def test_postgres_connection_and_extension():
     """Verify primary database connection and PostGIS extension."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1;")
@@ -40,7 +32,7 @@ def test_postgres_connection_and_extension(json_output_path=None):
         print(f"PostGIS Version: {version_row[0]}")
 
 
-def test_redis_cache_connection(json_output_path=None):
+def test_redis_cache_connection():
     """Verify Redis cache connection."""
     cache.set("infra_test_key", "infra_test_value", 10)
     value = cache.get("infra_test_key")
@@ -65,11 +57,12 @@ class TestVerificationScripts:
     """Tests for verification scripts with JSON output."""
 
     @pytest.mark.django_db
-    def test_database_verification_script(self, tmp_path):
+    @pytest.mark.django_db
+    def test_database_verification_script(self, tmp_path, monkeypatch):
         """Test database verification produces valid JSON output."""
         json_path = tmp_path / "db_verification.json"
-        os.environ["VERIFICATION_OUTPUT"] = "json"
-        os.environ["VERIFICATION_JSON_PATH"] = str(json_path)
+        monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+        monkeypatch.setenv("VERIFICATION_JSON_PATH", str(json_path))
 
         from scripts.verification.config import get_config
 
@@ -78,11 +71,11 @@ class TestVerificationScripts:
         assert config.should_output_json()
         assert config.json_path == str(json_path)
 
-    def test_cache_verification_script(self, tmp_path):
+    def test_cache_verification_script(self, tmp_path, monkeypatch):
         """Test cache verification produces valid JSON output."""
         json_path = tmp_path / "cache_verification.json"
-        os.environ["VERIFICATION_OUTPUT"] = "json"
-        os.environ["VERIFICATION_JSON_PATH"] = str(json_path)
+        monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+        monkeypatch.setenv("VERIFICATION_JSON_PATH", str(json_path))
 
         from scripts.verification.config import get_config
 
@@ -91,14 +84,15 @@ class TestVerificationScripts:
         assert config.should_output_json()
         assert config.json_path == str(json_path)
 
-    def test_verification_config_defaults(self):
+    def test_verification_config_defaults(self, monkeypatch):
         """Test verification config has correct defaults."""
-        os.environ.pop("VERIFICATION_TIMEOUT", None)
-        os.environ.pop("VERIFICATION_OUTPUT", None)
-        os.environ.pop("VERIFICATION_LATENCY_THRESHOLD", None)
+        monkeypatch.delenv("VERIFICATION_TIMEOUT", raising=False)
+        monkeypatch.delenv("VERIFICATION_OUTPUT", raising=False)
+        monkeypatch.delenv("VERIFICATION_LATENCY_THRESHOLD", raising=False)
 
         from scripts.verification.config import VerificationConfig
-
+        
+        # Reload defaults
         config = VerificationConfig.from_env()
 
         assert config.timeout_seconds == 5

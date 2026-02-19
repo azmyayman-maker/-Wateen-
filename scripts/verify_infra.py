@@ -18,7 +18,12 @@ django.setup()
 
 from typing import Any, Tuple
 from scripts.verification.config import VerificationConfig, get_config
-from scripts.verification.models import InfrastructureTestReport, VerificationStatus
+from scripts.verification.models import (
+    InfrastructureTestReport,
+    VerificationStatus,
+    DatabaseVerificationResult,
+    CacheVerificationResult,
+)
 from scripts.verification.console import print_header, print_footer, print_result
 from scripts.verification.output import generate_json_report
 
@@ -63,6 +68,15 @@ def main() -> int:
             if config.should_output_console():
                 print_result(db_result)
     except Exception as e:
+        db_exit_code = 1
+        db_result = DatabaseVerificationResult(
+            component="database",
+            status=VerificationStatus.FAIL,
+            latency_ms=0.0,
+            error=str(e),
+            details="Verification failed with exception",
+        )
+        report.add_component(db_result)
         if config.should_output_console():
             print(f"Database verification failed: {e}")
 
@@ -76,6 +90,15 @@ def main() -> int:
             if config.should_output_console():
                 print_result(cache_result)
     except Exception as e:
+        cache_exit_code = 1
+        cache_result = CacheVerificationResult(
+            component="cache",
+            status=VerificationStatus.FAIL,
+            latency_ms=0.0,
+            error=str(e),
+            details="Verification failed with exception",
+        )
+        report.add_component(cache_result)
         if config.should_output_console():
             print(f"Cache verification failed: {e}")
 

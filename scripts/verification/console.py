@@ -72,8 +72,11 @@ def print_database_result(result: DatabaseVerificationResult) -> None:
         crud = result.crud_status
         c = "✓" if crud.create else "✗"
         r = "✓" if crud.read else "✗"
+        u = "✓" if crud.update else "✗"
         d = "✓" if crud.delete else "✗"
-        print(f"    CRUD: create {c} read {r} delete {d}")
+        print(f"    CRUD: create {c} read {r} update {u} delete {d}")
+        if crud.error:
+            print(f"    {COLORS[VerificationStatus.FAIL]}CRUD Error: {crud.error}{COLORS['reset']}")
 
     if result.error:
         print(f"    {COLORS[VerificationStatus.FAIL]}{result.error}{COLORS['reset']}")
@@ -91,6 +94,8 @@ def print_cache_result(result: CacheVerificationResult) -> None:
         g = "✓" if ops.get else "✗"
         d = "✓" if ops.delete else "✗"
         print(f"    Operations: set {s} get {g} delete {d}")
+        if ops.error:
+            print(f"    {COLORS[VerificationStatus.FAIL]}Operations Error: {ops.error}{COLORS['reset']}")
 
     if result.pubsub_status:
         ps = result.pubsub_status
@@ -98,6 +103,8 @@ def print_cache_result(result: CacheVerificationResult) -> None:
         pub = "✓" if ps.publish else "✗"
         rec = "✓" if ps.receive else "✗"
         print(f"    Pub/Sub: subscribe {sub} publish {pub} receive {rec}")
+        if ps.error:
+            print(f"    {COLORS[VerificationStatus.FAIL]}PubSub Error: {ps.error}{COLORS['reset']}")
 
     if result.error:
         print(f"    {COLORS[VerificationStatus.FAIL]}{result.error}{COLORS['reset']}")

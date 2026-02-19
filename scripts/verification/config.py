@@ -24,6 +24,18 @@ from dataclasses import dataclass
 from typing import Optional
 
 
+
+def parse_int_env(key: str, default: int) -> int:
+    """Safely parse an integer environment variable."""
+    val = os.environ.get(key)
+    if val is None:
+        return default
+    try:
+        return int(val)
+    except ValueError:
+        raise ValueError(f"Environment variable '{key}' must be an integer. Got: '{val}'")
+
+
 @dataclass
 class VerificationConfig:
     database_url: Optional[str] = None
@@ -39,17 +51,13 @@ class VerificationConfig:
         return cls(
             database_url=os.environ.get("DATABASE_URL"),
             redis_url=os.environ.get("REDIS_URL", "redis://localhost:6379/1"),
-            timeout_seconds=int(os.environ.get("VERIFICATION_TIMEOUT", "5")),
+            timeout_seconds=parse_int_env("VERIFICATION_TIMEOUT", 5),
             output_format=os.environ.get("VERIFICATION_OUTPUT", "both"),
             json_path=os.environ.get(
                 "VERIFICATION_JSON_PATH", "./verification-report.json"
             ),
-            latency_threshold_ms=int(
-                os.environ.get("VERIFICATION_LATENCY_THRESHOLD", "100")
-            ),
-            latency_warning_ms=int(
-                os.environ.get("VERIFICATION_LATENCY_WARNING", "200")
-            ),
+            latency_threshold_ms=parse_int_env("VERIFICATION_LATENCY_THRESHOLD", 100),
+            latency_warning_ms=parse_int_env("VERIFICATION_LATENCY_WARNING", 200),
         )
 
     def should_output_console(self) -> bool:

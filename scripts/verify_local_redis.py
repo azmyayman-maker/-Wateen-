@@ -55,7 +55,8 @@ class CacheVerifier(BaseVerifier):
                 ops.get = True
 
             client.delete(test_key)
-            ops.delete = True
+            if not client.exists(test_key):
+                ops.delete = True
 
         except Exception:
             pass
@@ -103,8 +104,8 @@ class CacheVerifier(BaseVerifier):
 
             pubsub_status.receive = received
 
-        except Exception:
-            pass
+        except Exception as e:
+            pubsub_status.error = str(e)
         finally:
             if pubsub:
                 try:

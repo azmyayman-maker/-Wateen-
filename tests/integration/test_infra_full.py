@@ -11,17 +11,37 @@ import tempfile
 from pathlib import Path
 
 
+@pytest.fixture(autouse=True)
+def clean_env(monkeypatch):
+    """Clean environment variables before and after each test."""
+    monkeypatch.delenv("VERIFICATION_OUTPUT", raising=False)
+    monkeypatch.delenv("VERIFICATION_JSON_PATH", raising=False)
+    yield
+
+
 @pytest.fixture
 def temp_json_path():
+    """Create a temporary JSON file path for testing. Cleans up file and env vars after test."""
     with tempfile.NamedTemporaryFile(suffix=".json", delete=False) as f:
-        yield f.name
-    os.unlink(f.name)
+        temp_path = f.name
+
+    yield temp_path
+
+    # Clean up temp file, ignoring if already deleted
+    try:
+        os.unlink(temp_path)
+    except FileNotFoundError:
+        pass
+
+    # Clean up environment variables
+    os.environ.pop("VERIFICATION_OUTPUT", None)
+    os.environ.pop("VERIFICATION_JSON_PATH", None)
 
 
 @pytest.mark.django_db
-def test_database_verification_produces_json(temp_json_path):
-    os.environ["VERIFICATION_OUTPUT"] = "json"
-    os.environ["VERIFICATION_JSON_PATH"] = temp_json_path
+def test_database_verification_produces_json(temp_json_path, monkeypatch):
+    monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+    monkeypatch.setenv("VERIFICATION_JSON_PATH", temp_json_path)
 
     from scripts.verify_local_db import DatabaseVerifier
     from scripts.verification.config import get_config
@@ -51,9 +71,9 @@ def test_database_verification_produces_json(temp_json_path):
         assert exit_code == 1
 
 
-def test_cache_verification_produces_json(temp_json_path):
-    os.environ["VERIFICATION_OUTPUT"] = "json"
-    os.environ["VERIFICATION_JSON_PATH"] = temp_json_path
+def test_cache_verification_produces_json(temp_json_path, monkeypatch):
+    monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+    monkeypatch.setenv("VERIFICATION_JSON_PATH", temp_json_path)
 
     from scripts.verify_local_redis import CacheVerifier
     from scripts.verification.config import get_config
@@ -84,9 +104,9 @@ def test_cache_verification_produces_json(temp_json_path):
 
 
 @pytest.mark.django_db
-def test_comprehensive_verification_produces_json(temp_json_path):
-    os.environ["VERIFICATION_OUTPUT"] = "json"
-    os.environ["VERIFICATION_JSON_PATH"] = temp_json_path
+def test_comprehensive_verification_produces_json(temp_json_path, monkeypatch):
+    monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+    monkeypatch.setenv("VERIFICATION_JSON_PATH", temp_json_path)
 
     from scripts.verify_infra import main
 
@@ -121,9 +141,10 @@ def test_comprehensive_verification_produces_json(temp_json_path):
         assert exit_code == 1
 
 
-def test_json_schema_validation(temp_json_path):
-    os.environ["VERIFICATION_OUTPUT"] = "json"
-    os.environ["VERIFICATION_JSON_PATH"] = temp_json_path
+@pytest.mark.django_db
+def test_json_schema_validation(temp_json_path, monkeypatch):
+    monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
+    monkeypatch.setenv("VERIFICATION_JSON_PATH", temp_json_path)
 
     from scripts.verify_infra import main
 

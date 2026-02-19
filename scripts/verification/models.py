@@ -20,18 +20,24 @@ class VerificationStatus(str, Enum):
 class CRUDStatus:
     create: bool = False
     read: bool = False
+    update: bool = False
     delete: bool = False
+    error: Optional[str] = None
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "create": self.create,
             "read": self.read,
+            "update": self.update,
             "delete": self.delete,
         }
+        if self.error:
+            result["error"] = self.error
+        return result
 
     @property
     def all_passed(self) -> bool:
-        return self.create and self.read and self.delete
+        return self.create and self.read and self.update and self.delete
 
 
 @dataclass
@@ -39,13 +45,17 @@ class CacheOperations:
     set: bool = False
     get: bool = False
     delete: bool = False
+    error: Optional[str] = None
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "set": self.set,
             "get": self.get,
             "delete": self.delete,
         }
+        if self.error:
+            result["error"] = self.error
+        return result
 
     @property
     def all_passed(self) -> bool:
@@ -57,13 +67,17 @@ class PubSubStatus:
     subscribe: bool = False
     publish: bool = False
     receive: bool = False
+    error: Optional[str] = None
 
     def to_dict(self) -> dict:
-        return {
+        result = {
             "subscribe": self.subscribe,
             "publish": self.publish,
             "receive": self.receive,
         }
+        if self.error:
+            result["error"] = self.error
+        return result
 
     @property
     def all_passed(self) -> bool:
