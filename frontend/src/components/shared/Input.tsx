@@ -1,6 +1,5 @@
 'use client'
 
-'use client'
 
 import { forwardRef, useId, type InputHTMLAttributes } from 'react'
 import { cn } from '@/lib/utils'
