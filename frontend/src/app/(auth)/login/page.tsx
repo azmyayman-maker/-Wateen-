@@ -28,7 +28,7 @@ export default function LoginPage() {
       
       <p className="text-center text-sm text-text-secondary">
         ليس لديك حساب؟{' '}
-        <a href="/register" className="text-primary font-medium hover:underline">
+        <Link href="/register" className="text-primary font-medium hover:underline">
           سجل الآن
         </a>
       </p>
