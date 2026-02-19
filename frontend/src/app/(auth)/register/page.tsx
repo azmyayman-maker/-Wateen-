@@ -40,7 +40,7 @@ export default function RegisterPage() {
       
       <p className="text-center text-sm text-text-secondary">
         لديك حساب بالفعل؟{' '}
-        <a href="/login" className="text-primary font-medium hover:underline">
+        <Link href="/login" className="text-primary font-medium hover:underline">
           سجل دخولك
         </a>
       </p>
