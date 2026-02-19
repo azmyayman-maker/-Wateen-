@@ -140,11 +140,17 @@ def test_comprehensive_verification_produces_json(temp_json_path, monkeypatch):
     else:
         assert exit_code == 1
 
+<<<<<<< HEAD
 
 @pytest.mark.django_db
 def test_json_schema_validation(temp_json_path, monkeypatch):
     monkeypatch.setenv("VERIFICATION_OUTPUT", "json")
     monkeypatch.setenv("VERIFICATION_JSON_PATH", temp_json_path)
+=======
+def test_json_schema_validation(temp_json_path):
+    os.environ["VERIFICATION_OUTPUT"] = "json"
+    os.environ["VERIFICATION_JSON_PATH"] = temp_json_path
+>>>>>>> d1caa4fffb9e080b683aa4ba6547a502e7da2b1d
 
     from scripts.verify_infra import main
 

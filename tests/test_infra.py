@@ -19,7 +19,11 @@ from asgiref.sync import async_to_sync
 
 
 @pytest.mark.django_db
+<<<<<<< HEAD
 def test_postgres_connection_and_extension():
+=======
+def test_postgres_connection_and_extension(json_output_path):
+>>>>>>> d1caa4fffb9e080b683aa4ba6547a502e7da2b1d
     """Verify primary database connection and PostGIS extension."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1;")
