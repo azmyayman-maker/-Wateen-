@@ -47,7 +47,7 @@ npm start
 
 ## Project Structure
 
-```
+```text
 frontend/
 ├── src/
 │   ├── app/
@@ -67,8 +67,8 @@ frontend/
 │           ├── Button.tsx
 │           ├── Input.tsx
 │           └── Card.tsx
-├── tailwind.config.ts         # EDIT: add custom theme
-└── package.json
+├── package.json
+└── (tailwind.config.ts removed in v4)
 ```
 
 ## Key Implementation Steps
@@ -78,25 +78,25 @@ frontend/
 Edit `src/app/layout.tsx`:
 
 ```tsx
-import type { Metadata } from 'next'
-import { Cairo } from 'next/font/google'
-import './globals.css'
+import type { Metadata } from "next";
+import { Cairo } from "next/font/google";
+import "./globals.css";
 
 const cairo = Cairo({
-  subsets: ['arabic', 'latin'],
-  display: 'swap',
-  variable: '--font-cairo',
-})
+  subsets: ["arabic", "latin"],
+  display: "swap",
+  variable: "--font-cairo",
+});
 
 export const metadata: Metadata = {
-  title: 'وتين - Wateen Healthcare Platform',
-  description: 'منصة وتين للرعاية الصحية',
-}
+  title: "وتين - Wateen Healthcare Platform",
+  description: "منصة وتين للرعاية الصحية",
+};
 
 export default function RootLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
   return (
     <html lang="ar" dir="rtl" className={cairo.variable}>
@@ -104,7 +104,7 @@ export default function RootLayout({
         {children}
       </body>
     </html>
-  )
+  );
 }
 ```
 
@@ -117,16 +117,49 @@ Edit `src/app/globals.css`:
 
 :root {
   --primary: 8 145 178;
+  --primary-light: 34 211 238;
   --secondary: 20 184 166;
   --background: 255 255 255;
   --surface: 248 250 252;
   --text-primary: 15 23 42;
   --text-secondary: 71 85 105;
   --border: 226 232 240;
+  --success: 16 185 129;
+  --warning: 245 158 11;
+  --error: 239 68 68;
   --line-height: 1.8;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+@theme inline {
+  --color-primary: rgb(var(--primary) / <alpha-value>);
+  --color-primary-light: rgb(var(--primary-light) / <alpha-value>);
+  --color-secondary: rgb(var(--secondary) / <alpha-value>);
+  --color-background: rgb(var(--background) / <alpha-value>);
+  --color-surface: rgb(var(--surface) / <alpha-value>);
+  --color-text-primary: rgb(var(--text-primary) / <alpha-value>);
+  --color-text-secondary: rgb(var(--text-secondary) / <alpha-value>);
+  --color-border: rgb(var(--border) / <alpha-value>);
+  --color-success: rgb(var(--success) / <alpha-value>);
+  --color-warning: rgb(var(--warning) / <alpha-value>);
+  --color-error: rgb(var(--error) / <alpha-value>);
+  --font-sans:
+    var(--font-cairo), "Cairo", "Amiri", "Noto Sans Arabic", sans-serif;
+  --line-height-arabic: var(--line-height);
+  --radius-sm-base: 0.25rem;
+  --radius-md-base: 0.5rem;
+  --radius-lg-base: 1rem;
 }
 
 body {
+  background: rgb(var(--background));
+  color: rgb(var(--text-primary));
   line-height: var(--line-height);
 }
 ```
@@ -143,7 +176,7 @@ export default function Home() {
         مرحباً بكم في وتين - Wateen
       </h1>
     </main>
-  )
+  );
 }
 ```
 
@@ -158,31 +191,23 @@ mkdir -p src/app/\(dashboard\)/patient
 mkdir -p src/app/\(dashboard\)/nurse
 ```
 
-### Step 5: Update Tailwind Config
+### Step 5: Configure Tailwind v4 Theme
 
-Edit `tailwind.config.ts`:
+Tailwind v4 moves configuration from `tailwind.config.ts` to CSS variables in `src/app/globals.css` using the `@theme` directive.
 
-```typescript
-import type { Config } from 'tailwindcss'
+Ensure your `src/app/globals.css` includes the `@theme inline` block as shown in **Step 2**. This replaces the need for a separate `tailwind.config.ts` file for these theme extensions.
 
-const config: Config = {
-  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
-  theme: {
-    extend: {
-      fontFamily: {
-        sans: ['var(--font-cairo)', 'sans-serif'],
-      },
-      colors: {
-        primary: 'rgb(var(--primary) / <alpha-value>)',
-        secondary: 'rgb(var(--secondary) / <alpha-value>)',
-        surface: 'rgb(var(--surface) / <alpha-value>)',
-        background: 'rgb(var(--background) / <alpha-value>)',
-      },
-    },
-  },
-  plugins: [],
+**Note:** If `tailwind.config.ts` was created by the init script, you can delete it if you are fully using the CSS-first configuration, or keep it minimal if you need specific plugin configurations that aren't yet supported in CSS.
+
+The `@theme` block in `globals.css` should look like this (already added in Step 2):
+
+```css
+@theme inline {
+  --color-primary: rgb(var(--primary) / <alpha-value>);
+  /* ... other colors ... */
+  --font-sans:
+    var(--font-cairo), "Cairo", "Amiri", "Noto Sans Arabic", sans-serif;
 }
-export default config
 ```
 
 ## Verification Checklist
@@ -230,6 +255,7 @@ npx lighthouse http://localhost:3000 --only-categories=accessibility --view
 ## Next Steps
 
 After initialization:
+
 1. Run `/speckit.tasks` to generate implementation tasks
 2. Implement shared components (Button, Input, Card)
 3. Add form validation to auth pages
