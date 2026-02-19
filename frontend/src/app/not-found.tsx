@@ -14,6 +14,6 @@ export default function NotFound() {
       >
         العودة للصفحة الرئيسية
       </Link>
-    </div>
+    </main>
   )
 }
