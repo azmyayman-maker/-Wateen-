@@ -119,7 +119,6 @@ def test_comprehensive_verification_produces_json(temp_json_path):
         assert exit_code == 0
     else:
         assert exit_code == 1
-    exit_code = main()
 
 def test_json_schema_validation(temp_json_path):
     os.environ["VERIFICATION_OUTPUT"] = "json"
