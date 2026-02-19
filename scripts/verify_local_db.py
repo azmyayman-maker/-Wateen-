@@ -1,164 +1,130 @@
-"""
-Database Verification Script
-
-Verifies PostgreSQL/PostGIS connectivity and functionality with structured output.
-"""
-
 import os
 import sys
-import time
-import random
-
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
-
 import django
-
-django.setup()
-
+from django.conf import settings
 from django.db import connection
 from django.contrib.gis.geos import Point
+
+# Setup Django environment
+sys.path.append("/app")  # Adjust as needed if not in root
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
+django.setup()
 
 from django.contrib.auth import get_user_model
 from visits.models import Visit, VisitStatus
 from users.models import PatientProfile, UserRole
 
-from typing import cast
-from scripts.verification.base import BaseVerifier
-from scripts.verification.config import VerificationConfig, get_config
-from scripts.verification.models import (
-    DatabaseVerificationResult,
-    VerificationStatus,
-    CRUDStatus,
-)
-from scripts.verification.console import print_header, print_database_result
-
-
 User = get_user_model()
 
 
-class DatabaseVerifier(BaseVerifier):
-    def get_component_name(self) -> str:
-        return "database"
+def verify_postgis():
+    print("Verifying PostGIS extension...")
+    with connection.cursor() as cursor:
+        cursor.execute("SELECT postgis_version();")
+        row = cursor.fetchone()
+        if row:
+            print(f"PostGIS Version: {row[0]}")
+            return True
+        else:
+            print("FAILED: PostGIS version not returned.")
+            return False
 
-    def verify_postgis(self) -> tuple[bool, str | None]:
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT postgis_version();")
-            row = cursor.fetchone()
-            if row:
-                return True, row[0]
-        return False, None
 
-    def verify_crud(self) -> CRUDStatus:
-        crud = CRUDStatus()
-        user = None
-        visit = None
+def verify_crud():
+    print("Verifying Visit CRUD operations...")
+    user = None
+    visit = None
+    try:
+        # 1. Create User (Patient)
+        # Valid ID: 2 (1900-1999) + 900101 (DOB) + 01 (Cairo) + 000 (Seq) + 3 (Check)
+        national_id = "29001010100003"
+        import random
 
-        try:
-            national_id = "29001010100003"
-            phone = f"010{random.randint(10000000, 99999999)}"
+        # Random phone to avoid collision: 010 + 8 digits
+        phone = f"010{random.randint(10000000, 99999999)}"
 
-            User.objects.filter(national_id=national_id).delete()
-            User.objects.filter(phone_number=phone).delete()
+        # Cleanup if exists (idempotency)
+        User.objects.filter(national_id=national_id).delete()
+        User.objects.filter(phone_number=phone).delete()
 
-            user = User.objects.create_user(
-                national_id=national_id,
-                phone_number=phone,
-                password="testpassword123",
-                role=UserRole.PATIENT,
-            )
-            crud.create = True
-
-            profile = PatientProfile.objects.get(user=user)
-
-            location = Point(31.2357, 30.0444)
-            visit = Visit.objects.create(
-                patient=profile, location=location, status=VisitStatus.PENDING
-            )
-
-            retrieved_visit = Visit.objects.get(id=visit.id)
-            if (
-                retrieved_visit.location.x == 31.2357
-                and retrieved_visit.location.y == 30.0444
-            ):
-                crud.read = True
-
-            visit_id = visit.id
-            visit.delete()
-
-            if not Visit.objects.filter(id=visit_id).exists():
-                crud.delete = True
-
-        except Exception as e:
-            pass
-        finally:
-            if user:
-                try:
-                    user.delete()
-                except Exception:
-                    pass
-
-        return crud
-
-    def verify(self) -> DatabaseVerificationResult:
-        latency_ms = 0.0
-        postgis_version = None
-        crud_status = None
-        error = None
-        status = VerificationStatus.PASS
-        details = []
-
-        try:
-            start = time.time()
-
-            postgis_ok, postgis_version = self.verify_postgis()
-            latency_ms = (time.time() - start) * 1000
-
-            if not postgis_ok:
-                status = VerificationStatus.FAIL
-                error = "PostGIS extension not found or not functional"
-            else:
-                details.append(f"PostGIS {postgis_version}")
-
-                crud_status = self.verify_crud()
-                if crud_status.all_passed:
-                    details.append("CRUD operations passed")
-                else:
-                    status = VerificationStatus.FAIL
-                    error = "CRUD operations failed"
-
-            if latency_ms > 1000:
-                if status == VerificationStatus.PASS:
-                    status = VerificationStatus.WARNING
-                details.append(f"High latency: {latency_ms:.0f}ms")
-
-        except Exception as e:
-            status = VerificationStatus.FAIL
-            error = str(e)
-            latency_ms = self.elapsed_ms()
-
-        return DatabaseVerificationResult(
-            component="database",
-            status=status,
-            latency_ms=latency_ms,
-            postgis_version=postgis_version,
-            crud_status=crud_status,
-            error=error,
-            details=" | ".join(details) if details else "",
+        user = User.objects.create_user(
+            national_id=national_id,
+            phone_number=phone,
+            password="testpassword123",
+            role=UserRole.PATIENT,
         )
+        print(f"Created User: {user.national_id}")
 
-    def print_console_output(self) -> None:
-        print_header("Database Verification")
-        if self.result:
-            print_database_result(cast(DatabaseVerificationResult, self.result))
+        # 2. Get Patient Profile (created by signal)
+        profile = PatientProfile.objects.get(user=user)
+        print(f"Retrieved PatientProfile: {profile}")
 
+        # 3. Create Visit
+        # GeoDjango Point expects (longitude, latitude) order
+        # Cairo coordinates: lon=31.2357, lat=30.0444
+        location = Point(31.2357, 30.0444)  # (lon, lat) - GeoDjango standard
+        visit = Visit.objects.create(
+            patient=profile, location=location, status=VisitStatus.PENDING
+        )
+        print(f"Created Visit: {visit.id}")
 
-def main() -> int:
-    config = get_config()
-    verifier = DatabaseVerifier(config)
-    return verifier.run()
+        # 4. Read
+        retrieved_visit = Visit.objects.get(id=visit.id)
+        # Compare coordinates with some tolerance if needed, or exact match
+        # GeoDjango: x=longitude, y=latitude
+        if (
+            retrieved_visit.location.x == 31.2357
+            and retrieved_visit.location.y == 30.0444
+        ):
+            print(f"Read Visit: {retrieved_visit.id} - Location Matches")
+        else:
+            print(
+                f"Read Visit: {retrieved_visit.id} - Location MISMATCH: {retrieved_visit.location}"
+            )
+            return False
+
+        # 5. Delete
+        visit_id = visit.id
+        visit.delete()
+
+        # Verify deletion
+        if not Visit.objects.filter(id=visit_id).exists():
+            print(f"Deleted Visit: {visit_id}")
+        else:
+            print("FAILED: Visit was not deleted.")
+            return False
+
+        return True
+
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        print(f"CRUD Verification FAILED: {e}")
+        return False
+    finally:
+        # Cleanup user
+        if user:
+            try:
+                user.delete()
+                print("Cleanup: User deleted.")
+            except Exception as e:
+                print(f"Cleanup Failed: {e}")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    print("-" * 30)
+    print("Running Local DB Verification")
+    print("-" * 30)
+
+    postgis_ok = verify_postgis()
+    crud_ok = verify_crud()
+
+    if postgis_ok and crud_ok:
+        print("-" * 30)
+        print("SUCCESS: Database verification passed.")
+        sys.exit(0)
+    else:
+        print("-" * 30)
+        print("FAILURE: Database verification failed.")
+        sys.exit(1)

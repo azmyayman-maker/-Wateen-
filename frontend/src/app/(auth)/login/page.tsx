@@ -9,7 +9,7 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-text-secondary">مرحباً بعودتك</p>
       </div>
       
-      <form action="#" method="post" className="space-y-4">
+      <form method="post" className="space-y-4">
         <Input
           label="البريد الإلكتروني"
           type="email"
