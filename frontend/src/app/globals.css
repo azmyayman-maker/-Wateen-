@@ -54,7 +54,7 @@ body {
 .skip-link {
   position: absolute;
   top: -40px;
-  left: 0;
+  inset-inline-start: 0;
   background: rgb(var(--primary));
   color: white;
   padding: 0.5rem 1rem;
