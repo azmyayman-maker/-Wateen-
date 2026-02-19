@@ -7,7 +7,7 @@ export default function AuthLayout({
 }) {
   return (
     <div className="min-h-screen flex items-center justify-center bg-surface p-4">
-      <Card variant="elevated" padding="lg" className="w-full max-w-md">
+      <Card variant="elevated" padding="lg" className="w-full max-w-md" id="main-content">
         {children}
       </Card>
     </div>
