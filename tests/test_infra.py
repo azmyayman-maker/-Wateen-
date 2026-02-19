@@ -27,7 +27,7 @@ def json_output_path():
 
 
 @pytest.mark.django_db
-def test_postgres_connection_and_extension(json_output_path=None):
+def test_postgres_connection_and_extension(json_output_path):
     """Verify primary database connection and PostGIS extension."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1;")
