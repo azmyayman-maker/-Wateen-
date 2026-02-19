@@ -9,7 +9,7 @@ export default function RegisterPage() {
         <p className="mt-2 text-sm text-text-secondary">انضم إلى منصة وتين</p>
       </div>
       
-      <form method="post" className="space-y-4">
+      <form action="#" method="post" className="space-y-4">
         <Input
           label="الاسم الكامل"
           type="text"

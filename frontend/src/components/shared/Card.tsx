@@ -1,11 +1,14 @@
 import { cn } from '@/lib/utils'
-import { type ReactNode } from 'react'
+import { type HTMLAttributes, type ReactNode } from 'react'
 
+<<<<<<< HEAD
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+=======
 interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+>>>>>>> 7a4881e265e7672516941722399a3cb4be1cb240
   variant?: 'elevated' | 'outlined'
   padding?: 'sm' | 'md' | 'lg'
   children: ReactNode
-  className?: string
 }
 
 export function Card({
@@ -13,6 +16,7 @@ export function Card({
   padding = 'md',
   children,
   className,
+  ...props
 }: CardProps) {
   const variants = {
     elevated: 'bg-white shadow-md',
@@ -33,6 +37,7 @@ export function Card({
         paddings[padding],
         className
       )}
+      {...props}
     >
       {children}
     </div>

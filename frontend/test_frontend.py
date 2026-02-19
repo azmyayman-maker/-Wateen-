@@ -21,17 +21,18 @@ def test_frontend():
         try:
             page.goto(base_url, timeout=10000)
             page.wait_for_load_state("networkidle")
-        except PlaywrightTimeoutError:
+        except (PlaywrightTimeoutError, Exception) as e:
+            print(f"Warning: Could not connect to localhost:3000. Error: {e}")
             base_url = "http://localhost:3001"
-            page.goto(base_url, timeout=10000)
-            page.wait_for_load_state("networkidle")
-        except Exception as e:
-            print(
-                f"Warning: Could not connect to localhost:3000, trying 3001. Error: {e}"
-            )
-            base_url = "http://localhost:3001"
-            page.goto(base_url, timeout=10000)
-            page.wait_for_load_state("networkidle")
+            try:
+                page.goto(base_url, timeout=10000)
+                page.wait_for_load_state("networkidle")
+            except Exception as fallback_error:
+                print(
+                    f"Error: Fallback to localhost:3001 also failed: {fallback_error}"
+                )
+                browser.close()
+                raise
 
         print(f"Testing at: {base_url}\n")
 
