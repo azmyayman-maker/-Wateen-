@@ -1,7 +1,7 @@
 import { cn } from '@/lib/utils'
 import { type ReactNode } from 'react'
 
-interface CardProps {
+interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   variant?: 'elevated' | 'outlined'
   padding?: 'sm' | 'md' | 'lg'
   children: ReactNode
