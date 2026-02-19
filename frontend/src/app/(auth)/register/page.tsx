@@ -42,7 +42,7 @@ export default function RegisterPage() {
         لديك حساب بالفعل؟{' '}
         <Link href="/login" className="text-primary font-medium hover:underline">
           سجل دخولك
-        </a>
+        </Link>
       </p>
     </div>
   )
