@@ -30,7 +30,7 @@ export default function LoginPage() {
         ليس لديك حساب؟{' '}
         <Link href="/register" className="text-primary font-medium hover:underline">
           سجل الآن
-        </a>
+        </Link>
       </p>
     </div>
   )
