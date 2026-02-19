@@ -1,8 +1,11 @@
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 import os
 import sys
+from pathlib import Path
 
 sys.stdout.reconfigure(encoding="utf-8")
+
+SCREENSHOTS_DIR = Path(__file__).resolve().parent / "test-screenshots"
 
 
 def test_frontend():
@@ -18,7 +21,14 @@ def test_frontend():
         try:
             page.goto(base_url, timeout=10000)
             page.wait_for_load_state("networkidle")
-        except:
+        except PlaywrightTimeoutError:
+            base_url = "http://localhost:3001"
+            page.goto(base_url, timeout=10000)
+            page.wait_for_load_state("networkidle")
+        except Exception as e:
+            print(
+                f"Warning: Could not connect to localhost:3000, trying 3001. Error: {e}"
+            )
             base_url = "http://localhost:3001"
             page.goto(base_url, timeout=10000)
             page.wait_for_load_state("networkidle")
@@ -33,7 +43,7 @@ def test_frontend():
             ("Nurse Dashboard", "/nurse"),
         ]
 
-        os.makedirs("D:/projects/Wateen/frontend/test-screenshots", exist_ok=True)
+        SCREENSHOTS_DIR.mkdir(parents=True, exist_ok=True)
 
         for name, path in tests:
             try:
@@ -66,7 +76,7 @@ def test_frontend():
 
                 safe_name = path.replace("/", "-").strip("-") or "homepage"
                 page.screenshot(
-                    path=f"D:/projects/Wateen/frontend/test-screenshots/{safe_name}.png",
+                    path=str(SCREENSHOTS_DIR / f"{safe_name}.png"),
                     full_page=True,
                 )
 

@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Button, Input } from '@/components/shared'
 
 export default function RegisterPage() {
@@ -8,7 +9,7 @@ export default function RegisterPage() {
         <p className="mt-2 text-sm text-text-secondary">انضم إلى منصة وتين</p>
       </div>
       
-      <form className="space-y-4">
+      <form method="post" className="space-y-4">
         <Input
           label="الاسم الكامل"
           type="text"
@@ -40,9 +41,9 @@ export default function RegisterPage() {
       
       <p className="text-center text-sm text-text-secondary">
         لديك حساب بالفعل؟{' '}
-        <a href="/login" className="text-primary font-medium hover:underline">
+        <Link href="/login" className="text-primary font-medium hover:underline">
           سجل دخولك
-        </a>
+        </Link>
       </p>
     </div>
   )

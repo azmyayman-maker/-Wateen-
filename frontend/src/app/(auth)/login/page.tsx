@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { Button, Input } from '@/components/shared'
 
 export default function LoginPage() {
@@ -8,7 +9,7 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-text-secondary">مرحباً بعودتك</p>
       </div>
       
-      <form className="space-y-4">
+      <form method="post" className="space-y-4">
         <Input
           label="البريد الإلكتروني"
           type="email"
@@ -28,9 +29,9 @@ export default function LoginPage() {
       
       <p className="text-center text-sm text-text-secondary">
         ليس لديك حساب؟{' '}
-        <a href="/register" className="text-primary font-medium hover:underline">
+        <Link href="/register" className="text-primary font-medium hover:underline">
           سجل الآن
-        </a>
+        </Link>
       </p>
     </div>
   )

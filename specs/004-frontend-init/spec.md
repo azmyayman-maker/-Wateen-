@@ -98,7 +98,7 @@ As a platform administrator or developer, I want dashboard routes for patients a
 ### Measurable Outcomes
 
 - **SC-001**: The application builds successfully with zero errors when running the production build command
-- **SC-002**: All four routes (home, login, register, patient, nurse) render without 404 errors or runtime exceptions
+- **SC-002**: All five routes (home, login, register, patient, nurse) render without 404 errors or runtime exceptions
 - **SC-003**: RTL layout is applied consistently across all pages when viewed in a browser
 - **SC-004**: Arabic text renders correctly with the Cairo font on all pages
 - **SC-005**: The `frontend` folder structure matches the specified organization with route groups in place

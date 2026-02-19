@@ -113,9 +113,7 @@ export default function RootLayout({
 Edit `src/app/globals.css`:
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
 :root {
   --primary: 8 145 178;
