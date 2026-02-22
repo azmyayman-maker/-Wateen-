@@ -3,8 +3,10 @@
 import React from "react";
 import { motion } from "framer-motion";
 import { Fingerprint, Key, Network, Shield, Lock, Database } from "lucide-react";
+import { useLanguage } from "@/lib/i18n";
 
 export function HealthWalletSection() {
+  const { t } = useLanguage();
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -25,36 +27,36 @@ export function HealthWalletSection() {
   const PILLARS = [
     {
       icon: Fingerprint,
-      title: "إثبات المعرفة الصفرية",
+      title: t.healthWallet.zkpTitle,
       tag: "ZKP",
-      desc: "تحقق من هويتك دون كشف أي بيان شخصي.",
+      desc: t.healthWallet.zkpDesc,
       gradient: "from-violet-500/20 to-indigo-500/10",
       iconColor: "text-violet-400",
       borderColor: "border-violet-500/15",
     },
     {
       icon: Key,
-      title: "هوية لامركزية",
+      title: t.healthWallet.didTitle,
       tag: "DID",
-      desc: "هويتك الرقمية السيادية المشفرة على البلوكشين.",
+      desc: t.healthWallet.didDesc,
       gradient: "from-cyan-500/20 to-blue-500/10",
       iconColor: "text-cyan-400",
       borderColor: "border-cyan-500/15",
     },
     {
       icon: Shield,
-      title: "سجلات غير قابلة للتعديل",
+      title: t.healthWallet.immutableTitle,
       tag: "Immutable",
-      desc: "كل تحديث طبي يُسجَّل في كتلة لا يمكن حذفها أو تغييرها.",
+      desc: t.healthWallet.immutableDesc,
       gradient: "from-emerald-500/20 to-teal-500/10",
       iconColor: "text-emerald-400",
       borderColor: "border-emerald-500/15",
     },
     {
       icon: Lock,
-      title: "تحكم كامل للمريض",
+      title: t.healthWallet.patientOwnedTitle,
       tag: "Patient-Owned",
-      desc: "أنت فقط من يمنح أو يسحب صلاحية الوصول لسجلاتك.",
+      desc: t.healthWallet.patientOwnedDesc,
       gradient: "from-amber-500/20 to-orange-500/10",
       iconColor: "text-amber-400",
       borderColor: "border-amber-500/15",
@@ -62,15 +64,14 @@ export function HealthWalletSection() {
   ];
 
   const STATS = [
-    { value: "AES-256", label: "تشفير عسكري" },
-    { value: "100%", label: "ملكية المريض" },
-    { value: "24/7", label: "حماية مستمرة" },
+    { value: "AES-256", label: t.healthWallet.statEncryption },
+    { value: "100%", label: t.healthWallet.statOwnership },
+    { value: "24/7", label: t.healthWallet.statProtection },
   ];
 
   return (
     <div 
       className="absolute inset-0 w-full h-full flex items-center bg-[#050B14] overflow-hidden rounded-2xl md:rounded-[2.5rem] select-none shadow-[0_0_120px_-20px_rgba(79,70,229,0.15)] ring-1 ring-white/5"
-      dir="rtl"
       style={{ transformStyle: "preserve-3d" }}
     >
       {/* Ambient Glow */}
@@ -100,19 +101,25 @@ export function HealthWalletSection() {
             <div className="space-y-3.5">
               <motion.div variants={itemVariants} className="inline-flex items-center space-x-2 space-x-reverse bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1.5 w-fit backdrop-blur-md">
                 <Network className="w-3 h-3 text-indigo-400" />
-                <span className="text-xs font-semibold text-indigo-300 tracking-wide">WEB3 EMR ENGINE</span>
+                <span className="text-xs font-semibold text-indigo-300 tracking-wide">{t.healthWallet.badge}</span>
               </motion.div>
 
               <motion.h2 variants={itemVariants} className="text-2xl md:text-4xl lg:text-5xl xl:text-[4.5rem] font-bold text-white tracking-tight leading-snug">
-                بياناتك الصحية..
+                {t.healthWallet.title1}
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-white to-slate-400">
-                  تحت سيادتك.
+                  {t.healthWallet.title2}
                 </span>
               </motion.h2>
 
               <motion.p variants={itemVariants} className="text-sm md:text-base xl:text-lg text-slate-400 max-w-xl leading-relaxed">
-                أول محفظة صحية في مصر بتقنية <span className="text-slate-200 font-medium">Hyperledger</span>. سجلاتك مشفرة ومحمية ببروتوكولات إثبات المعرفة الصفرية.
+                {t.healthWallet.description.split(/(مصر|Egypt)/).map((part, i) => 
+                  part === "مصر" || part === "Egypt" ? (
+                    <span key={i} className="egypt-gradient">{part}</span>
+                  ) : (
+                    part
+                  )
+                )} <span className="text-slate-200 font-medium">{t.healthWallet.hyperledger}</span>. {t.healthWallet.zkpDesc}
               </motion.p>
             </div>
 
@@ -139,7 +146,7 @@ export function HealthWalletSection() {
                           <span className="text-[9px] font-mono font-semibold text-slate-500 bg-white/[0.04] px-1.5 py-0.5 rounded">{pillar.tag}</span>
                         </div>
                       </div>
-                      <p className="text-[11px] text-slate-400 leading-relaxed pr-0.5">{pillar.desc}</p>
+                      <p className="text-[11px] text-slate-400 leading-relaxed">{pillar.desc}</p>
                     </div>
                   </motion.div>
                 );

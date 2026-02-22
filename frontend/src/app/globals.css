@@ -69,3 +69,35 @@ body {
 .skip-link:focus {
   top: 0;
 }
+
+/* === LTR / English Mode Overrides === */
+[dir="ltr"] body {
+  font-family: var(--font-inter), "Inter", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+[dir="ltr"] .text-start {
+  text-align: left;
+}
+
+[dir="ltr"] .text-end {
+  text-align: right;
+}
+
+/* === Egypt National Flag Gradient === */
+.egypt-gradient {
+  background: linear-gradient(170deg, 
+    rgba(206, 17, 38, 0.8) 0%, 
+    rgba(206, 17, 38, 0.7) 20%, 
+    rgba(255, 255, 255, 1) 45%, 
+    rgba(255, 255, 255, 1) 55%, 
+    rgba(0, 0, 0, 0.7) 80%, 
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  font-weight: 800;
+  filter: drop-shadow(0 0 1px rgba(255,255,255,0.05));
+}

@@ -3,6 +3,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { cn } from '@/lib/utils';
 import { ChevronUp, ChevronDown } from 'lucide-react';
+import { useLanguage } from '@/lib/i18n';
 
 interface WheelPickerProps {
   options: { label: string; value: number | string }[];
@@ -228,6 +229,7 @@ export function DatePickerWheel({
   minYear = 1940,
   maxYear = new Date().getFullYear(),
 }: DatePickerProps) {
+  const { t } = useLanguage();
   
   const currentDay = date.getDate();
   const currentMonth = date.getMonth(); // 0-11
@@ -242,20 +244,10 @@ export function DatePickerWheel({
     value: i + 1,
   }));
 
-  const monthsOptions = [
-    { label: 'يناير', value: 0 },
-    { label: 'فبراير', value: 1 },
-    { label: 'مارس', value: 2 },
-    { label: 'أبريل', value: 3 },
-    { label: 'مايو', value: 4 },
-    { label: 'يونيو', value: 5 },
-    { label: 'يوليو', value: 6 },
-    { label: 'أغسطس', value: 7 },
-    { label: 'سبتمبر', value: 8 },
-    { label: 'أكتوبر', value: 9 },
-    { label: 'نوفمبر', value: 10 },
-    { label: 'ديسمبر', value: 11 },
-  ];
+  const monthsOptions = t.datePicker.months.map((label, i) => ({
+    label,
+    value: i,
+  }));
 
   const yearsOptions = Array.from({ length: maxYear - minYear + 1 }, (_, i) => {
     const y = maxYear - i;

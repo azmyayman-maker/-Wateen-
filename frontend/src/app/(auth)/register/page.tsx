@@ -5,16 +5,17 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input } from '@/components/shared';
+import { useLanguage } from '@/lib/i18n';
+import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
 import { 
   User, 
   Stethoscope, 
   Mail, 
   Lock, 
   Phone, 
-  IdCard, 
-  BriefcaseMedical, 
+  CreditCard, 
   UploadCloud, 
-  CheckCircle2, 
+  CheckCircle2,  
   ChevronRight,
   ChevronLeft,
   Calendar,
@@ -66,6 +67,7 @@ const AnimatedInput = ({ children, delay = 0 }: { children: React.ReactNode, del
 function RegisterContent() {
   const searchParams = useSearchParams();
   const initialIdentifier = searchParams.get("identifier") || "";
+  const { t, isRTL } = useLanguage();
   
   const [phone, setPhone] = useState(initialIdentifier && !initialIdentifier.includes('@') ? initialIdentifier : "");
   const [email, setEmail] = useState(initialIdentifier && initialIdentifier.includes('@') ? initialIdentifier : "");
@@ -91,12 +93,12 @@ function RegisterContent() {
 
   // Password validation rules
   const passwordRules = useMemo(() => [
-    { id: 'length', label: 'لا يقل عن 8 أحرف', test: (p: string) => p.length >= 8 },
-    { id: 'uppercase', label: 'يحتوي على حرف كبير (A-Z)', test: (p: string) => /[A-Z]/.test(p) },
-    { id: 'lowercase', label: 'يحتوي على حرف صغير (a-z)', test: (p: string) => /[a-z]/.test(p) },
-    { id: 'number', label: 'يحتوي على رقم (0-9)', test: (p: string) => /[0-9]/.test(p) },
-    { id: 'special', label: 'يحتوي على رمز خاص (!@#$...)', test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
-  ], []);
+    { id: 'length', label: t.register.minLength, test: (p: string) => p.length >= 8 },
+    { id: 'uppercase', label: t.register.hasUppercase, test: (p: string) => /[A-Z]/.test(p) },
+    { id: 'lowercase', label: t.register.hasLowercase, test: (p: string) => /[a-z]/.test(p) },
+    { id: 'number', label: t.register.hasNumber, test: (p: string) => /[0-9]/.test(p) },
+    { id: 'special', label: t.register.hasSpecial, test: (p: string) => /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(p) },
+  ], [t]);
 
   const allRulesPassed = useMemo(() => 
     passwordRules.every(rule => rule.test(password)) && password === confirmPassword && confirmPassword.length > 0,
@@ -105,12 +107,12 @@ function RegisterContent() {
 
   const passwordStrength = useMemo(() => {
     const passed = passwordRules.filter(rule => rule.test(password)).length;
-    if (passed <= 1) return { label: 'ضعيفة', color: 'bg-red-500', width: '20%' };
-    if (passed <= 2) return { label: 'مقبولة', color: 'bg-orange-500', width: '40%' };
-    if (passed <= 3) return { label: 'متوسطة', color: 'bg-yellow-500', width: '60%' };
-    if (passed <= 4) return { label: 'جيدة', color: 'bg-cyan-500', width: '80%' };
-    return { label: 'ممتازة', color: 'bg-emerald-500', width: '100%' };
-  }, [password, passwordRules]);
+    if (passed <= 1) return { label: t.register.weak, color: 'bg-red-500', width: '20%' };
+    if (passed <= 2) return { label: t.register.acceptable, color: 'bg-orange-500', width: '40%' };
+    if (passed <= 3) return { label: t.register.medium, color: 'bg-yellow-500', width: '60%' };
+    if (passed <= 4) return { label: t.register.good, color: 'bg-cyan-500', width: '80%' };
+    return { label: t.register.excellent, color: 'bg-emerald-500', width: '100%' };
+  }, [password, passwordRules, t]);
 
   useEffect(() => {
     setMounted(true);
@@ -156,11 +158,14 @@ function RegisterContent() {
           <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-64 h-64 rounded-full bg-purple-500/10 blur-[80px] pointer-events-none" />
 
           <div className="text-center mb-8 relative z-10">
+            <div className="flex justify-end mb-4">
+              <LanguageSwitcher variant="light" />
+            </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              {step === 1 ? 'إنشاء حساب جديد' : step === 2 ? 'تأمين حسابك' : 'البيانات المهنية (مقدم الخدمة)'}
+              {step === 1 ? t.register.createAccount : step === 2 ? t.register.secureAccount : t.register.professionalData}
             </h1>
             <p className="text-slate-400 text-sm">
-              {step === 1 ? 'انضم إلى واتين — الرعاية الصحية في خدمتك' : step === 2 ? 'الخطوة الأخيرة — اختر كلمة مرور قوية' : 'توثيق الهوية لضمان جودة الخدمة والبدء في تلقي الطلبات'}
+              {step === 1 ? t.register.joinWateen : step === 2 ? t.register.lastStep : t.register.kycDescription}
             </p>
           </div>
 
@@ -173,7 +178,7 @@ function RegisterContent() {
               className={`relative flex-1 py-3 text-sm font-medium rounded-xl transition-colors duration-200 z-10 flex items-center justify-center gap-2 ${role === 'patient' ? 'text-white' : 'text-slate-400 hover:text-white'}`}
             >
               <User className="w-4 h-4" />
-              <span>طالب خدمة</span>
+              <span>{t.register.patient}</span>
               {role === 'patient' && (
                 <motion.div
                   layoutId="active-role-pill"
@@ -188,7 +193,7 @@ function RegisterContent() {
               className={`relative flex-1 py-3 text-sm font-medium rounded-xl transition-colors duration-200 z-10 flex items-center justify-center gap-2 ${role === 'nurse' ? 'text-white' : 'text-slate-400 hover:text-white'}`}
             >
               <Stethoscope className="w-4 h-4" />
-              <span>مقدم خدمة</span>
+              <span>{t.register.nurse}</span>
               {role === 'nurse' && (
                 <motion.div
                   layoutId="active-role-pill"
@@ -224,10 +229,10 @@ function RegisterContent() {
                   <AnimatedInput delay={0.05}>
                     <div className="relative group">
                       <Input
-                        label="الاسم بالكامل (كما في الهوية الرسمية)"
+                        label={t.register.fullName}
                         type="text"
                         required
-                        placeholder="أدخل اسمك"
+                        placeholder={t.register.fullNamePlaceholder}
                         className="pl-12 bg-slate-900/50 border-slate-700/50 focus:border-cyan-400/80 focus:ring-2 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 shadow-inner focus:scale-[1.01]"
                       />
                       <User className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
@@ -237,10 +242,10 @@ function RegisterContent() {
                   <AnimatedInput delay={0.1}>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-slate-300 font-medium text-sm px-1">رقم الهاتف المحمول (أساسي للتواصل)*</label>
+                        <label className="text-slate-300 font-medium text-sm px-1">{t.register.primaryPhone}</label>
                         {secondaryPhones.length < 9 && (
                           <button type="button" onClick={() => setSecondaryPhones([...secondaryPhones, { id: Date.now().toString() + Math.random(), phone: '', owner: '', relation: '' }])} className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20">
-                            <Plus className="w-3 h-3" /> أضف رقم إضافي
+                            <Plus className="w-3 h-3" /> {t.register.addSecondaryPhone}
                           </button>
                         )}
                       </div>
@@ -270,11 +275,11 @@ function RegisterContent() {
                       >
                         <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 space-y-4 relative">
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-slate-300 font-medium text-sm">رقم إضافي {index + 1}</label>
+                            <label className="text-slate-300 font-medium text-sm">{t.register.secondaryPhone} {index + 1}</label>
                             <button type="button" onClick={() => {
                               setSecondaryPhones(secondaryPhones.filter(c => c.id !== contact.id));
                             }} className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 transition-colors px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20">
-                              <Minus className="w-3 h-3" /> إزالة
+                              <Minus className="w-3 h-3" /> {t.common.remove}
                             </button>
                           </div>
                           
@@ -298,7 +303,7 @@ function RegisterContent() {
                           {role === 'patient' && (
                             <div className="grid grid-cols-2 gap-3 pt-2">
                               <div>
-                                <label className="text-slate-300 text-xs mb-1.5 block text-cyan-50">لمن هذا الرقم؟*</label>
+                                <label className="text-slate-300 text-xs mb-1.5 block text-cyan-50">{t.register.phoneFor}</label>
                                 <input
                                   type="text"
                                   required
@@ -308,12 +313,12 @@ function RegisterContent() {
                                     newPhones[index].owner = e.target.value;
                                     setSecondaryPhones(newPhones);
                                   }}
-                                  placeholder="الاسم"
+                                  placeholder={t.register.namePlaceholder}
                                   className="w-full h-9 px-3 rounded-md bg-slate-900/50 border border-slate-700/50 focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 text-sm focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="text-slate-300 text-xs mb-1.5 block text-cyan-50">صلة القرابة*</label>
+                                <label className="text-slate-300 text-xs mb-1.5 block text-cyan-50">{t.register.relationship}</label>
                                 <input
                                   type="text"
                                   required
@@ -323,7 +328,7 @@ function RegisterContent() {
                                     newPhones[index].relation = e.target.value;
                                     setSecondaryPhones(newPhones);
                                   }}
-                                  placeholder="أب، أخت..."
+                                  placeholder={t.register.relationshipPlaceholder}
                                   className="w-full h-9 px-3 rounded-md bg-slate-900/50 border border-slate-700/50 focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 text-sm focus:outline-none"
                                 />
                               </div>
@@ -337,10 +342,10 @@ function RegisterContent() {
                   <AnimatedInput delay={0.15}>
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="text-slate-300 font-medium text-sm px-1">البريد الإلكتروني (لإرسال التقارير والإشعارات)*</label>
+                        <label className="text-slate-300 font-medium text-sm px-1">{t.register.email}</label>
                         {!showSecondaryEmail && (
                           <button type="button" onClick={() => setShowSecondaryEmail(true)} className="flex items-center gap-1 text-xs text-cyan-400 hover:text-cyan-300 transition-colors px-2 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20">
-                            <Plus className="w-3 h-3" /> أضف بريد إضافي
+                            <Plus className="w-3 h-3" /> {t.register.addSecondaryEmail}
                           </button>
                         )}
                       </div>
@@ -369,9 +374,9 @@ function RegisterContent() {
                       >
                         <div className="p-4 rounded-xl bg-slate-800/30 border border-slate-700/50 space-y-4">
                           <div className="flex items-center justify-between mb-1">
-                            <label className="text-slate-300 font-medium text-sm">بريد إضافي (اختياري)</label>
+                            <label className="text-slate-300 font-medium text-sm">{t.register.secondaryEmail}</label>
                             <button type="button" onClick={() => {setShowSecondaryEmail(false); setSecondaryEmail(''); setSecondaryEmailOwner(''); setSecondaryEmailRelation('');}} className="flex items-center gap-1 text-xs text-rose-400 hover:text-rose-300 transition-colors px-2 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20">
-                              <Minus className="w-3 h-3" /> إزالة
+                              <Minus className="w-3 h-3" /> {t.common.remove}
                             </button>
                           </div>
                           
@@ -390,22 +395,22 @@ function RegisterContent() {
                           {role === 'patient' && (
                             <div className="grid grid-cols-2 gap-3 pt-2">
                               <div>
-                                <label className="text-slate-300 text-xs mb-1.5 block">لمن هذا البريد؟</label>
+                                <label className="text-slate-300 text-xs mb-1.5 block">{t.register.emailFor}</label>
                                 <input
                                   type="text"
                                   value={secondaryEmailOwner}
                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSecondaryEmailOwner(e.target.value)}
-                                  placeholder="اسم الشخص"
+                                  placeholder={t.register.namePlaceholder}
                                   className="w-full h-9 px-3 rounded-md bg-slate-900/50 border border-slate-700/50 focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 text-sm focus:outline-none"
                                 />
                               </div>
                               <div>
-                                <label className="text-slate-300 text-xs mb-1.5 block">صلة القرابة</label>
+                                <label className="text-slate-300 text-xs mb-1.5 block">{t.register.relationship}</label>
                                 <input
                                   type="text"
                                   value={secondaryEmailRelation}
                                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSecondaryEmailRelation(e.target.value)}
-                                  placeholder="مثال: أب، زوجة..."
+                                  placeholder={t.register.relationshipPlaceholder}
                                   className="w-full h-9 px-3 rounded-md bg-slate-900/50 border border-slate-700/50 focus:border-cyan-400/80 focus:ring-1 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 text-sm focus:outline-none"
                                 />
                               </div>
@@ -421,7 +426,7 @@ function RegisterContent() {
                     <div className="relative group flex flex-col items-start w-full">
                       <label className="text-slate-300 font-medium text-sm mb-2 px-1 flex items-center gap-2">
                         <CalendarDays className="w-4 h-4 text-cyan-400" />
-                        تاريخ الميلاد*
+                        {t.register.birthDate}
                       </label>
                       <DatePickerWheel 
                         date={dob} 
@@ -451,8 +456,8 @@ function RegisterContent() {
                       : 'bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:from-purple-500 hover:to-indigo-400'}
                   `}
                 >
-                  <span>التالي — إنشاء كلمة المرور</span>
-                  <ChevronRight className="w-5 h-5 rtl:rotate-180 transition-transform group-hover:-translate-x-1" />
+                  <span>{t.register.nextCreatePassword}</span>
+                  <ChevronRight className={`w-5 h-5 transition-transform ${isRTL ? 'rtl:rotate-180 group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`} />
                 </Button>
               </div>
             </form>
@@ -475,20 +480,20 @@ function RegisterContent() {
               <div className="mx-auto w-14 h-14 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-emerald-500/20 border border-cyan-500/30 flex items-center justify-center mb-3">
                 <ShieldCheck className="w-7 h-7 text-cyan-400" />
               </div>
-              <h3 className="text-xl font-bold text-white">إنشاء كلمة مرور آمنة</h3>
-              <p className="text-sm text-slate-400">اختر كلمة مرور قوية لحماية حسابك على المنصة</p>
+              <h3 className="text-xl font-bold text-white">{t.register.createSecurePassword}</h3>
+              <p className="text-sm text-slate-400">{t.register.chooseStrongPassword}</p>
             </div>
 
             {/* Password Input */}
             <div className="space-y-4">
               <div className="relative group">
-                <label className="text-slate-300 font-medium text-sm mb-2 block px-1">كلمة المرور الجديدة*</label>
+                <label className="text-slate-300 font-medium text-sm mb-2 block px-1">{t.register.newPassword}</label>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder="أدخل كلمة المرور"
+                    placeholder={t.register.newPasswordPlaceholder}
                     dir="ltr"
                     className="w-full h-14 pl-12 pr-12 rounded-2xl bg-slate-900/50 border border-slate-700/50 focus:border-cyan-500 focus:ring-1 focus:ring-cyan-500/20 outline-none transition-all text-white placeholder:text-slate-500 text-base"
                   />
@@ -512,7 +517,7 @@ function RegisterContent() {
                   className="space-y-1.5"
                 >
                   <div className="flex justify-between items-center">
-                    <span className="text-xs text-slate-400">قوة كلمة المرور</span>
+                    <span className="text-xs text-slate-400">{t.register.passwordStrength}</span>
                     <span className={`text-xs font-semibold ${passwordStrength.color.replace('bg-', 'text-')}`}>{passwordStrength.label}</span>
                   </div>
                   <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
@@ -528,7 +533,7 @@ function RegisterContent() {
 
               {/* Validation Rules Checklist */}
               <div className="bg-slate-800/30 rounded-2xl p-4 border border-slate-700/30 space-y-2">
-                <p className="text-xs text-slate-400 font-medium mb-2">يجب أن تتحقق كلمة المرور من الشروط التالية:</p>
+                <p className="text-xs text-slate-400 font-medium mb-2">{t.register.passwordRequirements}</p>
                 {passwordRules.map((rule) => {
                   const passed = rule.test(password);
                   return (
@@ -559,13 +564,13 @@ function RegisterContent() {
 
               {/* Confirm Password */}
               <div className="relative group">
-                <label className="text-slate-300 font-medium text-sm mb-2 block px-1">تأكيد كلمة المرور*</label>
+                <label className="text-slate-300 font-medium text-sm mb-2 block px-1">{t.register.confirmPassword}</label>
                 <div className="relative">
                   <input
                     type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="أعد إدخال كلمة المرور"
+                    placeholder={t.register.confirmPasswordPlaceholder}
                     dir="ltr"
                     className={`w-full h-14 pl-12 pr-12 rounded-2xl bg-slate-900/50 border outline-none transition-all text-white placeholder:text-slate-500 text-base ${
                       confirmPassword.length > 0
@@ -595,7 +600,7 @@ function RegisterContent() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-xs text-red-400 mt-1.5 px-1"
                   >
-                    كلمتا المرور غير متطابقتين
+                    {t.register.passwordsDoNotMatch}
                   </motion.p>
                 )}
                 {confirmPassword.length > 0 && password === confirmPassword && (
@@ -604,7 +609,7 @@ function RegisterContent() {
                     animate={{ opacity: 1, y: 0 }}
                     className="text-xs text-emerald-400 mt-1.5 px-1"
                   >
-                    ✓ كلمتا المرور متطابقتان
+                    {t.register.passwordsMatch}
                   </motion.p>
                 )}
               </div>
@@ -618,7 +623,7 @@ function RegisterContent() {
                 className="flex items-center justify-center gap-1.5 px-5 h-14 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:border-slate-600 transition-all text-sm font-medium"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>رجوع</span>
+                <span>{t.common.back}</span>
               </button>
               <Button 
                 type={role === 'patient' ? "submit" : "button"}
@@ -638,11 +643,11 @@ function RegisterContent() {
                   }
                 `}
               >
-                <span>{role === 'patient' ? 'إنشاء حساب مستخدم' : 'التالي — استكمال البيانات'}</span>
+                <span>{role === 'patient' ? t.register.createPatientAccount : t.register.nextCompleteData}</span>
                 {role === 'patient' ? (
                   <ShieldCheck className="w-5 h-5 transition-transform group-hover:scale-110" />
                 ) : (
-                  <ChevronRight className="w-5 h-5 rtl:rotate-180 transition-transform group-hover:-translate-x-1" />
+                  <ChevronRight className={`w-5 h-5 transition-transform ${isRTL ? 'rtl:rotate-180 group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`} />
                 )}
               </Button>
             </div>
@@ -663,28 +668,28 @@ function RegisterContent() {
               <AnimatedInput delay={0.1}>
                 <div className="relative group">
                   <Input
-                    label="الرقم القومي (المدون بالبطاقة الشخصية)"
+                    label={t.register.nationalId}
                     type="text"
                     required
-                    placeholder="14 رقم"
+                    placeholder={t.register.nationalIdPlaceholder}
                     className="pl-10 bg-slate-900/50 border-slate-700/50 focus:border-purple-500 focus:ring-purple-500/20 transition-all text-white placeholder:text-slate-500"
                     dir="ltr"
                   />
-                  <IdCard className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                  <CreditCard className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
                 </div>
               </AnimatedInput>
 
               <AnimatedInput delay={0.15}>
                 <div className="relative group">
                   <Input
-                    label="رقم القيد النقابي / ترخيص مزاولة المهنة"
+                    label={t.register.syndicateNumber}
                     type="text"
                     required
-                    placeholder="أدخل رقم النقابة"
+                    placeholder={t.register.syndicateNumberPlaceholder}
                     className="pl-10 bg-slate-900/50 border-slate-700/50 focus:border-purple-500 focus:ring-purple-500/20 transition-all text-white placeholder:text-slate-500"
                     dir="ltr"
                   />
-                  <IdCard className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
+                  <CreditCard className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-purple-400 transition-colors" />
                 </div>
               </AnimatedInput>
             </div>
@@ -694,8 +699,8 @@ function RegisterContent() {
               <div className="bg-slate-800/30 rounded-2xl p-5 border border-slate-700/50">
                 <div className="flex justify-between items-start mb-4">
                   <div>
-                    <h4 className="text-sm font-medium text-white mb-1">توثيق الهوية والمؤهلات (KYC)</h4>
-                    <p className="text-xs text-slate-400">يمكنك تخطي هذه الخطوة حالياً، ولكنها إلزامية لاعتماد حسابك وبدء تقديم خدماتك الطبية.</p>
+                    <h4 className="text-sm font-medium text-white mb-1">{t.register.kycTitle}</h4>
+                    <p className="text-xs text-slate-400">{t.register.kycNote}</p>
                   </div>
                 </div>
                 
@@ -705,7 +710,7 @@ function RegisterContent() {
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setNationalIdFile)} />
                     <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
                     <span className="text-xs text-slate-300 font-medium text-center">
-                      {nationalIdFile ? nationalIdFile.name : 'صورة البطاقة القومية (الوجه الأمامي)'}
+                      {nationalIdFile ? nationalIdFile.name : t.register.nationalIdFront}
                     </span>
                     {!nationalIdFile && <span className="text-[10px] text-slate-500 mt-1">PNG, JPG or PDF</span>}
                   </label>
@@ -715,7 +720,7 @@ function RegisterContent() {
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setNationalIdBackFile)} />
                     <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
                     <span className="text-xs text-slate-300 font-medium text-center">
-                      {nationalIdBackFile ? nationalIdBackFile.name : 'صورة البطاقة القومية (الوجه الخلفي)'}
+                      {nationalIdBackFile ? nationalIdBackFile.name : t.register.nationalIdBack}
                     </span>
                     {!nationalIdBackFile && <span className="text-[10px] text-slate-500 mt-1">PNG, JPG or PDF</span>}
                   </label>
@@ -725,7 +730,7 @@ function RegisterContent() {
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setSyndicateFile)} />
                     <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
                     <span className="text-xs text-slate-300 font-medium text-center">
-                      {syndicateFile ? syndicateFile.name : 'صورة بطاقة القيد بالنقابة المهنية'}
+                      {syndicateFile ? syndicateFile.name : t.register.syndicateCard}
                     </span>
                     {!syndicateFile && <span className="text-[10px] text-slate-500 mt-1">PNG, JPG or PDF</span>}
                   </label>
@@ -741,7 +746,7 @@ function RegisterContent() {
                 className="flex items-center justify-center gap-1.5 px-5 h-14 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:border-slate-600 transition-all text-sm font-medium"
               >
                 <ChevronLeft className="w-4 h-4" />
-                <span>رجوع</span>
+                <span>{t.common.back}</span>
               </button>
               
               <button
@@ -752,7 +757,7 @@ function RegisterContent() {
                 }}
                 className="flex items-center justify-center gap-1.5 px-5 h-14 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:border-slate-600 transition-all text-sm font-medium"
               >
-                <span>تخطي</span>
+                <span>{t.common.skip}</span>
               </button>
 
               <Button 
@@ -764,7 +769,7 @@ function RegisterContent() {
                   bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40
                 `}
               >
-                <span>تقديم طلب الانضمام</span>
+                <span>{t.register.submitApplication}</span>
                 <CheckCircle2 className="w-5 h-5 transition-transform group-hover:scale-110" />
               </Button>
             </div>
@@ -783,19 +788,19 @@ function RegisterContent() {
                   ? `w-8 h-2.5 ${role === 'patient' ? 'bg-cyan-500' : 'bg-purple-500'}`
                   : 'w-2.5 h-2.5 bg-slate-600 hover:bg-slate-500'
               }`}
-              aria-label={`الخطوة ${s}`}
+              aria-label={`${t.register.step} ${s}`}
             />
           ))}
         </div>
 
           <div className="mt-8 text-center relative z-10 pt-4 border-t border-slate-700/50">
             <p className="text-sm text-slate-400 flex items-center justify-center gap-1.5">
-              <span>لديك حساب بالفعل؟</span>
+              <span>{t.register.haveAccount}</span>
               <Link 
                 href="/login" 
                 className={`font-medium transition-colors hover:underline underline-offset-4 flex items-center ${role === 'patient' ? 'text-cyan-400 hover:text-cyan-300' : 'text-purple-400 hover:text-purple-300'}`}
               >
-                سجل دخولك من هنا
+                {t.register.loginHere}
               </Link>
             </p>
           </div>

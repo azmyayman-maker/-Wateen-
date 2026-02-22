@@ -4,6 +4,8 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 // ─── SVG Icons (Lucide-style inlined for zero-dep) ────────────────────────────
 const PhoneIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -109,6 +111,7 @@ const animationStyles = `
 // ─── Component ────────────────────────────────────────────────────────────────
 export default function LoginPage() {
   const router = useRouter();
+  const { t, isRTL } = useLanguage();
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [step, setStep] = useState<1 | 2>(1);
@@ -204,6 +207,9 @@ export default function LoginPage() {
 
           {/* ─── HEADER: Logo + Greeting ─── */}
           <div className="text-center mb-8 login-entrance login-entrance-delay-1">
+            <div className="flex justify-end mb-4">
+              <LanguageSwitcher variant="light" />
+            </div>
             <div
               className={`mx-auto transition-all duration-500 relative ${step === 2 ? 'w-16 h-16 mb-4' : 'w-20 h-20 mb-5'}`}
               style={{ animation: "loginFloatBreathing 5s ease-in-out infinite 1.5s" }}
@@ -211,7 +217,7 @@ export default function LoginPage() {
               <div className="absolute inset-0 rounded-full bg-cyan-500/20 blur-xl" aria-hidden="true" />
               <Image
                 src="/images/icon.svg"
-                alt="شعار وتين"
+                alt="Wateen Logo"
                 fill
                 className="relative z-10 drop-shadow-2xl object-contain"
                 priority
@@ -220,14 +226,14 @@ export default function LoginPage() {
 
             <h1 className="text-2xl sm:text-3xl font-bold text-white tracking-wide leading-relaxed transition-all">
               {step === 1 ? (
-                <>مرحباً بك في{" "}
+                <>{t.login.welcomeTo}{" "}
                 <span className="text-transparent bg-clip-text bg-gradient-to-l from-cyan-400 to-purple-400">
-                  وَتِين
+                  {t.common.wateen}
                 </span></>
-              ) : 'مرحباً بعودتك!'}
+              ) : t.login.welcomeBack}
             </h1>
             <p className="mt-2 text-sm text-white/50 font-light transition-all">
-              {step === 1 ? 'منصة الرعاية الصحية المنزلية' : identifier}
+              {step === 1 ? t.login.platformDescription : identifier}
             </p>
           </div>
 
@@ -245,7 +251,7 @@ export default function LoginPage() {
                 >
                   <span className="flex items-center gap-2">
                     <PhoneIcon className="w-4 h-4 text-cyan-400" />
-                    رقم الهاتف المحمول أو البريد الإلكتروني
+                    {t.login.phoneOrEmail}
                   </span>
                 </label>
 
@@ -265,9 +271,9 @@ export default function LoginPage() {
                     <input
                     id="identifier-input"
                     type="text"
-                    dir={identifier ? "ltr" : "rtl"}
+                    dir={identifier ? "ltr" : (isRTL ? "rtl" : "ltr")}
                     autoComplete="username"
-                    placeholder="مثال: 01xxxxxxxxx أو البريد الإلكتروني"
+                    placeholder={t.login.phonePlaceholder}
                     value={identifier}
                     onChange={handleIdentifierChange}
                     onFocus={() => setIsFocused(true)}
@@ -280,7 +286,7 @@ export default function LoginPage() {
                       tracking-wide font-medium
                       rounded-xl
                     `}
-                    aria-label="أدخل المُعرّف الخاص بك"
+                    aria-label={t.login.enterIdentifier}
                   />
 
                   {/* Validation Indicator */}
@@ -334,8 +340,8 @@ export default function LoginPage() {
                     />
                   )}
                   <span className="relative z-10 flex items-center justify-center gap-3">
-                    {isLoading ? "جاري التحقق..." : "المتابعة"}
-                    {!isLoading && <ArrowLeftIcon className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />}
+                    {isLoading ? t.login.verifying : t.login.continue}
+                    {!isLoading && <ArrowLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isRTL ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1 rotate-180'}`} />}
                   </span>
                 </button>
               </div>
@@ -343,7 +349,7 @@ export default function LoginPage() {
               {/* ─── SOCIAL SEPARATOR ─── */}
               <div className="login-entrance login-entrance-delay-4 flex items-center gap-4 my-6">
                 <div className="flex-1 h-px bg-gradient-to-l from-white/15 to-transparent" />
-                <span className="text-xs text-white/25 font-light">أو</span>
+                <span className="text-xs text-white/25 font-light">{t.common.or}</span>
                 <div className="flex-1 h-px bg-gradient-to-r from-white/15 to-transparent" />
               </div>
 
@@ -368,7 +374,7 @@ export default function LoginPage() {
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                   </svg>
-                  المتابعة مع Google
+                  {t.login.continueWithGoogle}
                 </button>
               </div>
             </div>
@@ -382,7 +388,7 @@ export default function LoginPage() {
                 >
                   <span className="flex items-center gap-2">
                     <LockIcon className="w-4 h-4 text-purple-400" />
-                    كلمة المرور
+                    {t.login.password}
                   </span>
                 </label>
 
@@ -417,7 +423,7 @@ export default function LoginPage() {
                       tracking-widest font-medium
                       rounded-xl
                     `}
-                    aria-label="أدخل كلمة المرور"
+                    aria-label={t.login.enterPassword}
                   />
                 </div>
               </div>
@@ -429,13 +435,13 @@ export default function LoginPage() {
                    className="text-xs text-white/50 hover:text-white transition-colors flex items-center gap-1"
                 >
                   <ArrowLeftIcon className="w-3 h-3 rotate-180" />
-                  تعديل المُعرّف
+                  {t.login.editIdentifier}
                 </button>
                 <Link
                   href="/forgot-password"
                   className="text-xs text-purple-400/80 hover:text-purple-400 underline underline-offset-2 transition-colors"
                 >
-                  نسيت كلمة المرور؟
+                  {t.login.forgotPassword}
                 </Link>
               </div>
 
@@ -459,8 +465,8 @@ export default function LoginPage() {
                   `}
                 >
                   <span className="relative z-10 flex items-center justify-center gap-3">
-                    {isLoading ? "جاري الدخول..." : "تسجيل الدخول"}
-                    {!isLoading && <ArrowLeftIcon className="w-5 h-5 transition-transform duration-300 group-hover:-translate-x-1" />}
+                    {isLoading ? t.login.loggingIn : t.login.login}
+                    {!isLoading && <ArrowLeftIcon className={`w-5 h-5 transition-transform duration-300 ${isRTL ? 'group-hover:-translate-x-1' : 'group-hover:translate-x-1 rotate-180'}`} />}
                   </span>
                 </button>
               </div>
@@ -472,25 +478,25 @@ export default function LoginPage() {
             {/* Security Badge */}
             <div className="flex items-center justify-center gap-2 text-white/25 text-xs">
               <ShieldCheckIcon className="w-3.5 h-3.5 text-emerald-400/60" />
-              <span>اتصال مشفّر وآمن بالكامل</span>
+              <span>{t.login.encryptedConnection}</span>
               <LockIcon className="w-3 h-3 text-white/20" />
             </div>
 
             {/* Terms */}
             <p className="mt-3 text-center text-[11px] text-white/20 leading-relaxed">
-              بالمتابعة، أنت توافق على{" "}
+              {t.login.termsAgreement}{" "}
               <Link
                 href="/terms"
                 className="text-cyan-400/50 hover:text-cyan-400/80 underline underline-offset-2 transition-colors"
               >
-                شروط الاستخدام
+                {t.login.termsOfService}
               </Link>{" "}
-              و{" "}
+              {t.login.and}{" "}
               <Link
                 href="/privacy"
                 className="text-cyan-400/50 hover:text-cyan-400/80 underline underline-offset-2 transition-colors"
               >
-                سياسة الخصوصية
+                {t.login.privacyPolicy}
               </Link>
             </p>
           </div>

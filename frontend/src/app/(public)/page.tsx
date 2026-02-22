@@ -8,11 +8,14 @@ import {
   useTransform,
   useSpring,
   useMotionValue,
+  AnimatePresence,
   type MotionValue,
 } from "framer-motion";
-import { LogIn, UserPlus, Activity, BrainCircuit, ShieldCheck, Calculator, ShieldAlert, HeartPulse, Database } from "lucide-react";
+import { LogIn, UserPlus, Activity, BrainCircuit, ShieldCheck, Calculator, ShieldAlert, HeartPulse, Database, Menu, X } from "lucide-react";
 import { HealthWalletSection } from "@/components/landing/HealthWalletSection";
 import { LiveECGMonitor } from "@/components/landing/LiveECGMonitor";
+import { useLanguage } from "@/lib/i18n";
+import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
 
 // --- 0. MOBILE DETECTION HOOK ---
 function useIsMobile(breakpoint = 768) {
@@ -62,7 +65,7 @@ export default function LandingPage() {
   }, []);
 
   return (
-    <main dir="rtl" className="relative bg-[#020408] text-slate-50 overflow-clip">
+    <main className="relative bg-[#020408] text-slate-50 overflow-clip">
       <div ref={containerRef} className="h-[600vh] relative">
         <Section3D index={0} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="hero">
           <HeroContent />
@@ -193,7 +196,9 @@ const DomainReveal = () => {
   );
 };
 
-const HeroContent = () => (
+const HeroContent = () => {
+  const { t } = useLanguage();
+  return (
   <div className="flex flex-col items-center justify-center w-full h-full relative" style={{ transformStyle: "preserve-3d" }}>
     
     {/* Dynamic Background Radial Breathing Mesh */}
@@ -205,21 +210,7 @@ const HeroContent = () => (
       />
     </div>
 
-    {/* Floating Badges (Glassmorphic) */}
-    <motion.div className="flex flex-wrap items-center justify-center gap-3 md:gap-4 mb-4 md:mb-6 z-10" style={{ translateZ: 150 }}
-       initial={{ opacity: 0, y: 20 }}
-       animate={{ opacity: 1, y: 0 }}
-       transition={{ duration: 0.8, delay: 0.2 }}>
-      <div className="px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-slate-800/60 backdrop-blur-md border border-white/10 text-[10px] md:text-xs font-semibold text-emerald-300 flex items-center gap-2 shadow-lg">
-        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-emerald-400 animate-pulse" /> رعاية فورية (IoT)
-      </div>
-      <div className="px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-slate-800/60 backdrop-blur-md border border-white/10 text-[10px] md:text-xs font-semibold text-cyan-300 flex items-center gap-2 shadow-lg">
-        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-cyan-400 animate-pulse" /> ذكاء مدمج (AI Copilot)
-      </div>
-      <div className="px-3 py-1.5 md:px-4 md:py-1.5 rounded-full bg-slate-800/60 backdrop-blur-md border border-white/10 text-[10px] md:text-xs font-semibold text-indigo-300 flex items-center gap-2 shadow-lg">
-        <span className="w-1.5 h-1.5 md:w-2 md:h-2 rounded-full bg-indigo-400 animate-pulse" /> أمان لا مركزي (Blockchain)
-      </div>
-    </motion.div>
+    {/* Floating Badges (Glassmorphic) - Removed as per Phase 8 */}
 
     <motion.div className="relative flex items-center justify-center w-28 h-28 md:w-32 md:h-32 lg:w-40 lg:h-40 z-10" style={{ transformStyle: "preserve-3d", transform: "translateZ(120px)" }}>
       <div className="absolute inset-0 bg-cyan-500/20 blur-[100px] rounded-full will-change-transform" style={{ transform: "translateZ(-50px)" }} />
@@ -237,7 +228,13 @@ const HeroContent = () => (
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.4 }}>
-      مستقبل الرعاية الصحية في مصر
+      {t.landing.heroTitle.split(/(مصر|Egypt)/).map((part, i) => 
+        part === "مصر" || part === "Egypt" ? (
+          <span key={i} className="egypt-gradient">{part}</span>
+        ) : (
+          part
+        )
+      )}
     </motion.h1>
     
     <motion.p 
@@ -246,20 +243,23 @@ const HeroContent = () => (
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.6 }}>
-      منصة وَتِين الرقمية — نظام بيئي رائد يجمع بين الرعاية الفورية، الذكاء الاصطناعي السريري، وتأمين السجلات بتقنية البلوكشين.
+      {t.landing.heroDescription}
     </motion.p>
 
     {/* Dynamic Domain Reveal */}
     <DomainReveal />
 
   </div>
-);
+  );
+};
 
-const IoTVitalsContent = () => (
+const IoTVitalsContent = () => {
+  const { t } = useLanguage();
+  return (
   <div className="flex flex-col items-center justify-center w-full h-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
     <motion.div className="flex flex-col items-center gap-3 md:gap-6 mb-6 md:mb-16" style={{ translateZ: 160 }}>
       <Activity className="w-10 h-10 md:w-12 md:h-12 text-rose-500" />
-      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center shadow-black drop-shadow-lg leading-snug">نبض متصل لحظياً</h2>
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center shadow-black drop-shadow-lg leading-snug">{t.landing.connectedPulse}</h2>
     </motion.div>
 
     {/* Desktop: Absolute positioned cards around ECG. Mobile: Vertical stack */}
@@ -287,10 +287,10 @@ const IoTVitalsContent = () => (
       {/* Mobile: Grid of feature cards below ECG */}
       <div className="grid grid-cols-2 gap-2.5 mt-4 w-full lg:hidden">
         {[
-          { icon: BrainCircuit, title: "اكتشاف التشوهات", desc: "تحليل المؤشرات لاكتشاف أي تشوهات مبكراً.", color: "emerald" },
-          { icon: Activity, title: "مراقبة مستمرة", desc: "تتبع لحظي لنبض القلب والضغط.", color: "cyan" },
-          { icon: ShieldAlert, title: "تنبيهات طوارئ", desc: "تنبيهات فورية عند تخطي المعدلات.", color: "rose" },
-          { icon: Database, title: "تسجيل زمني", desc: "توثيق مستمر في محفظتك المشفرة.", color: "purple" },
+          { icon: BrainCircuit, title: t.landing.anomalyDetection, desc: t.landing.anomalyDesc, color: "emerald" },
+          { icon: Activity, title: t.landing.continuousMonitoring, desc: t.landing.continuousMonitoringDesc, color: "cyan" },
+          { icon: ShieldAlert, title: t.landing.emergencyAlerts, desc: t.landing.emergencyAlertsDesc, color: "rose" },
+          { icon: Database, title: t.landing.timeLogging, desc: t.landing.timeLoggingDesc, color: "purple" },
         ].map((card, i) => {
           const Icon = card.icon;
           const colorMap: Record<string, { bg: string; border: string; text: string; iconBg: string; iconBorder: string }> = {
@@ -331,10 +331,10 @@ const IoTVitalsContent = () => (
           <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
             <BrainCircuit className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">اكتشاف مبكر للتشوهات</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.anomalyDetection}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          الذكاء الاصطناعي يحلل المؤشرات لاكتشاف أي تشوهات قبل تفاقمها.
+          {t.landing.anomalyDesc}
         </p>
       </motion.div>
 
@@ -348,10 +348,10 @@ const IoTVitalsContent = () => (
           <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
             <Activity className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">مراقبة حيوية مستمرة</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.continuousMonitoring}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          تتبع لحظي لنبض القلب والضغط عبر الأجهزة الذكية القابلة للارتداء.
+          {t.landing.continuousMonitoringDesc}
         </p>
       </motion.div>
 
@@ -365,10 +365,10 @@ const IoTVitalsContent = () => (
           <div className="p-2 rounded-lg bg-rose-500/20 border border-rose-500/30">
             <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-rose-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">تنبيهات طوارئ استباقية</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.emergencyAlerts}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          إرسال تنبيهات فورية للفريق الطبي عند تخطي المؤشرات المعدلات الطبيعية.
+          {t.landing.emergencyAlertsDesc}
         </p>
       </motion.div>
 
@@ -382,15 +382,16 @@ const IoTVitalsContent = () => (
           <div className="p-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
             <Database className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">تسجيل زمني دقيق</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.timeLogging}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          توثيق مستمر للتغيرات الحيوية في قاعدة بيانات محفظتك الصحية المشفرة.
+          {t.landing.timeLoggingDesc}
         </p>
       </motion.div>
     </div>
   </div>
-);
+  );
+};
 
 const AICopilotContent = () => {
   const containerVariants = {
@@ -403,16 +404,18 @@ const AICopilotContent = () => {
     visible: { opacity: 1, x: 0, transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] } },
   };
 
+  const { t } = useLanguage();
+
   const BULLETS = [
-    { icon: Activity, text: "تحليل حيوي لحظي", desc: "مراقبة مستمرة للعلامات الحيوية مع تنبيهات ذكية فورية لحالتك" },
-    { icon: BrainCircuit, text: "توقع المخاطر قبل حدوثها", desc: "خوارزميات تنبؤية تحلل الأنماط لاكتشاف الأزمات الصحية مبكراً" },
-    { icon: Calculator, text: "دعم القرار الطبي الدقيق", desc: "حساب معقد لجرعات الأدوية استناداً إلى حالة المريض والوزن" },
-    { icon: ShieldAlert, text: "تحليل التداخلات الدوائية", desc: "تحليل متقدم لتفاعلات الأدوية المتعددة لضمان أقصى درجات السلامة" },
-    { icon: HeartPulse, text: "استجابة فائقة للطوارئ", desc: "حزمة بروتوكولات طبية وتوجيهات لحظية للتعامل مع المواقف الحرجة" },
+    { icon: Activity, text: t.landing.vitalAnalysis, desc: t.landing.vitalAnalysisDesc },
+    { icon: BrainCircuit, text: t.landing.riskPrediction, desc: t.landing.riskPredictionDesc },
+    { icon: Calculator, text: t.landing.clinicalDecision, desc: t.landing.clinicalDecisionDesc },
+    { icon: ShieldAlert, text: t.landing.drugInteraction, desc: t.landing.drugInteractionDesc },
+    { icon: HeartPulse, text: t.landing.emergencyResponse, desc: t.landing.emergencyResponseDesc },
   ];
 
   return (
-    <div dir="rtl" className="min-h-screen relative flex items-center overflow-hidden py-8 md:py-16 lg:py-24 w-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
+    <div className="min-h-screen relative flex items-center overflow-hidden py-8 md:py-16 lg:py-24 w-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
       {/* Background Aura */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] lg:w-[700px] lg:h-[700px] bg-cyan-500/10 mix-blend-screen blur-[80px] md:blur-[100px] rounded-full animate-pulse pointer-events-none" />
 
@@ -434,9 +437,9 @@ const AICopilotContent = () => {
             variants={itemVariants}
             className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-snug lg:leading-snug tracking-tight drop-shadow-md"
           >
-            مساعد طبي بذكاء اصطناعي{" "}
+            {t.landing.aiAssistant}{" "}
             <span className="bg-gradient-to-l from-cyan-400 via-cyan-300 to-purple-500 bg-clip-text text-transparent">
-              لا ينام أبداً.
+              {t.landing.aiNeverSleeps}
             </span>
           </motion.h2>
 
@@ -444,7 +447,7 @@ const AICopilotContent = () => {
             variants={itemVariants}
             className="mt-4 md:mt-5 text-sm md:text-base lg:text-lg text-slate-300 leading-relaxed max-w-xl font-medium"
           >
-            تكنولوجيا الذكاء الاصطناعي الأقوى لدعم أطبائك، لتقديم رعاية منزلية ترقى للمعايير العالمية، مدمجة في نظام متكامل.
+            {t.landing.aiDescription}
           </motion.p>
 
           {/* Bullet Points */}
@@ -611,7 +614,7 @@ const AICopilotContent = () => {
             animate={{ y: [-3, 3, -3] }}
             transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
           >
-            <span className="text-cyan-300/80 text-xs font-medium tracking-wide">المساعد الذكي — يعمل على مدار الساعة</span>
+            <span className="text-cyan-300/80 text-xs font-medium tracking-wide">{t.landing.smartAssistant247}</span>
           </motion.div>
         </motion.div>
       </div>
@@ -619,11 +622,13 @@ const AICopilotContent = () => {
   );
 };
 
-const ShieldContent = () => (
+const ShieldContent = () => {
+  const { t } = useLanguage();
+  return (
   <div className="flex flex-col items-center justify-center w-full h-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
     <motion.div style={{ translateZ: 180 }} className="text-center mb-6 md:mb-16 z-10 relative">
       <ShieldCheck className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 text-emerald-400 mx-auto mb-4 md:mb-5 drop-shadow-[0_0_30px_rgba(52,211,153,0.5)]" />
-      <h2 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white text-balance drop-shadow-xl leading-snug">حماية سيبرانية لا تُخترق</h2>
+      <h2 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white text-balance drop-shadow-xl leading-snug">{t.landing.cyberShield}</h2>
     </motion.div>
     
     <div className="relative w-full max-w-[1300px] flex flex-col lg:flex-row items-center justify-center lg:min-h-[400px]" style={{ transformStyle: "preserve-3d", transform: "translateZ(60px)" }}>
@@ -650,10 +655,10 @@ const ShieldContent = () => (
       {/* Mobile: Grid of security cards below radar */}
       <div className="grid grid-cols-2 gap-2.5 mt-4 w-full lg:hidden">
         {[
-          { icon: ShieldCheck, title: "تشفير طرف-إلى-طرف", desc: "بياناتك مشفرة ببروتوكولات عسكرية.", color: "emerald" },
-          { icon: BrainCircuit, title: "هوية لا مركزية", desc: "تحقق ذكي عبر البلوكشين.", color: "cyan" },
-          { icon: Database, title: "محفظة صحية آمنة", desc: "سجلاتك مخزنة في شبكة بلوكشين.", color: "rose" },
-          { icon: ShieldAlert, title: "منع الاختراق", desc: "مراقبة حية لصد الهجمات.", color: "purple" },
+          { icon: ShieldCheck, title: t.landing.e2eEncryption, desc: t.landing.e2eEncryptionDesc, color: "emerald" },
+          { icon: BrainCircuit, title: t.landing.decentralizedIdentity, desc: t.landing.decentralizedIdentityDesc, color: "cyan" },
+          { icon: Database, title: t.landing.healthWallet, desc: t.landing.healthWalletDesc, color: "rose" },
+          { icon: ShieldAlert, title: t.landing.intrusionPrevention, desc: t.landing.intrusionPreventionDesc, color: "purple" },
         ].map((card, i) => {
           const Icon = card.icon;
           const colorMap: Record<string, { bg: string; border: string; text: string; iconBg: string; iconBorder: string }> = {
@@ -694,10 +699,10 @@ const ShieldContent = () => (
           <div className="p-2 rounded-lg bg-emerald-500/20 border border-emerald-500/30">
             <ShieldCheck className="w-4 h-4 md:w-5 md:h-5 text-emerald-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">تشفير طرف-إلى-طرف</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.e2eEncryption}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          جميع بياناتك الطبية والشخصية مشفرة ببروتوكولات عسكرية لا يمكن اختراقها.
+          {t.landing.e2eEncryptionDesc}
         </p>
       </motion.div>
 
@@ -711,10 +716,10 @@ const ShieldContent = () => (
           <div className="p-2 rounded-lg bg-cyan-500/20 border border-cyan-500/30">
             <BrainCircuit className="w-4 h-4 md:w-5 md:h-5 text-cyan-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">هوية لا مركزية (KYC)</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.decentralizedIdentity}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          نظام تحقق ذكي عبر البلوكشين وتعرف على الوجه لمنع انتحال الشخصية.
+          {t.landing.decentralizedIdentityDesc}
         </p>
       </motion.div>
 
@@ -728,10 +733,10 @@ const ShieldContent = () => (
           <div className="p-2 rounded-lg bg-rose-500/20 border border-rose-500/30">
             <Database className="w-4 h-4 md:w-5 md:h-5 text-rose-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">محفظة صحية لامركزية</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.healthWallet}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          سجلاتك الطبية مخزنة في شبكة بلوكشين، أنت فقط من يملك مفتاح الوصول إليها.
+          {t.landing.healthWalletDesc}
         </p>
       </motion.div>
 
@@ -745,18 +750,21 @@ const ShieldContent = () => (
           <div className="p-2 rounded-lg bg-purple-500/20 border border-purple-500/30">
             <ShieldAlert className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
           </div>
-          <div className="text-white font-bold text-xs md:text-sm">نظام منع الاختراق (IPS)</div>
+          <div className="text-white font-bold text-xs md:text-sm">{t.landing.intrusionPrevention}</div>
         </div>
         <p className="text-slate-300 text-xs md:text-sm leading-relaxed font-medium">
-          مراقبة حية للشبكة لصد الهجمات وحماية خصوصية بيانات المرضى والمستشفيات.
+          {t.landing.intrusionPreventionDesc}
         </p>
       </motion.div>
     </div>
   </div>
-);
+  );
+};
 
 function TopNavbar() {
   const [scrolled, setScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { t, isRTL } = useLanguage();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 50);
@@ -766,7 +774,6 @@ function TopNavbar() {
 
   return (
     <motion.nav
-      dir="rtl"
       className="fixed top-0 left-0 right-0 z-50 select-none"
       initial={{ opacity: 0, y: -30 }}
       animate={{ opacity: 1, y: 0 }}
@@ -785,7 +792,7 @@ function TopNavbar() {
         }}
       >
         {/* Right side — Logo */}
-        <a href="#hero" className="flex items-center gap-2 md:gap-3 group">
+        <a href="/" className="flex items-center gap-2 md:gap-3 group">
           <motion.img
             src="/images/icon.svg"
             alt="Wateen"
@@ -795,15 +802,39 @@ function TopNavbar() {
             draggable={false}
           />
           <span className="text-lg md:text-xl lg:text-2xl font-black bg-gradient-to-l from-white via-cyan-200 to-cyan-400 bg-clip-text text-transparent group-hover:opacity-90 transition-opacity">
-            وَتِين
+            {t.common.wateen}
           </span>
         </a>
 
-        {/* Left side — Auth buttons */}
+        {/* Center — Navigation Links (Hidden on small screens, disappears on scroll) */}
+        <AnimatePresence>
+          {!scrolled && (
+            <motion.div 
+              className="hidden md:flex items-center gap-6 lg:gap-8 font-medium text-sm lg:text-base text-slate-300 absolute left-1/2 -translate-x-1/2"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <a href="/about" className="hover:text-white transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-cyan-400 after:origin-bottom-right after:transition-transform hover:after:scale-x-100 hover:after:origin-bottom-left">
+                {t.landing.navAbout}
+              </a>
+              <a href="/services" className="hover:text-white transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-cyan-400 after:origin-bottom-right after:transition-transform hover:after:scale-x-100 hover:after:origin-bottom-left">
+                {t.landing.navServices}
+              </a>
+              <a href="/support" className="hover:text-white transition-colors relative after:content-[''] after:absolute after:w-full after:scale-x-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-cyan-400 after:origin-bottom-right after:transition-transform hover:after:scale-x-100 hover:after:origin-bottom-left">
+                {t.landing.navSupport}
+              </a>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Left side — Auth buttons + Language Switcher + Hamburger */}
         <div className="flex items-center gap-3">
+          <LanguageSwitcher variant="light" />
           <motion.a
             href="/login"
-            className="flex items-center gap-1.5 md:gap-2 px-3 py-2 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm lg:text-base font-bold text-white cursor-pointer"
+            className="hidden md:flex items-center gap-1.5 md:gap-2 px-3 py-2 md:px-5 md:py-2.5 rounded-xl text-xs md:text-sm lg:text-base font-bold text-white cursor-pointer"
             style={{
               background: "linear-gradient(135deg, #0088FF 0%, #6C3AED 100%)",
               boxShadow:
@@ -818,11 +849,50 @@ function TopNavbar() {
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
           >
             <UserPlus className="w-4 h-4 md:w-5 md:h-5" strokeWidth={2} />
-            <span className="hidden md:inline">تسجيل الدخول / إنشاء حساب</span>
-            <span className="md:hidden">دخول</span>
+            <span className="hidden md:inline">{t.landing.loginBtn} / {t.landing.registerBtn}</span>
           </motion.a>
+
+          {/* Mobile Hamburger Button */}
+          <button
+            className="md:hidden flex items-center justify-center p-2 rounded-lg bg-white/5 border border-white/10 text-white hover:bg-white/10 transition-colors"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
         </div>
       </div>
+
+      {/* Mobile Menu Overlay */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className="md:hidden bg-slate-900/95 backdrop-blur-3xl border-b border-white/10 overflow-hidden"
+          >
+            <div className="flex flex-col items-center py-8 gap-6">
+              <a href="/about" className="text-xl font-bold text-slate-200 hover:text-white transition-colors">{t.landing.navAbout}</a>
+              <a href="/services" className="text-xl font-bold text-slate-200 hover:text-white transition-colors">{t.landing.navServices}</a>
+              <a href="/support" className="text-xl font-bold text-slate-200 hover:text-white transition-colors">{t.landing.navSupport}</a>
+              
+              <div className="w-full px-6 pt-4 mt-2 border-t border-white/10">
+                <a
+                  href="/login"
+                  className="flex items-center justify-center w-full gap-2 px-6 py-3.5 rounded-xl text-base font-bold text-white shadow-xl"
+                  style={{
+                    background: "linear-gradient(135deg, #0088FF 0%, #6C3AED 100%)",
+                  }}
+                >
+                  <UserPlus className="w-5 h-5" />
+                  <span>{t.landing.loginBtn} / {t.landing.registerBtn}</span>
+                </a>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.nav>
   );
 }

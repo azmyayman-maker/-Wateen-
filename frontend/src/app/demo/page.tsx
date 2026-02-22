@@ -2,13 +2,11 @@
 
 import { useState } from 'react';
 import { WateenCanvasLogo } from '../../components/WateenCanvasLogo';
-import { PatientDashboard } from '../../components/PatientDashboard';
-import { NurseDashboard } from '../../components/NurseDashboard';
 import { PatientLocationPicker } from '../../components/PatientLocationPicker';
 import { NurseLiveTracker } from '../../components/NurseLiveTracker';
 
 export default function DemoHub() {
-  const [activeTab, setActiveTab] = useState<'logo' | 'patient' | 'nurse' | 'location' | 'tracker'>('logo');
+  const [activeTab, setActiveTab] = useState<'logo' | 'location' | 'tracker'>('logo');
 
   return (
     <div className="w-full min-h-screen bg-slate-50 flex flex-col font-sans" dir="rtl">
@@ -19,18 +17,6 @@ export default function DemoHub() {
           className={`px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'logo' ? 'bg-[#0088FF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
         >
           عارض الشعار
-        </button>
-        <button 
-          onClick={() => setActiveTab('patient')}
-          className={`px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'patient' ? 'bg-[#0088FF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-        >
-          لوحة المريض
-        </button>
-        <button 
-          onClick={() => setActiveTab('nurse')}
-          className={`px-4 py-2 rounded-lg font-bold transition-colors ${activeTab === 'nurse' ? 'bg-[#0088FF] text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
-        >
-          لوحة الممرض
         </button>
         <button 
           onClick={() => setActiveTab('location')}
@@ -52,14 +38,6 @@ export default function DemoHub() {
           <div className="flex flex-col items-center justify-center min-h-[80vh]">
              <WateenCanvasLogo width={500} height={500} />
           </div>
-        )}
-        
-        {activeTab === 'patient' && (
-          <PatientDashboard />
-        )}
-        
-        {activeTab === 'nurse' && (
-          <NurseDashboard />
         )}
 
         {activeTab === 'location' && (
