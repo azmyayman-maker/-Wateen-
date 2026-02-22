@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useLanguage } from "@/lib/i18n";
 import { motion } from "framer-motion";
 
@@ -11,7 +11,17 @@ import { DynamicPricingConsole } from "@/components/dashboard/admin/DynamicPrici
 import { SecurityKYCQueue } from "@/components/dashboard/admin/SecurityKYCQueue";
 
 export default function AdminDashboard() {
-  const { dir } = useLanguage();
+  const { t, dir } = useLanguage();
+  const [currentTime, setCurrentTime] = useState<string>("--");
+
+  useEffect(() => {
+    const updateTime = () => {
+      setCurrentTime(new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+    };
+    updateTime();
+    const timer = setInterval(updateTime, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <div
@@ -36,19 +46,19 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-black tracking-tight text-white uppercase drop-shadow-[0_0_10px_rgba(255,255,255,0.1)] pb-1">
-                Omni-Command Center
+                {t.admin.omniCommandCenter}
               </h1>
               <p className="text-sm font-medium text-emerald-400/80 uppercase tracking-[0.2em]">
-                System Status: Nominal
+                {t.admin.systemStatus}
               </p>
             </div>
           </div>
           
           <div className="flex gap-4">
-            {/* Clock / Quick Stats placeholder */}
+            {/* Clock / Quick Stats */}
             <div className="flex flex-col items-end">
-              <span className="text-xs text-slate-500 font-mono tracking-widest">LOCAL TIME</span>
-              <span className="text-lg font-mono font-bold text-slate-300">16:55:00</span>
+              <span className="text-xs text-slate-500 font-mono tracking-widest">{t.admin.localTime}</span>
+              <span className="text-lg font-mono font-bold text-slate-300" suppressHydrationWarning>{currentTime}</span>
             </div>
           </div>
         </header>
@@ -66,7 +76,7 @@ export default function AdminDashboard() {
                <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-cyan-500/10 to-transparent" />
                <div className="p-6 h-full flex flex-col">
                   <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                     <span className="text-cyan-400">01</span> Tactical Radar
+                     <span className="text-cyan-400">01</span> {t.admin.tacticalRadar}
                   </h2>
                   <div className="flex-1 rounded-lg bg-slate-950/50 border border-slate-800 flex items-center justify-center overflow-hidden">
                     <TacticalMissionRadar />
@@ -80,7 +90,7 @@ export default function AdminDashboard() {
               <div className="h-full rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                  <div className="p-6 h-full flex flex-col">
                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                       <span className="text-cyan-400">02</span> Active Missions
+                       <span className="text-cyan-400">02</span> {t.admin.activeMissions}
                     </h2>
                     <div className="flex-1 -mx-2 overflow-hidden">
                       <ActiveMissionsFeed />
@@ -92,7 +102,7 @@ export default function AdminDashboard() {
               <div className="h-full rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur-xl shadow-2xl relative overflow-hidden">
                  <div className="p-6 h-full flex flex-col">
                     <h2 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-0 flex items-center gap-2">
-                       <span className="text-emerald-400">03</span> KYC Verify
+                       <span className="text-emerald-400">03</span> {t.admin.kycVerify}
                     </h2>
                     <div className="flex-1 -mx-2 overflow-hidden">
                       <SecurityKYCQueue />

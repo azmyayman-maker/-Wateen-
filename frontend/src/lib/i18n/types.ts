@@ -253,4 +253,12 @@ export interface Translations {
     estimatedPrice: string;
     timeAgo: string;
   };
+  admin: {
+    omniCommandCenter: string;
+    systemStatus: string;
+    localTime: string;
+    tacticalRadar: string;
+    activeMissions: string;
+    kycVerify: string;
+  };
 }

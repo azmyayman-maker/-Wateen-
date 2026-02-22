@@ -253,4 +253,12 @@ export const ar: Translations = {
     estimatedPrice: 'تقديري',
     timeAgo: 'منذ',
   },
+  admin: {
+    omniCommandCenter: 'غرفة التحكم المركزية',
+    systemStatus: 'حالة النظام: مستقرة',
+    localTime: 'التوقيت المحلي',
+    tacticalRadar: 'الرادار التكتيكي',
+    activeMissions: 'المهام النشطة',
+    kycVerify: 'طلبات التوثيق',
+  },
 };

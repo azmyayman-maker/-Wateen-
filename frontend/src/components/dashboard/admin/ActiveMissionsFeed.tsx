@@ -8,8 +8,8 @@ export const ActiveMissionsFeed = () => {
   const missions = [
     {
       id: "SHL-4092",
-      patient: "Ibrahim H.",
-      nurse: "N-Ahmed",
+      patient: "Patient A",
+      nurse: "N-01 (Nurse)",
       service: "IV Drip",
       zone: "Maadi",
       status: "IN_PROGRESS",
@@ -17,8 +17,8 @@ export const ActiveMissionsFeed = () => {
     },
     {
       id: "SHL-4093",
-      patient: "Mona S.",
-      nurse: "N-Sara",
+      patient: "Patient B",
+      nurse: "N-02 (Nurse)",
       service: "Wound Care",
       zone: "Zamalek",
       status: "EN_ROUTE",
@@ -26,7 +26,7 @@ export const ActiveMissionsFeed = () => {
     },
     {
       id: "SHL-4094",
-      patient: "Khaled A.",
+      patient: "Patient C",
       nurse: "Pending Match",
       service: "Injection",
       zone: "Nasr City",
@@ -35,8 +35,8 @@ export const ActiveMissionsFeed = () => {
     },
     {
       id: "SHL-4095",
-      patient: "Aya M.",
-      nurse: "N-Omar",
+      patient: "Patient D",
+      nurse: "N-03 (Nurse)",
       service: "Vitals Check",
       zone: "New Cairo",
       status: "COMPLETED",

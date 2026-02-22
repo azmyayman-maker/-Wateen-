@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" className={`${cairo.variable} ${inter.variable}`} suppressHydrationWarning>
-      <body className="font-sans antialiased bg-background text-text-primary select-none">
+      <body className="font-sans antialiased bg-background text-text-primary select-none" suppressHydrationWarning>
         <LanguageProvider>
           <a href="#main-content" className="skip-link">
             Skip to main content

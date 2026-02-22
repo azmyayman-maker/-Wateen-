@@ -253,4 +253,12 @@ export const en: Translations = {
     estimatedPrice: 'Est.',
     timeAgo: 'ago',
   },
+  admin: {
+    omniCommandCenter: 'Omni-Command Center',
+    systemStatus: 'System Status: Nominal',
+    localTime: 'LOCAL TIME',
+    tacticalRadar: 'Tactical Radar',
+    activeMissions: 'Active Missions',
+    kycVerify: 'KYC Verify',
+  },
 };

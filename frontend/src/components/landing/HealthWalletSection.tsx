@@ -104,7 +104,7 @@ export function HealthWalletSection() {
                 <span className="text-xs font-semibold text-indigo-300 tracking-wide">{t.healthWallet.badge}</span>
               </motion.div>
 
-              <motion.h2 variants={itemVariants} className="text-2xl md:text-4xl lg:text-5xl xl:text-[4.5rem] font-bold text-white tracking-tight leading-snug">
+              <motion.h2 variants={itemVariants} className="text-3xl md:text-4xl lg:text-5xl xl:text-[3.5rem] 2xl:text-[4rem] font-bold text-white tracking-tight leading-snug pb-2">
                 {t.healthWallet.title1}
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-white to-slate-400">
@@ -112,7 +112,7 @@ export function HealthWalletSection() {
                 </span>
               </motion.h2>
 
-              <motion.p variants={itemVariants} className="text-sm md:text-base xl:text-lg text-slate-400 max-w-xl leading-relaxed">
+              <motion.p variants={itemVariants} className="text-sm md:text-base xl:text-lg text-slate-400 max-w-xl leading-relaxed mt-4">
                 {t.healthWallet.description.split(/(مصر|Egypt)/).map((part, i) => 
                   part === "مصر" || part === "Egypt" ? (
                     <span key={i} className="egypt-gradient">{part}</span>

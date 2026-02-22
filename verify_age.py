@@ -2,7 +2,7 @@ from playwright.sync_api import sync_playwright
 import time
 import os
 
-ARTIFACTS_DIR = 'C:/Users/AdminOS/.gemini/antigravity/brain/3e15d3ab-58b6-427a-b4c9-54d232f740cf'
+ARTIFACTS_DIR = os.environ.get('ARTIFACTS_DIR', './artifacts/verify_age')
 os.makedirs(ARTIFACTS_DIR, exist_ok=True)
 
 with sync_playwright() as p:

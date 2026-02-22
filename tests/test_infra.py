@@ -19,11 +19,7 @@ from asgiref.sync import async_to_sync
 
 
 @pytest.mark.django_db
-<<<<<<< HEAD
 def test_postgres_connection_and_extension():
-=======
-def test_postgres_connection_and_extension(json_output_path):
->>>>>>> d1caa4fffb9e080b683aa4ba6547a502e7da2b1d
     """Verify primary database connection and PostGIS extension."""
     with connection.cursor() as cursor:
         cursor.execute("SELECT 1;")
@@ -60,7 +56,6 @@ async def test_redis_channel_layer():
 class TestVerificationScripts:
     """Tests for verification scripts with JSON output."""
 
-    @pytest.mark.django_db
     @pytest.mark.django_db
     def test_database_verification_script(self, tmp_path, monkeypatch):
         """Test database verification produces valid JSON output."""

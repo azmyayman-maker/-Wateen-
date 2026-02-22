@@ -1,11 +1,14 @@
 import React from 'react';
+import { useLanguage } from '@/lib/i18n/context';
 
 // --- MOCK CONSTANTS ---
 const MOCK_MAP_BG = "repeating-linear-gradient(-45deg, #f1f5f9 25%, transparent 25%, transparent 75%, #f1f5f9 75%, #f1f5f9), repeating-linear-gradient(-45deg, #f1f5f9 25%, #f8fafc 25%, #f8fafc 75%, #f1f5f9 75%, #f1f5f9)";
 
 export const NurseLiveTracker: React.FC = () => {
+  const { dir } = useLanguage();
+  
   return (
-    <div className="relative w-full h-screen bg-[#F0F4F8] dark:bg-[#0B1120] overflow-hidden font-sans selection:bg-cyan-200 select-none" dir="rtl">
+    <div className="relative w-full h-screen bg-[#F0F4F8] dark:bg-[#0B1120] overflow-hidden font-sans selection:bg-cyan-200 select-none" dir={dir}>
       {/* Self-contained Keyframes */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes sonarPing1 {

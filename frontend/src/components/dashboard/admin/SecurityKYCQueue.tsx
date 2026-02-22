@@ -8,19 +8,19 @@ export const SecurityKYCQueue = () => {
   const queue = [
     {
       id: "NID-84920",
-      name: "Ahmed Hassan",
+      name: "Applicant 01",
       type: "National ID + Selfie",
-      faceScore: 98.4,
-      ocrMatch: 100,
+      faceScore: 99.9,
+      ocrMatch: 95.0,
       status: "pending",
       time: "2m ago"
     },
     {
       id: "SYN-11029",
-      name: "Sara Mahmoud",
+      name: "Applicant 02",
       type: "Syndicate Card",
       faceScore: 0, 
-      ocrMatch: 85.2,
+      ocrMatch: 88.5,
       status: "pending",
       time: "15m ago"
     }

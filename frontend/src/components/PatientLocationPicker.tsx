@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { useLanguage } from '@/lib/i18n/context';
 
 // --- MOCK CONSTANTS ---
 const MOCK_MAP_BG = "repeating-linear-gradient(45deg, #f0f0f0 25%, transparent 25%, transparent 75%, #f0f0f0 75%, #f0f0f0), repeating-linear-gradient(45deg, #f0f0f0 25%, #ffffff 25%, #ffffff 75%, #f0f0f0 75%, #f0f0f0)";
@@ -6,13 +7,14 @@ const MOCK_MAP_BG = "repeating-linear-gradient(45deg, #f0f0f0 25%, transparent 2
 export const PatientLocationPicker: React.FC = () => {
   const [isPanning, setIsPanning] = useState(false);
   const mapRef = useRef<HTMLDivElement>(null);
+  const { dir } = useLanguage();
 
   // Simulate Map Panning
   const handlePointerDown = () => setIsPanning(true);
   const handlePointerUp = () => setIsPanning(false);
 
   return (
-    <div className="relative w-full h-screen bg-white dark:bg-[#0B1120] overflow-hidden font-sans selection:bg-cyan-200 select-none" dir="rtl">
+    <div className="relative w-full h-screen bg-white dark:bg-[#0B1120] overflow-hidden font-sans selection:bg-cyan-200 select-none" dir={dir}>
       {/* Inline Styles for Custom Animations strictly for self-contained functionality */}
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes subtlePulse {
