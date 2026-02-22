@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Blockchain Orb Shader</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: transparent;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="gl"></canvas>
+    <script>
+      const canvas = document.getElementById("gl");
+      const gl = canvas.getContext("webgl2") || canvas.getContext("webgl");
+      if (!gl) {
+        document.body.innerHTML = "";
+      }
+
+      function resize() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = canvas.clientWidth * dpr;
+        canvas.height = canvas.clientHeight * dpr;
+        gl.viewport(0, 0, canvas.width, canvas.height);
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      const vsSource = `
+  attribute vec2 a_position;
+  void main() { gl_Position = vec4(a_position, 0.0, 1.0); }
+`;
+
+      const fsSource = `
+  precision highp float;
+  uniform float u_time;
+  uniform vec2  u_resolution;
+
+  #define PI  3.14159265359
+  #define TAU 6.28318530718
+
+  // Smooth noise
+  float hash(vec2 p) {
+    return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453123);
+  }
+
+  float noise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    float a = hash(i);
+    float b = hash(i + vec2(1.0, 0.0));
+    float c = hash(i + vec2(0.0, 1.0));
+    float d = hash(i + vec2(1.0, 1.0));
+    return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+  }
+
+  float fbm(vec2 p) {
+    float v = 0.0, a = 0.5;
+    mat2 rot = mat2(cos(0.5), sin(0.5), -sin(0.5), cos(0.5));
+    for (int i = 0; i < 5; i++) {
+      v += a * noise(p);
+      p = rot * p * 2.0;
+      a *= 0.5;
+    }
+    return v;
+  }
+
+  // Hex distance
+  float hexDist(vec2 p) {
+    p = abs(p);
+    return max(dot(p, normalize(vec2(1.0, 1.73))), p.x);
+  }
+
+  vec4 hexCoords(vec2 uv) {
+    vec2 r = vec2(1.0, 1.73);
+    vec2 h = r * 0.5;
+    vec2 a = mod(uv, r) - h;
+    vec2 b = mod(uv - h, r) - h;
+    vec2 gv = dot(a, a) < dot(b, b) ? a : b;
+    float x = atan(gv.x, gv.y);
+    float y = 0.5 - hexDist(gv);
+    vec2 id = uv - gv;
+    return vec4(x, y, id.x, id.y);
+  }
+
+  void main() {
+    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution) / min(u_resolution.x, u_resolution.y);
+    float t = u_time * 0.3;
+
+    // Dark deep blue base
+    vec3 col = vec3(0.02, 0.04, 0.08);
+
+    // Radial distance
+    float dist = length(uv);
+
+    // Hex grid
+    vec2 hexUV = uv * 8.0 + vec2(t * 0.5, t * 0.3);
+    vec4 hc = hexCoords(hexUV);
+
+    // Animate hex edges
+    float hexEdge = smoothstep(0.04, 0.05, hc.y) - smoothstep(0.05, 0.06, hc.y);
+    float hexPulse = sin(hc.z * 3.0 + hc.w * 5.0 + t * 4.0) * 0.5 + 0.5;
+
+    // Hex grid glow — indigo / cyan palette
+    vec3 hexColor = mix(
+      vec3(0.24, 0.15, 0.95),  // Indigo
+      vec3(0.0, 0.85, 0.9),    // Cyan
+      hexPulse
+    );
+    col += hexEdge * hexColor * 0.35 * smoothstep(0.7, 0.0, dist);
+
+    // Central orb energy
+    float orbGlow = smoothstep(0.5, 0.0, dist);
+    float orbPulse = 0.5 + 0.5 * sin(t * 2.5);
+    vec3 orbColor = mix(
+      vec3(0.3, 0.2, 1.0),     // Deep indigo
+      vec3(0.0, 0.9, 1.0),     // Bright cyan
+      0.5 + 0.5 * sin(t * 1.5 + dist * 4.0)
+    );
+    col += orbGlow * orbColor * (0.4 + 0.2 * orbPulse);
+
+    // Flowing energy streams — fbm distortion
+    float flow1 = fbm(uv * 3.0 + vec2(t * 0.7, -t * 0.3));
+    float flow2 = fbm(uv * 4.0 - vec2(t * 0.5, t * 0.8));
+    float energyStream = smoothstep(0.45, 0.55, flow1) * smoothstep(0.45, 0.55, flow2);
+    col += energyStream * vec3(0.1, 0.4, 1.0) * 0.5 * smoothstep(0.6, 0.0, dist);
+
+    // Inner shield ring
+    float ring1 = abs(dist - 0.25 - 0.02 * sin(t * 3.0));
+    float ringGlow1 = smoothstep(0.015, 0.0, ring1);
+    col += ringGlow1 * vec3(0.3, 0.5, 1.0) * 0.8;
+
+    // Outer ring
+    float ring2 = abs(dist - 0.4 - 0.01 * sin(t * 2.0 + PI));
+    float ringGlow2 = smoothstep(0.01, 0.0, ring2);
+    col += ringGlow2 * vec3(0.0, 0.8, 0.9) * 0.5;
+
+    // Orbiting data particles
+    for (int i = 0; i < 8; i++) {
+      float angle = TAU * float(i) / 8.0 + t * (1.0 + 0.3 * float(i));
+      float radius = 0.3 + 0.05 * sin(t * 2.0 + float(i));
+      vec2 particlePos = vec2(cos(angle), sin(angle)) * radius;
+      float particleDist = length(uv - particlePos);
+      float particleGlow = smoothstep(0.02, 0.0, particleDist);
+      vec3 pColor = mix(vec3(0.4, 0.2, 1.0), vec3(0.0, 1.0, 0.9), float(i) / 8.0);
+      col += particleGlow * pColor * 0.7;
+    }
+
+    // Blockchain node connections — subtle lines between particles
+    for (int i = 0; i < 6; i++) {
+      float a1 = TAU * float(i) / 6.0 + t;
+      float a2 = TAU * float(i + 1) / 6.0 + t;
+      float r1 = 0.3 + 0.03 * sin(t + float(i));
+      float r2 = 0.3 + 0.03 * sin(t + float(i + 1));
+      vec2 p1 = vec2(cos(a1), sin(a1)) * r1;
+      vec2 p2 = vec2(cos(a2), sin(a2)) * r2;
+      // Line segment distance
+      vec2 pa = uv - p1;
+      vec2 ba = p2 - p1;
+      float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+      float lineDist = length(pa - ba * h);
+      float lineGlow = smoothstep(0.004, 0.0, lineDist);
+      col += lineGlow * vec3(0.2, 0.5, 1.0) * 0.25;
+    }
+
+    // Central core bright spot
+    float core = smoothstep(0.08, 0.0, dist);
+    col += core * vec3(0.6, 0.8, 1.0) * 1.2;
+
+    // Vignette — fade edges to pure black
+    float vignette = smoothstep(0.55, 0.2, dist);
+    col *= vignette;
+
+    // Subtle overall pulse
+    col *= 0.9 + 0.1 * sin(t * 1.5);
+
+    gl_FragColor = vec4(col, 1.0);
+  }
+`;
+
+      function createShader(type, source) {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, source);
+        gl.compileShader(s);
+        if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) {
+          console.error(gl.getShaderInfoLog(s));
+          gl.deleteShader(s);
+          return null;
+        }
+        return s;
+      }
+
+      const vs = createShader(gl.VERTEX_SHADER, vsSource);
+      const fs = createShader(gl.FRAGMENT_SHADER, fsSource);
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      gl.useProgram(program);
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(
+        gl.ARRAY_BUFFER,
+        new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
+        gl.STATIC_DRAW,
+      );
+      const loc = gl.getAttribLocation(program, "a_position");
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+      const uTime = gl.getUniformLocation(program, "u_time");
+      const uRes = gl.getUniformLocation(program, "u_resolution");
+
+      function render(now) {
+        gl.uniform1f(uTime, now * 0.001);
+        gl.uniform2f(uRes, canvas.width, canvas.height);
+        gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        requestAnimationFrame(render);
+      }
+      requestAnimationFrame(render);
+    </script>
+  </body>
+</html>

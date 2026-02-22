@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:is(.dark *));
+
 :root {
   --primary: 8 145 178;
   --primary-light: 34 211 238;

@@ -28,7 +28,7 @@ export function Card({
   return (
     <div
       className={cn(
-        'rounded-lg',
+        'rounded-lg select-none',
         variants[variant],
         paddings[padding],
         className
