@@ -1,0 +1,23 @@
+{
+  "timestamp": "2026-02-19T03:15:45.993906+00:00",
+  "overall_status": "pass",
+  "components": {
+    "cache": {
+      "component": "cache",
+      "status": "pass",
+      "latency_ms": 74.43,
+      "timestamp": "2026-02-19T03:15:45.993906+00:00",
+      "details": "Latency 74ms | Operations passed | Pub/Sub passed",
+      "operations": {
+        "set": true,
+        "get": true,
+        "delete": true
+      },
+      "pubsub_status": {
+        "subscribe": true,
+        "publish": true,
+        "receive": true
+      }
+    }
+  }
+}
