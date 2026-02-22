@@ -1,11 +1,11 @@
 <div align="center">
 
-  <img src="icon.png" alt="Wateen Logo" width="120" height="120" />
+  <img src="https://github.com/azmyayman-maker/-Wateen-/blob/main/static/images/icon.png" alt="Wateen Logo" width="120" height="120" />
   <h1>Wateen (وَتِين)</h1> 
   <h2>Primary Domain: wateen.live</h2>
 =======
-  <img src="https://github.com/azmyayman-maker/-Wateen-/blob/main/static/images/icon.png" alt="Wateen Logo" width="120" height="120" />
-  <h1>Wateen (وَتِين)</h1>
+
+
 
   <p><strong>AI-Powered Healthcare Ecosystem for Egypt</strong></p>
 
@@ -21,7 +21,7 @@
 
 ---
 
-## 📌 Executive Summary
+##  Executive Summary
 
 **The Problem:** Egypt's healthcare market faces fragmentation, with 60% of areas lacking reliable addressing and a significant shortage of accessible nursing care (2.5 doctors/1000 citizens).
 
@@ -35,7 +35,7 @@
 
 ---
 
-## 🏗️ System Architecture
+##  System Architecture
 
 Wateen utilizes a **Modular Monolith** architecture optimized for the "Hyper-Pair Programming" model (Solo Dev + AI). This guarantees strict domain boundaries, high-velocity development, and future readiness for microservices migration.
 
@@ -84,7 +84,7 @@ graph TB
 
 ---
 
-## 🚀 Tech Stack
+##  Tech Stack
 
 | Category       | Technology                         | Purpose                                              |
 | :------------- | :--------------------------------- | :--------------------------------------------------- |
@@ -98,19 +98,19 @@ graph TB
 
 ---
 
-## ✨ Key Features (The "Uber" Logic)
+##  Key Features (The "Uber" Logic)
 
-- **🤖 AI Copilot:** A medical decision support system enabling nurses to query protocols, drug interactions, and dosage calculations in Arabic.
-- **📍 Hyper-Local Navigation:** Custom mapping engine designed to handle Egypt's unstructured addresses using landmarks and crowd-sourced pins.
-- **⌚ IoT Integration:** Real-time ingestion of patient vitals (Heart Rate, SpO2) from wearables directly into the nurse dashboard.
-- **🛡️ Shield Protocol:** Audio safety system that uses AI to detect distress signals (screams, aggression) during visits.
-- **🔗 Blockchain Health Wallet:** Patient-controlled, immutable health records secured by Smart Contracts.
+- **AI Copilot:** A medical decision support system enabling nurses to query protocols, drug interactions, and dosage calculations in Arabic.
+- ** Hyper-Local Navigation:** Custom mapping engine designed to handle Egypt's unstructured addresses using landmarks and crowd-sourced pins.
+- **IoT Integration:** Real-time ingestion of patient vitals (Heart Rate, SpO2) from wearables directly into the nurse dashboard.
+- **Shield Protocol:** Audio safety system that uses AI to detect distress signals (screams, aggression) during visits.
+- ** Blockchain Health Wallet:** Patient-controlled, immutable health records secured by Smart Contracts.
 
 ---
 
 
 
-## 🤝 Contribution & Team
+## Contribution & Team
 
 **Execution Model: Hyper-Pair Programming**
 
@@ -119,4 +119,4 @@ This project is executed by a unique "Solo Dev + AI" unit:
 - **Human Lead:** Product Architecture & Logic Validation.
 - **AI Engine (Wateen Gem I):** Code Generation, Testing, and Documentation.
 
-_Built with ❤️ for Egypt._
+_Built with Azmy Ayman for Egypt._
