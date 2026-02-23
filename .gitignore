@@ -118,3 +118,9 @@ verify_age.py
 .specify/
 .vscode/
 node_modules/
+mcp_config.json
+package-lock.json
+package.json
+setup_fw.mjs
+test_output2.txt
+test_output3.txt
