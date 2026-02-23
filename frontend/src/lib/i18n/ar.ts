@@ -215,7 +215,7 @@ export const ar: Translations = {
     vitalsCheckTitle: 'فحص شامل للعلامات الحيوية',
     vitalsCheckTime: 'غداً، 10:00 صباحاً',
     heroTitle: 'مرحبا بك،',
-    heroHighlight: 'أحمد',
+    heroHighlight: 'أسم المريض',
     heroDesc: 'رعاية صحية متكاملة — بين يديك.',
     requestNurse: 'اطلب ممرض',
     requestNurseDesc: 'رعاية متخصصة في منزلك خلال دقائق.',
@@ -234,6 +234,7 @@ export const ar: Translations = {
   },
   nurse: {
     title: 'مرحبا بك،',
+    nurseName: 'أسم الممرض',
     subtitle: 'RN-4029 • وحدة العناية المركزة',
     goOnline: 'متاح للعمل',
     goOffline: 'خارج التغطية',

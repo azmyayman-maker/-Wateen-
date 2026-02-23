@@ -215,7 +215,7 @@ export const en: Translations = {
     vitalsCheckTitle: 'Full Vitals Check',
     vitalsCheckTime: 'Tomorrow, 10:00 AM',
     heroTitle: 'Welcome,',
-    heroHighlight: 'Ahmed',
+    heroHighlight: 'Patient Name',
     heroDesc: 'Integrated healthcare — at your fingertips.',
     requestNurse: 'Request Nurse',
     requestNurseDesc: 'Expert care delivered to your doorstep in minutes.',
@@ -234,6 +234,7 @@ export const en: Translations = {
   },
   nurse: {
     title: 'Welcome,',
+    nurseName: 'Nurse Name',
     subtitle: 'RN-4029 • ICU Unit',
     goOnline: 'Go Online',
     goOffline: 'Go Offline',

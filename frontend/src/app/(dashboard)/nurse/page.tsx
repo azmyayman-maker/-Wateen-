@@ -511,7 +511,7 @@ export default function NurseDashboard() {
           </div>
 
           <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg leading-tight flex justify-center w-full mb-2">
-            <FlipTextReveal title={t.nurse?.title ?? 'Welcome,'} highlightText="Ahmed" />
+            <FlipTextReveal title={t.nurse?.title ?? 'Welcome,'} highlightText={t.nurse?.nurseName ?? 'أسم الممرض'} />
           </div>
 
           <p className="text-base text-slate-300/80 font-mono tracking-wider">
