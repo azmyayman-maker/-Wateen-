@@ -90,11 +90,11 @@ services:
       - SECRET_KEY=${SECRET_KEY:-qwertgyuijok1234567890zxcvbnmS3cur3C0d3}
       - DEBUG=False
       - ALLOWED_HOSTS=76.13.61.222,wateen.live,www.wateen.live,localhost
-      - "DATABASE_URL=postgis://wateen_admin:Wt$$Pr0d!2026#S3cur3P@ssw0rd!Xk9#mN2@db:5432/wateen_prod"
-      - "REDIS_URL=redis://:R3d1s$$Pr0d!2026#S3cur3K3y!Lp8#nM4@redis:6379/1"
+      - DATABASE_URL=postgis://wateen_admin:WtPr0d2026S3cur3Pssw0rdXk9mN2@db:5432/wateen_prod
+      - REDIS_URL=redis://:R3d1sPr0d2026S3cur3K3yLp8nM4@redis:6379/1
       - DB_NAME=wateen_prod
       - DB_USER=wateen_admin
-      - DB_PASSWORD=Wt$$Pr0d!2026#S3cur3P@ssw0rd!Xk9#mN2
+      - DB_PASSWORD=WtPr0d2026S3cur3Pssw0rdXk9mN2
     depends_on:
       redis:
         condition: service_healthy
@@ -131,7 +131,7 @@ services:
     container_name: wateen_redis
     command: >
       redis-server
-      --requirepass "R3d1s$$Pr0d!2026#S3cur3K3y!Lp8#nM4"
+      --requirepass "R3d1sPr0d2026S3cur3K3yLp8nM4"
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
       --appendonly yes
@@ -144,7 +144,7 @@ services:
       - wateen_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "R3d1s$$Pr0d!2026#S3cur3K3y!Lp8#nM4", "ping"]
+      test: ["CMD", "redis-cli", "-a", "R3d1sPr0d2026S3cur3K3yLp8nM4", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -163,7 +163,7 @@ services:
     environment:
       - POSTGRES_DB=wateen_prod
       - POSTGRES_USER=wateen_admin
-      - POSTGRES_PASSWORD=Wt$$Pr0d!2026#S3cur3P@ssw0rd!Xk9#mN2
+      - POSTGRES_PASSWORD=WtPr0d2026S3cur3Pssw0rdXk9mN2
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
