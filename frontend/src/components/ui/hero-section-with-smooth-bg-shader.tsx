@@ -1,7 +1,9 @@
 'use client';
 
-import { MeshGradient } from "@paper-design/shaders-react"
+import dynamic from 'next/dynamic';
 import { useEffect, useState } from "react"
+
+const MeshGradient = dynamic(() => import('@paper-design/shaders-react').then((mod) => mod.MeshGradient), { ssr: false });
 import { cn } from "@/lib/utils"
 import FlipTextReveal from "@/components/ui/next-reveal"
 import { useLanguage } from "@/lib/i18n"

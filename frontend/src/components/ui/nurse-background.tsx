@@ -1,7 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { DotOrbit } from '@paper-design/shaders-react';
+import dynamic from 'next/dynamic';
+
+const DotOrbit = dynamic(() => import('@paper-design/shaders-react').then((mod) => mod.DotOrbit), { ssr: false });
 
 interface NurseBackgroundProps {
   isOnline: boolean;
