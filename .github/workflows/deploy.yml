@@ -36,3 +36,5 @@ jobs:
               docker logs wateen_web
               exit 1
             fi
+            echo "Deployment successful. Fetching Next.js frontend logs to debug 500 error..."
+            docker logs wateen_frontend --tail 150
