@@ -161,7 +161,7 @@ services:
     # Require password authentication
     command: >
       redis-server
-      --requirepass "R3d1s$$Pr0d!2026#S3cur3K3y!Lp8#nM4"
+      --requirepass "R3d1sPr0d2026S3cur3K3yLp8nM4"
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
       --appendonly yes
@@ -174,7 +174,7 @@ services:
       - wateen_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "R3d1s$$Pr0d!2026#S3cur3K3y!Lp8#nM4", "ping"]
+      test: ["CMD", "redis-cli", "-a", "R3d1sPr0d2026S3cur3K3yLp8nM4", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5
@@ -193,7 +193,7 @@ services:
     environment:
       - POSTGRES_DB=wateen_prod
       - POSTGRES_USER=wateen_admin
-      - POSTGRES_PASSWORD=Wt$$Pr0d!2026#S3cur3P@ssw0rd!Xk9#mN2
+      - POSTGRES_PASSWORD=WtPr0d2026S3cur3Pssw0rdXk9mN2
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
