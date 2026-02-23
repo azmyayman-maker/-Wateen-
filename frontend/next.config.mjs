@@ -18,14 +18,8 @@ const nextConfig = {
       }
     ]
   },
-  webpack: (config, { isServer }) => {
-    // Attempt to bypass Next.js internal client module tracking bug 
-    // where some dynamically imported or heavy client components cause CSS entry tracking to fail
-    if (isServer) {
-        config.externals = [...(config.externals || []), 'canvas', 'jsdom'];
-    }
-    return config;
-  },
+  // Next.js Docker Standalone mode
+  output: 'standalone',
 };
 
 export default nextConfig;
