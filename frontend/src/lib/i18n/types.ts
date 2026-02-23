@@ -234,6 +234,7 @@ export interface Translations {
   };
   nurse: {
     title: string;
+    nurseName: string;
     subtitle: string;
     goOnline: string;
     goOffline: string;
