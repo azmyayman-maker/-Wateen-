@@ -22,5 +22,7 @@ jobs:
             cd ~/-Wateen-
             git fetch https://oauth2:${GH_TOKEN}@github.com/azmyayman-maker/-Wateen-.git main
             git reset --hard FETCH_HEAD
-            docker compose down
+            docker compose down --remove-orphans
+            docker rm -f $(docker ps -a -q) || true
+            docker network rm wateen_network || true
             docker compose up -d --build
