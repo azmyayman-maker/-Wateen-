@@ -6,7 +6,7 @@ Contains the TestConsumer for validating WebSocket infrastructure.
 
 import logging
 
-from channels.generic.websocket import JsonWebsocketConsumer
+from channels.generic.websocket import JsonWebsocketConsumer, AsyncJsonWebsocketConsumer
 from django.conf import settings
 
 logger = logging.getLogger(__name__)
@@ -64,7 +64,6 @@ class TestConsumer(JsonWebsocketConsumer):
             )
 
 
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
 
 class PatientConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
