@@ -257,7 +257,7 @@ class NurseRespondVisitView(APIView):
                         "visit": VisitResponseSerializer(visit).data,
                         "nurse": {
                             "name": request.user.get_full_name(),
-                            "phone": f"******{str(request.user.phone_number)[-4:]}" if request.user.phone_number else None
+                            "phone": None
                         }
                     }
                 }
