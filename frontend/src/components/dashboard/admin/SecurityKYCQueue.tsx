@@ -54,7 +54,67 @@ export const SecurityKYCQueue = () => {
                  </div>
                  <span className="text-[10px] text-slate-500 font-mono">{item.time}</span>
               </div>
+            <style>{`
+        .holo-grid {
+          position: absolute;
+          inset: 0;
+          background-size: 30px 30px;
+          background-image:
+            linear-gradient(to right, rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,1) 0%, rgba(0,0,0,0) 100%);
+          pointer-events: none;
+        }
 
+        .scanning-line {
+          position: absolute;
+          left: 0;
+          right: 0;
+          height: 100%;
+          background: linear-gradient(
+            to bottom,
+            transparent,
+            rgba(0, 255, 255, 0.05) 50%,
+            transparent
+          );
+          animation: scan-vertical 3s linear infinite;
+          pointer-events: none;
+        }
+
+        @keyframes scan-vertical {
+          0% { transform: translateY(-100%); }
+          100% { transform: translateY(100%); }
+        }
+
+        .kyc-card {
+          position: relative;
+          background: rgba(16, 24, 39, 0.6);
+          border: 1px solid rgba(0, 255, 255, 0.1);
+          backdrop-filter: blur(12px);
+          border-radius: 12px;
+          padding: 1rem;
+          margin-bottom: 0.75rem;
+          transition: all 0.3s ease;
+        }
+
+        .kyc-card::before {
+          content: '';
+          position: absolute;
+          top: 0; left: 0; right: 0; bottom: 0;
+          border-radius: 12px;
+          padding: 1px;
+          background: linear-gradient(135deg, rgba(0,255,255,0.4), transparent, rgba(255,0,255,0.4));
+          -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          -webkit-mask-composite: xor;
+          mask-composite: exclude;
+          opacity: 0;
+          transition: opacity 0.3s ease;
+        }
+
+        .kyc-card:hover::before {
+          opacity: 1;
+        }
+      `}</style>
               {/* AI Confidence Scores */}
               <div className="flex gap-4 mb-3 p-2 bg-slate-950/50 rounded border border-slate-800">
                  {item.faceScore > 0 && (
@@ -99,7 +159,7 @@ export const SecurityKYCQueue = () => {
         </AnimatePresence>
       </div>
 
-      <style jsx global>{`
+      <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 4px;
         }

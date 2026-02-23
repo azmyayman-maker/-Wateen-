@@ -42,7 +42,7 @@ export default function FlipTextReveal({ title = "Welcome,", highlightText = "Ah
         ))}
       </h1>
 
-      <style jsx>{`
+      <style>{`
         /* --- Layout --- */
         .flip-container {
           color: inherit;

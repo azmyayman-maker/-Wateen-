@@ -196,10 +196,22 @@ export const TacticalMissionRadar = () => {
         })}
       </div>
       
-      <style jsx global>{`
-        @keyframes pulse-slow {
-          0% { opacity: 0.3; }
-          100% { opacity: 0.7; }
+      <style>{`
+        @keyframes radar-spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .radar-sweep {
+          animation: radar-spin 4s linear infinite;
+          transform-origin: center;
+        }
+
+        @keyframes ping-radar {
+          0% { transform: scale(0.5); opacity: 0.8; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        .blip-ping {
+          animation: ping-radar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
       `}</style>
     </div>
