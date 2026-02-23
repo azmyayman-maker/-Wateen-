@@ -24,7 +24,13 @@ jobs:
             git reset --hard FETCH_HEAD
             docker compose down --remove-orphans
             docker rm -f $(docker ps -a -q) || true
+            sudo systemctl stop apache2 || true
+            sudo systemctl stop nginx || true
+            sudo fuser -k 80/tcp || true
+            sudo fuser -k 443/tcp || true
             docker network rm wateen_network || true
+            docker network prune -f || true
+            docker image prune -af || true
             if ! docker compose up -d --build; then
               echo "Deployment failed. Fetching web container logs..."
               docker logs wateen_web
