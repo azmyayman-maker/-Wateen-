@@ -221,6 +221,11 @@ fi
 
 echo "=============================================="
 echo "[INFO] All dependencies are ready!"
+
+# Collect static files before starting the application
+echo "[INFO] Collecting static files..."
+python manage.py collectstatic --noinput
+
 echo "[INFO] Starting application..."
 echo "=============================================="
 

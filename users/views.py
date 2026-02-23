@@ -7,8 +7,11 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
 from django.utils.translation import gettext_lazy as _
+import logging
 
-from .models import CustomUser, UserRole, NurseDocument, DocumentType
+logger = logging.getLogger(__name__)
+
+from .models import CustomUser, UserRole, NurseDocument, DocumentType, NurseProfile
 from .serializers import (
     UserRegistrationSerializer,
     UserProfileSerializer,
@@ -163,7 +166,7 @@ class KYCUploadView(APIView):
         # ── Get nurse profile ──
         try:
             nurse_profile = user.nurse_profile
-        except Exception:
+        except NurseProfile.DoesNotExist:
             return Response(
                 {
                     'status': 'error',
@@ -198,7 +201,8 @@ class KYCUploadView(APIView):
                 nurse_document=nurse_document,
                 expected_national_id=user.national_id,
             )
-        except Exception:
+        except Exception as e:
+            logger.exception("KYC Verification failed unexpectedly: %s", e)
             # Never crash — return graceful rejection
             nurse_document.status = 'REJECTED'
             nurse_document.rejection_reason = (

@@ -3,6 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
+from django.db import transaction
 
 from users.models import UserRole, PatientProfile, NurseProfile
 from .models import Visit, VisitStatus
@@ -13,7 +14,7 @@ from .serializers import (
     NurseRespondSerializer,
     NursePendingVisitSerializer,
 )
-from .services import create_visit_request
+from .services import create_visit_request, broadcast_visit_request
 
 import logging
 
@@ -58,33 +59,7 @@ class VisitRequestView(APIView):
 
         response_serializer = VisitResponseSerializer(visit)
 
-        # Broadcast to nearby nurses
-        from .services.matching import GeoMatchingService
-        geo_service = GeoMatchingService()
-        candidates = geo_service.find_candidates(patient_lat=visit.location.y, patient_lng=visit.location.x)
-        
-        if candidates:
-            from channels.layers import get_channel_layer
-            from asgiref.sync import async_to_sync
-            from .serializers import NursePendingVisitSerializer
-            
-            channel_layer = get_channel_layer()
-            visit_base_data = NursePendingVisitSerializer(visit).data
-            
-            for candidate in candidates:
-                visit_data = visit_base_data.copy()
-                visit_data['distance_km'] = candidate['distance_km']
-                
-                async_to_sync(channel_layer.group_send)(
-                    f"nurse_{candidate['nurse_id']}",
-                    {
-                        "type": "visit.request",
-                        "data": {
-                            "type": "new_visit",
-                            "visit": visit_data
-                        }
-                    }
-                )
+        broadcast_visit_request(visit)
 
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
@@ -236,7 +211,7 @@ class NurseRespondVisitView(APIView):
         if action == "accept":
             if visit.status != VisitStatus.PENDING:
                 return Response(
-                    {"detail": _("لا يمكن قبول هذه الزيارة — الحالة الحالية: ") + visit.status},
+                    {"detail": str(_("لا يمكن قبول هذه الزيارة — الحالة الحالية: {}")).format(visit.status)},
                     status=status.HTTP_409_CONFLICT,
                 )
 
@@ -248,12 +223,26 @@ class NurseRespondVisitView(APIView):
                     status=status.HTTP_404_NOT_FOUND,
                 )
 
-            # Transition PENDING → MATCHED → ACCEPTED and assign nurse
-            visit.nurse = nurse_profile
-            visit.transition_to(VisitStatus.MATCHED)
-            visit.transition_to(VisitStatus.ACCEPTED)
+            # Use atomic transaction to prevent race condition
+            # Nurse assignment must be persisted before status transitions
+            with transaction.atomic():
+                # Select for update to prevent concurrent modifications
+                visit = Visit.objects.select_for_update().get(id=visit_id)
+                
+                # Re-check status after acquiring lock
+                if visit.status != VisitStatus.PENDING:
+                    return Response(
+                        {"detail": str(_("لا يمكن قبول هذه الزيارة — الحالة الحالية: {}")).format(visit.status)},
+                        status=status.HTTP_409_CONFLICT,
+                    )
+                
+                # Transition PENDING → MATCHED → ACCEPTED and assign nurse atomically
+                visit.nurse = nurse_profile
+                visit.save(update_fields=["nurse"])
+                visit.transition_to(VisitStatus.MATCHED)
+                visit.transition_to(VisitStatus.ACCEPTED)
 
-            # Broadcast acceptance to the patient
+            # Broadcast acceptance to the patient (outside transaction)
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
             from .serializers import VisitResponseSerializer
@@ -268,7 +257,7 @@ class NurseRespondVisitView(APIView):
                         "visit": VisitResponseSerializer(visit).data,
                         "nurse": {
                             "name": request.user.get_full_name(),
-                            "phone": request.user.phone_number
+                            "phone": f"******{str(request.user.phone_number)[-4:]}" if request.user.phone_number else None
                         }
                     }
                 }
