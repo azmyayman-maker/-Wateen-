@@ -112,3 +112,9 @@ run_tests.bat
 run_tests.sh
 run_tests_manual.py
 verify_age.py
+.agent/
+.kilocode/
+.opencode/
+.specify/
+.vscode/
+node_modules/
