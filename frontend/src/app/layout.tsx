@@ -17,7 +17,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "وتين - Wateen Healthcare Platform",
+  title: "wateen",
   description: "منصة وتين للرعاية الصحية — Wateen Healthcare Platform",
 };
 
