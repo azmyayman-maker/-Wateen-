@@ -14,6 +14,15 @@
         "@modelcontextprotocol/server-postgresql",
         "postgresql://wateen_user:wateen_password@localhost:5432/wateen_db"
       ]
+    },
+    "hostinger-mcp": {
+      "command": "npx",
+      "args": [
+        "hostinger-api-mcp@latest"
+      ],
+      "env": {
+        "API_TOKEN": "IkpUQBdqfxrhBuU9105W9rWqRRd9FHLCcbE36uPX064b08b7"
+      }
     }
   }
 }
