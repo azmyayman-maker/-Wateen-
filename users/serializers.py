@@ -185,3 +185,45 @@ class TokenObtainPairResponseSerializer(serializers.Serializer):
 
 class TokenRefreshResponseSerializer(serializers.Serializer):
     access = serializers.CharField()
+
+
+class KYCDocumentUploadSerializer(serializers.Serializer):
+    """Validates KYC document upload requests."""
+
+    document_type = serializers.ChoiceField(
+        choices=[('NATIONAL_ID', 'National ID'), ('SYNDICATE_CARD', 'Syndicate Card')],
+        help_text=_('نوع المستند: NATIONAL_ID أو SYNDICATE_CARD'),
+    )
+    document_file = serializers.FileField(
+        help_text=_('صورة المستند (JPEG, PNG — حد أقصى 10 ميجابايت)'),
+    )
+
+    def validate_document_file(self, value):
+        """Validate file type and size."""
+        # Check file size (10MB max)
+        max_size = 10 * 1024 * 1024
+        if value.size > max_size:
+            raise serializers.ValidationError(
+                _('حجم الملف أكبر من الحد المسموح (10 ميجابايت)')
+            )
+
+        # Check file extension
+        allowed_extensions = {'jpg', 'jpeg', 'png', 'bmp', 'tiff', 'webp'}
+        ext = value.name.rsplit('.', 1)[-1].lower() if '.' in value.name else ''
+        if ext not in allowed_extensions:
+            raise serializers.ValidationError(
+                _('نوع الملف غير مدعوم. الأنواع المسموحة: JPEG, PNG, BMP, TIFF, WebP')
+            )
+
+        return value
+
+
+class NurseDocumentSerializer(serializers.Serializer):
+    """Read serializer for NurseDocument responses."""
+
+    id = serializers.UUIDField(read_only=True)
+    document_type = serializers.CharField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    rejection_reason = serializers.CharField(read_only=True)
+    uploaded_at = serializers.DateTimeField(read_only=True)
+    verified_at = serializers.DateTimeField(read_only=True)

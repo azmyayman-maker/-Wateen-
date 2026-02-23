@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
+import { useAuth } from "@/providers/AuthProvider";
 
 // ─── SVG Icons (Lucide-style inlined for zero-dep) ────────────────────────────
 const PhoneIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
@@ -72,6 +73,22 @@ const ShieldCheckIcon = ({ className = "w-4 h-4" }: { className?: string }) => (
 );
 
 // ─── CSS Animations ───────────────────────────────────────────────────────────
+const EyeIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" />
+    <circle cx="12" cy="12" r="3" />
+  </svg>
+);
+
+const EyeOffIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+    <path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" />
+    <path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" />
+    <path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" />
+    <path d="m2 2 20 20" />
+  </svg>
+);
+
 const animationStyles = `
   @keyframes loginFadeInUp {
     0% {
@@ -97,6 +114,11 @@ const animationStyles = `
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-3px); }
   }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
   .login-entrance {
     animation: loginFadeInUp 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     opacity: 0;
@@ -106,6 +128,7 @@ const animationStyles = `
   .login-entrance-delay-3 { animation-delay: 0.45s; }
   .login-entrance-delay-4 { animation-delay: 0.6s; }
   .login-entrance-delay-5 { animation-delay: 0.75s; }
+  .shake-error { animation: shake 0.5s ease-in-out; }
 `;
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -118,6 +141,10 @@ export default function LoginPage() {
   const [isFocused, setIsFocused] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [shakeError, setShakeError] = useState(false);
+  const { login } = useAuth();
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -141,38 +168,29 @@ export default function LoginPage() {
   const handleIdentifierSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValidIdentifier || isLoading) return;
-
-    setIsLoading(true);
-    // Mock API Check
-    setTimeout(() => {
-      setIsLoading(false);
-      // IF identifier starts with 11 or 10 or 011 or 010 or has admin -> mock EXISTS
-      const userExists =
-        identifier.startsWith("11") ||
-        identifier.startsWith("10") ||
-        identifier.startsWith("011") ||
-        identifier.startsWith("010") ||
-        identifier.includes("admin");
-
-      if (userExists) {
-        setStep(2); // Ask for password
-      } else {
-        // Redirect to register with identifier
-        router.push(`/register?identifier=${encodeURIComponent(identifier)}`);
-      }
-    }, 800);
+    setErrorMsg(null);
+    // Always proceed to password step — the backend handles "user not found" during login
+    setStep(2);
   };
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password || isLoading) return;
 
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      // Mock successful login
+    setErrorMsg(null);
+    try {
+      // Send real API request — backend expects national_id or phone_number
+      await login({ identifier, password });
+      // Redirect on success
       router.push("/dashboard");
-    }, 1000);
+    } catch (err: any) {
+      setErrorMsg(t.login?.invalidCredentials || "Invalid credentials. Please try again.");
+      setShakeError(true);
+      setTimeout(() => setShakeError(false), 500);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -190,6 +208,7 @@ export default function LoginPage() {
             p-8 sm:p-10
             transition-all duration-700
             ${mounted ? "login-entrance" : "opacity-0"}
+            ${shakeError ? "shake-error" : ""}
           `}
           style={{
             boxShadow: `
@@ -407,7 +426,7 @@ export default function LoginPage() {
                 >
                   <input
                     id="password-input"
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     dir="ltr"
                     autoComplete="current-password"
                     placeholder="••••••••"
@@ -416,7 +435,7 @@ export default function LoginPage() {
                     onFocus={() => setIsFocused(true)}
                     onBlur={() => setIsFocused(false)}
                     className={`
-                      w-full h-full px-4
+                      w-full h-full pl-4 pr-12
                       bg-transparent text-white text-base
                       placeholder:text-white/20
                       focus:outline-none
@@ -425,7 +444,20 @@ export default function LoginPage() {
                     `}
                     aria-label={t.login.enterPassword}
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-white/30 hover:text-purple-400 transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOffIcon className="w-5 h-5" /> : <EyeIcon className="w-5 h-5" />}
+                  </button>
                 </div>
+                {errorMsg && (
+                  <p className="mt-2 text-xs text-red-400 font-medium">
+                    {errorMsg}
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center justify-between mt-4 mb-6 px-1">

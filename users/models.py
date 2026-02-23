@@ -325,3 +325,93 @@ class NurseProfile(models.Model):
 
     def __str__(self) -> str:
         return f'NurseProfile({self.user.national_id})'
+
+
+class DocumentType(models.TextChoices):
+    NATIONAL_ID = 'NATIONAL_ID', _('بطاقة الرقم القومي')
+    SYNDICATE_CARD = 'SYNDICATE_CARD', _('كارنيه النقابة')
+
+
+class DocumentStatus(models.TextChoices):
+    PENDING = 'PENDING', _('قيد المراجعة')
+    VERIFIED = 'VERIFIED', _('تم التحقق')
+    REJECTED = 'REJECTED', _('مرفوض')
+
+
+def kyc_document_upload_path(instance, filename):
+    """Generate upload path: kyc_documents/<nurse_uuid>/<document_type>/<filename>"""
+    return f'kyc_documents/{instance.nurse.user_id}/{instance.document_type}/{filename}'
+
+
+class NurseDocument(models.Model):
+    """Stores uploaded KYC documents for nurse verification (National ID, Syndicate Card)."""
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_('المعرّف'),
+    )
+    nurse = models.ForeignKey(
+        'users.NurseProfile',
+        on_delete=models.CASCADE,
+        related_name='documents',
+        verbose_name=_('الممرض/ة'),
+    )
+    document_type = models.CharField(
+        _('نوع المستند'),
+        max_length=20,
+        choices=DocumentType.choices,
+    )
+    document_file = models.FileField(
+        _('ملف المستند'),
+        upload_to=kyc_document_upload_path,
+    )
+    ocr_data = models.JSONField(
+        _('بيانات OCR'),
+        default=dict,
+        blank=True,
+        help_text=_('البيانات المستخرجة من المستند عبر OCR'),
+    )
+    extracted_national_id = models.CharField(
+        _('الرقم القومي المستخرج'),
+        max_length=14,
+        blank=True,
+        default='',
+        help_text=_('الرقم القومي المكوّن من 14 رقم المستخرج من الصورة'),
+    )
+    status = models.CharField(
+        _('الحالة'),
+        max_length=10,
+        choices=DocumentStatus.choices,
+        default=DocumentStatus.PENDING,
+    )
+    rejection_reason = models.TextField(
+        _('سبب الرفض'),
+        blank=True,
+        default='',
+    )
+    uploaded_at = models.DateTimeField(
+        _('تاريخ الرفع'),
+        auto_now_add=True,
+    )
+    verified_at = models.DateTimeField(
+        _('تاريخ التحقق'),
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        verbose_name = _('مستند الممرض/ة')
+        verbose_name_plural = _('مستندات الممرضين')
+        db_table = 'users_nurse_document'
+        ordering = ['-uploaded_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['nurse', 'document_type'],
+                name='unique_nurse_document_type',
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f'{self.get_document_type_display()} — {self.nurse}'

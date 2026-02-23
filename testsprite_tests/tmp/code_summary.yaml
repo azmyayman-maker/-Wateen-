@@ -3,63 +3,37 @@ type: backend
 tech_stack:
   - Python
   - Django
-  - PostGIS
-  - Redis
   - Django REST Framework
-  - SimpleJWT
+  - PostGIS
+routes:
+  - path: /api/v1/visits/estimate/
+    file: visits/api.py
+    auth_required: false
+    description: Get price estimate for a service visit
+  - path: /api/v1/payments/webhook/mock/
+    file: visits/api.py
+    auth_required: false
+    description: Mock payment webhook for testing
 features:
-  - name: User Management
-    description: Authentication and profile management for Patients and Nurses (CustomUser, PatientProfile, NurseProfile)
+  - name: Validating Pricing Engine Calculation
+    description: Calculate price breakdown based on base_price, distance_fee, and time_multiplier
     files:
-      - users/models.py
-      - users/urls.py
-      - users/views.py
-    endpoints:
+      - visits/api.py
+      - visits/services/pricing.py
+    entry_route: /api/v1/visits/estimate/
+    user_interactions: []
+    api_calls:
       - method: POST
-        path: /api/v1/auth/register/
-        description: Register a new user (Patient or Nurse)
-        auth_required: false
-      - method: POST
-        path: /api/v1/auth/token/
-        description: Obtain JWT access and refresh tokens
-        auth_required: false
-      - method: POST
-        path: /api/v1/auth/token/refresh/
-        description: Refresh JWT access token
-        auth_required: false
-      - method: POST
-        path: /api/v1/auth/logout/
-        description: Logout user (blacklist token)
-        auth_required: true
-      - method: GET
-        path: /api/v1/profile/
-        description: Retrieve user profile
-        auth_required: true
-      - method: PUT
-        path: /api/v1/profile/
-        description: Update user profile
-        auth_required: true
-    depends_on: []
-  - name: Visit Management
-    description: Visit lifecycle management (Request, Estimate, Matching)
+        endpoint: /api/v1/visits/estimate/
+    auth_required: false
+  - name: Visit Lifecycle
+    description: Validating visit lifecycle state transitions from PENDING to COMPLETED
     files:
       - visits/models.py
-      - visits/urls.py
-      - visits/views.py
-      - visits/api.py
-    endpoints:
+    entry_route: /api/v1/payments/webhook/mock/
+    user_interactions: []
+    api_calls:
       - method: POST
-        path: /api/v1/visits/request/
-        description: Request a new home nursing visit
-        auth_required: true
-      - method: POST
-        path: /api/v1/visits/estimate/
-        description: Get price estimate for a visit
-        auth_required: true
-      - method: POST
-        path: /api/v1/visits/payments/webhook/mock/
-        description: Mock webhook for payment processing
-        auth_required: false
-    depends_on:
-      - User Management
+        endpoint: /api/v1/payments/webhook/mock/
+    auth_required: false
 known_limitations: []

@@ -7,7 +7,8 @@ from .views import (
     ChangePasswordView,
     LogoutView,
     CustomTokenObtainPairView,
-    CustomTokenRefreshView
+    CustomTokenRefreshView,
+    KYCUploadView,
 )
 
 
@@ -21,4 +22,6 @@ urlpatterns = [
     path('auth/logout/', LogoutView.as_view(), name='logout'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
     path('profile/', ProfileView.as_view(), name='profile'),
+    # KYC document upload for nurse verification
+    path('kyc/upload/', KYCUploadView.as_view(), name='kyc_upload'),
 ]

@@ -16,8 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
+
+
+def healthcheck(request):
+    """Docker healthcheck endpoint - returns 200 OK with status JSON."""
+    return JsonResponse({"status": "healthy"})
+
 
 urlpatterns = [
+    path('', healthcheck, name='healthcheck'),  # Docker healthcheck
     path('admin/', admin.site.urls),
     path('api/v1/', include('users.urls')),
     path('api/v1/visits/', include('visits.urls')),

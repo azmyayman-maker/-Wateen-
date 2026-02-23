@@ -7,6 +7,7 @@ import {
   Syringe, Cross, HeartPulse, HeartHandshake, UserCheck, Droplets, FlaskConical, Star
 } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import { ServicesGrid } from "@/components/services/ServicesGrid";
 
 export default function ServicesPage() {
   const { isRTL } = useLanguage();
@@ -91,23 +92,7 @@ export default function ServicesPage() {
     ]
   };
 
-  const coreServices = isRTL ? [
-    { title: "زيارة تمريضية شاملة", desc: "رعاية تمريضية متكاملة في راحة منزلك بواسطة نخبة من الممرضين المؤهلين.", icon: HeartHandshake, color: "from-blue-400 to-indigo-500", shadow: "shadow-blue-500/20", colSpan: "lg:col-span-2 lg:row-span-2" },
-    { title: "الحقن الوريدي والعضلي", desc: "إعطاء الحقن بجميع أنواعها بأعلى معايير التعقيم.", icon: Syringe, color: "from-emerald-400 to-teal-500", shadow: "shadow-emerald-500/20", colSpan: "lg:col-span-2" },
-    { title: "تركيب الكانيولا والمحاليل", desc: "تركيب الكانيولا الوريدية والمحاليل باحترافية وبدون ألم.", icon: Droplets, color: "from-cyan-400 to-blue-500", shadow: "shadow-cyan-500/20", colSpan: "lg:col-span-1" },
-    { title: "العناية المتقدمة بالجروح", desc: "تغيير على الجروح الجراحية باستخدام أحدث الغيارات.", icon: Cross, color: "from-rose-400 to-red-500", shadow: "shadow-rose-500/20", colSpan: "lg:col-span-1" },
-    { title: "القسطرة البولية والأنبوب المعدي", desc: "تركيب وتغيير القسطرة البولية وأنبوب التغذية بعناية.", icon: FlaskConical, color: "from-orange-400 to-amber-500", shadow: "shadow-orange-500/20", colSpan: "lg:col-span-2" },
-    { title: "رعاية كبار السن", desc: "برامج رعاية مخصصة لكبار السن تشمل النظافة والمتابعة.", icon: UserCheck, color: "from-purple-400 to-fuchsia-500", shadow: "shadow-purple-500/20", colSpan: "lg:col-span-1" },
-    { title: "قياس العلامات الحيوية", desc: "قياس دقيق لضغط الدم، السكر، النبض، ونسبة الأكسجين.", icon: HeartPulse, color: "from-red-400 to-rose-500", shadow: "shadow-red-500/20", colSpan: "lg:col-span-1" }
-  ] : [
-    { title: "Comprehensive Nursing Visit", desc: "Full nursing care in the comfort of your home by highly qualified nurses.", icon: HeartHandshake, color: "from-blue-400 to-indigo-500", shadow: "shadow-blue-500/20", colSpan: "lg:col-span-2 lg:row-span-2" },
-    { title: "IV & IM Injections", desc: "Administration of all types of injections with strict sterilization.", icon: Syringe, color: "from-emerald-400 to-teal-500", shadow: "shadow-emerald-500/20", colSpan: "lg:col-span-2" },
-    { title: "Cannula & IV Fluids", desc: "Professional and painless insertion of IV cannulas and therapeutic fluids.", icon: Droplets, color: "from-cyan-400 to-blue-500", shadow: "shadow-cyan-500/20", colSpan: "lg:col-span-1" },
-    { title: "Advanced Wound Care", desc: "Dressing surgical wounds using the latest medical dressings.", icon: Cross, color: "from-rose-400 to-red-500", shadow: "shadow-rose-500/20", colSpan: "lg:col-span-1" },
-    { title: "Catheter & Feeding", desc: "Insertion and changing of catheters and feeding tubes with utmost care.", icon: FlaskConical, color: "from-orange-400 to-amber-500", shadow: "shadow-orange-500/20", colSpan: "lg:col-span-2" },
-    { title: "Elderly Care", desc: "Tailored care programs for the elderly including hygiene and monitoring.", icon: UserCheck, color: "from-purple-400 to-fuchsia-500", shadow: "shadow-purple-500/20", colSpan: "lg:col-span-1" },
-    { title: "Vitals Monitoring", desc: "Accurate measurement of blood pressure, blood sugar, pulse, and SpO2.", icon: HeartPulse, color: "from-red-400 to-rose-500", shadow: "shadow-red-500/20", colSpan: "lg:col-span-1" }
-  ];
+
 
   return (
     <main className="min-h-screen bg-[#020408] text-slate-50 selection:bg-cyan-500/30 overflow-hidden" dir={isRTL ? 'rtl' : 'ltr'}>
@@ -175,50 +160,7 @@ export default function ServicesPage() {
             <div className="h-[2px] flex-1 bg-gradient-to-r from-slate-800 to-transparent opacity-50" />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 auto-rows-fr">
-            {coreServices.map((service, idx) => {
-              const Icon = service.icon;
-              return (
-                <motion.div
-                  key={idx}
-                  className={`group relative overflow-hidden rounded-[2rem] bg-slate-900/40 backdrop-blur-xl border border-white/5 hover:border-white/10 transition-all duration-500 flex flex-col justify-between p-6 md:p-8 ${service.colSpan}`}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true, margin: "-50px" }}
-                  transition={{ duration: 0.5, delay: idx * 0.05 }}
-                  whileHover={{ y: -5 }}
-                >
-                  <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-0 group-hover:opacity-5 transition-opacity duration-500`} />
-                  
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={`w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center relative overflow-hidden group-hover:shadow-[0_0_30px_rgba(0,0,0,0)] group-hover:${service.shadow} transition-shadow duration-500`}>
-                      <div className={`absolute inset-0 bg-gradient-to-br ${service.color} opacity-20`} />
-                      <Icon className="w-7 h-7 text-white relative z-10 drop-shadow-lg" />
-                    </div>
-                    {/* Tiny visual pulse for the first big tile */}
-                    {idx === 0 && (
-                      <span className="flex h-3 w-3 relative">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
-                      </span>
-                    )}
-                  </div>
-
-                  <div>
-                    <h3 className={`text-xl md:text-2xl font-bold text-white mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r ${service.color} transition-all duration-300`}>
-                      {service.title}
-                    </h3>
-                    <p className={`text-slate-400 font-medium leading-relaxed ${idx === 0 ? "text-lg max-w-md" : "text-sm md:text-base"}`}>
-                      {service.desc}
-                    </p>
-                  </div>
-                  
-                  {/* Glass reflection */}
-                  <div className="absolute -inset-full top-0 z-0 block h-full w-1/2 -skew-x-12 transform bg-gradient-to-r from-transparent via-white/5 to-transparent opacity-0 group-hover:animate-shine" />
-                </motion.div>
-              );
-            })}
-          </div>
+          <ServicesGrid isRTL={isRTL} />
         </div>
 
         {/* Section 2: Exclusive Features (Tech innovations based on MIP) */}

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "@/lib/i18n";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 const cairo = Cairo({
   subsets: ["arabic", "latin"],
@@ -28,12 +29,14 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={`${cairo.variable} ${inter.variable}`} suppressHydrationWarning>
       <body className="font-sans antialiased bg-background text-text-primary select-none" suppressHydrationWarning>
-        <LanguageProvider>
-          <a href="#main-content" className="skip-link">
-            Skip to main content
-          </a>
-          {children}
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <a href="#main-content" className="skip-link">
+              Skip to main content
+            </a>
+            {children}
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

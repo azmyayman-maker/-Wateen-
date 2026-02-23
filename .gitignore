@@ -20,7 +20,18 @@ env/
 
 # ── Environment Variables ──
 .env
+.env.production
 !.env.example
+
+# ── SSL Certificates (NEVER COMMIT) ──
+*.pem
+*.key
+*.crt
+docker/ssl/*.pem
+
+# ── Backups ──
+backups/
+*.backup
 
 # ── Database ──
 db.sqlite3
@@ -50,9 +61,54 @@ nul
 
 # ── Temporary Test & Debug Output ──
 *_output.txt
+*_output*.txt
 test_errors.txt
 test_failures*.txt
 logs_dump.txt
 remaining_tests.txt
 error_log.txt
 check_output.txt
+output.txt
+
+# ── MCP & Tool Config (generated/temporary) ──
+mcp_output.json
+mcp_tools.json
+mcp_config.json
+invoke_mcp.mjs
+mcp_client.mjs
+projects_out.json
+tools.json
+act.json
+opencode.json
+
+# ── Temporary JSON files ──
+payload.json
+payload_auth.json
+firewall.json
+firewall_utf8.json
+rule.json
+schema.json
+verification-report.json
+
+# ── Cache Directories ──
+.pytest_cache/
+.ruff_cache/
+.agent/
+.opencode/
+.specify/
+
+# ── Node.js ──
+node_modules/
+package-lock.json
+
+# ── Frontend (Next.js) ──
+frontend/.next/
+frontend/node_modules/
+frontend/package-lock.json
+
+# ── Misc Temporary Files ──
+help.txt
+run_tests.bat
+run_tests.sh
+run_tests_manual.py
+verify_age.py

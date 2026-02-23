@@ -20,12 +20,12 @@ django_asgi_app = get_asgi_application()
 
 # Import after Django setup to avoid AppRegistryNotReady
 from channels.routing import ProtocolTypeRouter, URLRouter  # noqa: E402
-from channels.auth import AuthMiddlewareStack  # noqa: E402
+from config.middleware import JWTAuthMiddleware  # noqa: E402
 from visits.routing import websocket_urlpatterns  # noqa: E402
 
 application = ProtocolTypeRouter({
     'http': django_asgi_app,
-    'websocket': AuthMiddlewareStack(
+    'websocket': JWTAuthMiddleware(
         URLRouter(websocket_urlpatterns)
     ),
 })

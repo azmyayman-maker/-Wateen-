@@ -2,7 +2,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils.translation import gettext_lazy as _
 
-from .models import CustomUser, UserRole, PatientProfile, NurseProfile
+from .models import CustomUser, UserRole, PatientProfile, NurseProfile, NurseDocument
 
 
 @admin.register(CustomUser)
@@ -116,3 +116,12 @@ class NurseProfileAdmin(admin.ModelAdmin):
     search_fields = ('user__national_id', 'user__phone_number', 'syndicate_number')
     readonly_fields = ('created_at', 'updated_at')
     raw_id_fields = ('user',)
+
+
+@admin.register(NurseDocument)
+class NurseDocumentAdmin(admin.ModelAdmin):
+    list_display = ('nurse', 'document_type', 'status', 'uploaded_at', 'verified_at')
+    list_filter = ('status', 'document_type')
+    search_fields = ('nurse__user__national_id', 'nurse__user__phone_number')
+    readonly_fields = ('id', 'ocr_data', 'extracted_national_id', 'uploaded_at', 'verified_at')
+    raw_id_fields = ('nurse',)

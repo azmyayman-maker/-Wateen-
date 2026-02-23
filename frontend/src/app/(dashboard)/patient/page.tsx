@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n';
 import { 
@@ -24,8 +24,16 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { HeroSection } from '@/components/ui/hero-section-with-smooth-bg-shader';
 import { SlideButton } from '@/components/ui/slide-button';
+import { useDataFetch } from '@/hooks/useDataFetch';
+import { useWateenWebSocket } from '@/hooks/useWateenWebSocket';
+import { 
+  CannulaFluidsSVG, IronIV_SVG, CatheterFeedingSVG, BloodSamplingSVG,
+  InjectionsSVG, VitalsMonitorSVG, WoundCareSVG, StitchRemovalSVG, 
+  OxygenMeasurementSVG, HolographicPulse 
+} from '@/components/services/ServicesGrid';
 
 // --- Brand Color Palette ---
 // Teal:   #16615F — Primary, Trust
@@ -66,6 +74,15 @@ interface HealthOrbProps {
   delay?: number;
 }
 
+interface VisitData {
+  service: string;
+  nurse: string;
+  date: string;
+  price: number;
+  status: 'completed' | 'cancelled' | 'rated';
+  rating: number;
+}
+
 const HealthOrb = ({ icon: Icon, value, unit, label, colorRgb, delay = 0 }: HealthOrbProps) => (
   <motion.div
     variants={scaleIn}
@@ -99,28 +116,44 @@ export default function PatientDashboard() {
   const { t, isRTL, dir } = useLanguage();
   const [mounted, setMounted] = useState(false);
   const [hasActiveBooking, setHasActiveBooking] = useState(false);
+  const [activeVisitData, setActiveVisitData] = useState<any>(null);
+
+  const handleWebSocketMessage = useCallback((msg: any) => {
+    if (msg.type === 'visit_accepted' && msg.visit) {
+      setActiveVisitData(msg);
+      setHasActiveBooking(true);
+    }
+  }, []);
+
+  useWateenWebSocket('ws/patient/', handleWebSocketMessage);
+
+  // --- Data Fetching (Caching Scaffolding) ---
+  const { data: visitHistory, isLoading: isLoadingHistory } = useDataFetch<VisitData[]>('/patient/history/', {
+    fallbackData: [
+      { service: t.patient?.serviceInjection ?? 'Injection',   nurse: 'Sara Ahmed',   date: '18 Feb 2026', price: 165, status: 'completed' as const, rating: 5 },
+      { service: t.patient?.serviceWoundCare ?? 'Wound Care',  nurse: 'Mona Ali',     date: '14 Feb 2026', price: 220, status: 'rated' as const,     rating: 4 },
+      { service: t.patient?.serviceVitals ?? 'Vitals Check',   nurse: 'Amira Khaled', date: '10 Feb 2026', price: 100, status: 'completed' as const, rating: 5 },
+      { service: t.patient?.serviceIVDrip ?? 'IV Drip',        nurse: 'Fatma Hassan', date: '5 Feb 2026',  price: 275, status: 'cancelled' as const, rating: 0 },
+      { service: t.patient?.servicePhysio ?? 'Physiotherapy',  nurse: 'Nour Ibrahim', date: '1 Feb 2026',  price: 310, status: 'rated' as const,     rating: 5 },
+    ]
+  });
 
   useEffect(() => setMounted(true), []);
   if (!mounted) return null;
 
   // --- Services Data ---
   const services = [
-    { icon: Syringe,        name: t.patient?.serviceInjection ?? 'Injection',     price: 150, color: THEME.teal   },
-    { icon: Scissors,        name: t.patient?.serviceWoundCare ?? 'Wound Care',    price: 200, color: THEME.orange },
-    { icon: Stethoscope,     name: t.patient?.serviceIVDrip ?? 'IV Drip',         price: 250, color: THEME.green  },
-    { icon: Activity,        name: t.patient?.serviceVitals ?? 'Vitals Check',    price: 100, color: THEME.teal   },
-    { icon: Dumbbell,        name: t.patient?.servicePhysio ?? 'Physiotherapy',   price: 300, color: THEME.orange },
-    { icon: HeartHandshake,  name: t.patient?.serviceElderly ?? 'Elderly Care',   price: 350, color: THEME.red    },
+    { svg: CannulaFluidsSVG,       name: isRTL ? 'تركيب الكانيولا والمحاليل' : 'Cannula & IV Fluids', color: THEME.green, id: 'iv-drip' },
+    { svg: IronIV_SVG,       name: isRTL ? 'محاليل الحديد (إشراف طبي)' : 'Iron IV (Medical Supervision)', color: THEME.teal, id: 'iron-iv' },
+    { svg: CatheterFeedingSVG,    name: isRTL ? 'تركيب القساطر وأنابيب التغذية' : 'Catheters & Feeding Tubes', color: THEME.orange, id: 'catheters-feeding' },
+    { svg: BloodSamplingSVG,        name: isRTL ? 'سحب عينات الدم بالمنزل' : 'Home Blood Sampling', color: THEME.red, id: 'blood-sampling' },
+    { svg: InjectionsSVG,        name: isRTL ? 'الحقن واختبار الحساسية' : 'Injections & Allergy Tests', color: THEME.teal, id: 'injections' },
+    { svg: VitalsMonitorSVG,          name: isRTL ? 'قياس نسبة السكر والضغط' : 'Blood Sugar & Pressure', color: THEME.red, id: 'vitals-check' },
+    { svg: WoundCareSVG, name: isRTL ? 'العناية بالجروح والقدم السكري' : 'Wound Care & Diabetic Foot', color: THEME.orange, id: 'wound-care' },
+    { svg: StitchRemovalSVG,       name: isRTL ? 'متابعة ما بعد الجراحة وفك الغرز' : 'Post-Surgery & Stitch Removal', color: THEME.teal, id: 'post-surgery' },
+    { svg: OxygenMeasurementSVG,       name: isRTL ? 'قياس نسبة الأكسجين بالمنزل' : 'Home Oxygen Measurement', color: THEME.green, id: 'oxygen-measurement' },
   ];
 
-  // --- Mock Visit History ---
-  const mockHistory = [
-    { service: t.patient?.serviceInjection ?? 'Injection',   nurse: 'Sara Ahmed',   date: '18 Feb 2026', price: 165, status: 'completed' as const, rating: 5 },
-    { service: t.patient?.serviceWoundCare ?? 'Wound Care',  nurse: 'Mona Ali',     date: '14 Feb 2026', price: 220, status: 'rated' as const,     rating: 4 },
-    { service: t.patient?.serviceVitals ?? 'Vitals Check',   nurse: 'Amira Khaled', date: '10 Feb 2026', price: 100, status: 'completed' as const, rating: 5 },
-    { service: t.patient?.serviceIVDrip ?? 'IV Drip',        nurse: 'Fatma Hassan', date: '5 Feb 2026',  price: 275, status: 'cancelled' as const, rating: 0 },
-    { service: t.patient?.servicePhysio ?? 'Physiotherapy',  nurse: 'Nour Ibrahim', date: '1 Feb 2026',  price: 310, status: 'rated' as const,     rating: 5 },
-  ];
 
   const statusConfig = {
     completed: { label: t.patient?.visitCompleted ?? 'Completed', icon: CheckCircle2, color: 'text-[#79B253]', bg: 'bg-[#79B253]/10 border-[#79B253]/20' },
@@ -140,7 +173,7 @@ export default function PatientDashboard() {
         description={t.patient?.heroDesc ?? 'رعاية صحية متكاملة — بين يديك.'}
         colors={['#16615F', '#79B253', '#F32D17', '#FD8839', '#114D4C', '#5C8B3E']}
         buttonText={t.patient?.requestNurse ?? 'Request Nurse'}
-        onButtonClick={() => {}}
+        onButtonClick={() => window.location.href = '/patient/direct-request'}
       />
 
       {/* ── Main Content ── */}
@@ -188,59 +221,39 @@ export default function PatientDashboard() {
             </h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {services.map((svc, i) => {
-                const Icon = svc.icon;
+                const SvgComponent = svc.svg;
                 return (
-                  <motion.div
-                    key={i}
-                    whileHover={{ scale: 1.03, y: -3 }}
-                    whileTap={{ scale: 0.97 }}
-                    className="relative group overflow-hidden rounded-2xl border border-white/10 cursor-pointer p-5 flex flex-col items-center text-center gap-3 transition-colors hover:border-white/20"
-                    style={{ background: `linear-gradient(160deg, rgba(${svc.color}, 0.12) 0%, rgba(11,17,32,0.85) 100%)` }}
-                  >
-                    <div
-                      className="w-12 h-12 rounded-xl flex items-center justify-center border backdrop-blur-sm"
-                      style={{
-                        borderColor: `rgba(${svc.color}, 0.3)`,
-                        background: `rgba(${svc.color}, 0.1)`,
-                      }}
+                  <Link href={`/patient/service/${svc.id}`} key={svc.id}>
+                    <motion.div
+                      whileHover={{ scale: 1.03, y: -3 }}
+                      whileTap={{ scale: 0.97 }}
+                      className="relative group overflow-hidden rounded-2xl border border-white/10 cursor-pointer p-5 flex flex-col items-center text-center gap-3 transition-colors hover:border-white/20 h-full"
+                      style={{ background: `linear-gradient(160deg, rgba(${svc.color}, 0.12) 0%, rgba(11,17,32,0.85) 100%)` }}
                     >
-                      <Icon className="w-5 h-5" style={{ color: `rgb(${svc.color})` }} />
-                    </div>
-                    <div>
-                      <p className="font-bold text-white text-sm">{svc.name}</p>
-                      <p className="text-xs text-slate-400 mt-1">
-                        {svc.price} <span className="text-[10px]">EGP</span>
-                      </p>
-                    </div>
-                    {/* Hover glow  */}
-                    <div
-                      className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none"
-                      style={{ background: `rgb(${svc.color})` }}
-                    />
-                  </motion.div>
+                      <div className={`w-16 h-16 md:w-20 md:h-20 rounded-xl bg-slate-800/50 border flex items-center justify-center relative overflow-hidden group-hover:shadow-[0_0_30px_rgba(0,0,0,0)] transition-all duration-500`} style={{ borderColor: `rgba(${svc.color}, 0.3)`, boxShadow: `0 0 10px rgba(${svc.color}, 0.1)`}}>
+                        <div className={`absolute inset-0 opacity-10`} style={{ background: `linear-gradient(to bottom right, rgb(${svc.color}), transparent)` }} />
+                        <HolographicPulse />
+                        <div className="w-12 h-12 md:w-16 md:h-16 relative z-10 p-1">
+                          <SvgComponent />
+                        </div>
+                      </div>
+                      <div className="flex-1 flex flex-col justify-center">
+                        <p className="font-bold text-white text-sm">{svc.name}</p>
+                      </div>
+                      {/* Hover glow  */}
+                      <div
+                        className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full blur-2xl opacity-0 group-hover:opacity-40 transition-opacity duration-500 pointer-events-none"
+                        style={{ background: `rgb(${svc.color})` }}
+                      />
+                    </motion.div>
+                  </Link>
                 );
               })}
             </div>
           </motion.div>
 
           {/* ── Quick Actions Row ── */}
-          <motion.div variants={slideUp} className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {/* Teleconsult */}
-            <div
-              className="relative group overflow-hidden rounded-2xl border border-white/10 cursor-pointer"
-              style={{ background: `linear-gradient(135deg, rgba(${THEME.orange}, 0.15) 0%, rgba(11,17,32,0.9) 100%)` }}
-            >
-              <div className="p-5 relative z-10 flex items-center gap-4">
-                <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#FD8839]/15 border border-[#FD8839]/30 shrink-0">
-                  <Video className="w-5 h-5" style={{ color: `rgb(${THEME.orange})` }} />
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-base font-bold text-white">{t.common?.telemedicine ?? 'Teleconsult'}</h3>
-                  <p className="text-xs text-slate-400">{t.patient?.talkDoctorNow ?? 'Talk to a doctor now'}</p>
-                </div>
-                {isRTL ? <ChevronLeft className="w-4 h-4 text-slate-500" /> : <ChevronRight className="w-4 h-4 text-slate-500" />}
-              </div>
-            </div>
+          <motion.div variants={slideUp} className="grid grid-cols-1 gap-3">
 
             {/* Emergency SOS */}
             <div
@@ -264,22 +277,23 @@ export default function PatientDashboard() {
           {/* ── Active Booking Tracker (or Empty State) ── */}
           <motion.div variants={slideUp}>
             {hasActiveBooking ? (
-              <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full rounded-l-2xl" style={{ backgroundColor: `rgb(${THEME.green})` }} />
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 ps-2">
-                  <div className="flex items-center gap-4 w-full md:w-auto">
-                    <div className="relative shrink-0">
-                      <div className="w-14 h-14 rounded-xl bg-slate-800 p-1 border border-slate-700">
-                        <Image src="https://i.pravatar.cc/150?img=33" alt="Nurse" width={56} height={56} className="rounded-lg object-cover" />
-                      </div>
+              <Link href="/patient/simulator" className="block">
+                <div className="bg-slate-900/50 backdrop-blur-xl border border-slate-800 rounded-2xl p-6 relative overflow-hidden hover:bg-slate-800/60 transition-colors cursor-pointer group">
+                  <div className="absolute top-0 left-0 w-1 h-full rounded-l-2xl group-hover:w-2 transition-all duration-300" style={{ backgroundColor: `rgb(${THEME.green})` }} />
+                  <div className="flex flex-col md:flex-row items-center justify-between gap-6 ps-2">
+                    <div className="flex items-center gap-4 w-full md:w-auto">
+                      <div className="relative shrink-0">
+                        <div className="w-14 h-14 rounded-xl bg-slate-800 p-1 border border-slate-700">
+                          <Image src="https://i.pravatar.cc/150?img=33" alt="Nurse" width={56} height={56} className="rounded-lg object-cover" />
+                        </div>
                       <div className="absolute -bottom-1 -end-1 w-4 h-4 rounded-full border-2 border-slate-900 bg-[#79B253]">
                         <motion.div animate={{ scale: [1,1.8,1], opacity: [1,0,1] }} transition={{ duration: 2, repeat: Infinity }} className="w-full h-full bg-[#79B253] rounded-full" />
                       </div>
                     </div>
                     <div>
                       <p className="text-xs font-semibold mb-1" style={{ color: `rgb(${THEME.green})` }}>{t.patient?.nurseOnTheWay ?? 'Nurse on the way'}</p>
-                      <h3 className="text-base font-bold text-white">{t.patient?.nurseName ?? 'Amira Khaled'}</h3>
-                      <p className="text-xs text-slate-400">{t.patient?.nurseSpecialty ?? 'Wound Care • 4.9 ⭐'}</p>
+                      <h3 className="text-base font-bold text-white">{activeVisitData?.nurse?.name || (t.patient?.nurseName ?? 'Amira Khaled')}</h3>
+                      <p className="text-xs text-slate-400">{activeVisitData?.visit?.service_type || (t.patient?.nurseSpecialty ?? 'Wound Care • 4.9 ⭐')}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-5 text-center">
@@ -292,12 +306,13 @@ export default function PatientDashboard() {
                       <p className="text-[10px] text-slate-400 mb-1">{t.patient?.distance ?? 'Distance'}</p>
                       <p className="text-lg font-bold text-white">3.2 km</p>
                     </div>
-                    <button className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer">
+                    <div className="hidden sm:flex items-center justify-center w-10 h-10 rounded-full border border-slate-700 bg-slate-800 group-hover:bg-slate-700 transition-colors">
                       <MapPin className="w-4 h-4 text-white" />
-                    </button>
+                    </div>
                   </div>
                 </div>
               </div>
+              </Link>
             ) : (
               /* Empty State */
               <div className="bg-slate-900/30 backdrop-blur-sm border border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center justify-center text-center">
@@ -315,9 +330,10 @@ export default function PatientDashboard() {
             <h2 className="text-lg font-bold text-slate-300 mb-4 flex items-center gap-2">
               <span className="w-1.5 h-5 rounded-full bg-[#FD8839]" />
               {t.patient?.visitHistory ?? 'Visit History'}
+              {isLoadingHistory && <Activity className="w-4 h-4 ml-2 animate-spin text-slate-500" />}
             </h2>
             <div className="space-y-3">
-              {mockHistory.map((visit, idx) => {
+              {(visitHistory || []).map((visit, idx) => {
                 const cfg = statusConfig[visit.status];
                 const StatusIcon = cfg.icon;
                 return (

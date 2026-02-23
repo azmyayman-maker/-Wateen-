@@ -17,6 +17,9 @@ WORKDIR /app
 # python3-gdal            → Python GDAL bindings
 # libgeos-dev             → GEOS geometry engine for spatial operations
 # libproj-dev             → PROJ coordinate projection library
+# tesseract-ocr           → OCR engine for KYC document processing
+# tesseract-ocr-ara       → Arabic language data for Tesseract
+# libgl1                  → OpenCV headless rendering dependency (replaces libgl1-mesa-glx)
 # --------------------------------------------------------------------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -29,6 +32,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-gdal \
     libgeos-dev \
     libproj-dev \
+    tesseract-ocr \
+    tesseract-ocr-ara \
+    libgl1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Install python dependencies (base + dev for testing)
