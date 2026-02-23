@@ -2,8 +2,9 @@
 
 import React, { useRef } from "react";
 import { motion } from "framer-motion";
-import { Mail, ArrowLeft, HeadphonesIcon } from "lucide-react";
+import { Mail, ArrowLeft, HeadphonesIcon, MapPin } from "lucide-react";
 import { useLanguage } from "@/lib/i18n";
+import LocationPicker from "@/components/shared/map/LocationPicker";
 
 export default function SupportPage() {
   const { isRTL } = useLanguage();
@@ -16,7 +17,9 @@ export default function SupportPage() {
       : "Contact the dedicated Wateen support team to resolve any issues or answer your inquiries as quickly as possible.",
     backBtn: isRTL ? "العودة للرئيسية" : "Back to Home",
     emailAction: isRTL ? "أرسل لنا رسالة" : "Send us a message",
-    emailAddress: "support@wateen.live"
+    emailAddress: "support@wateen.live",
+    visitUs: isRTL ? "قم بزيارتنا" : "Visit Us",
+    hqAddress: isRTL ? "القاهرة، مصر (المقر الرئيسي)" : "Cairo, Egypt (HQ)"
   };
 
   return (
@@ -31,14 +34,14 @@ export default function SupportPage() {
         
         {/* Navigation / Back Button */}
         <motion.div 
-          className="absolute top-10 left-6 right-6 lg:left-12 lg:right-12"
+          className="w-full flex justify-start mb-6"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
           <a 
             href="/"
-            className="inline-flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors group cursor-pointer w-fit"
+            className="inline-flex items-center gap-2 text-slate-400 hover:text-cyan-400 transition-colors group cursor-pointer"
           >
             <ArrowLeft className={`w-5 h-5 transition-transform group-hover:${isRTL ? 'translate-x-1' : '-translate-x-1'} ${isRTL ? 'rotate-180' : ''}`} />
             <span className="font-medium">{content.backBtn}</span>
@@ -85,6 +88,26 @@ export default function SupportPage() {
           
           <div className="mt-8 font-mono text-slate-500 text-sm md:text-base">
             {content.emailAddress}
+          </div>
+
+          {/* Map Section */}
+          <div className="mt-16 pt-12 border-t border-white/10">
+            <div className="flex items-center justify-center gap-2 mb-6 text-slate-300">
+              <MapPin className="w-5 h-5 text-cyan-400" />
+              <h2 className="text-xl md:text-2xl font-bold">{content.visitUs}</h2>
+            </div>
+            <p className="text-slate-400 mb-8">{content.hqAddress}</p>
+            
+            {/* The Integrated OpenStreetMap */}
+            <div className="text-left w-full h-[350px] md:h-[450px] rounded-2xl overflow-hidden ring-1 ring-white/10 shadow-2xl relative">
+              {/* Subtle inner shadow overlay */}
+              <div className="absolute inset-0 z-10 pointer-events-none shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]" />
+              <LocationPicker 
+                initialLocation={[30.158375, 31.396375]} // exact coordinates for: 49WH+V84، حجاب حبلص، بركة النصر، قسم أول السلام، القاهرة 
+                readOnly={false} 
+                className="h-full border-none rounded-none"
+              />
+            </div>
           </div>
         </motion.div>
 

@@ -2,11 +2,14 @@
 
 import React, { useState, useEffect, useMemo, Suspense } from "react";
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button, Input } from '@/components/shared';
 import { useLanguage } from '@/lib/i18n';
 import { LanguageSwitcher } from '@/components/shared/LanguageSwitcher';
+import { useAuth } from '@/providers/AuthProvider';
+import { authAPI } from '@/lib/api/auth';
+import SuccessCelebration from '@/components/shared/SuccessCelebration';
 import { 
   User, 
   Stethoscope, 
@@ -26,7 +29,9 @@ import {
   X,
   Plus,
   Minus,
-  CalendarDays
+  CalendarDays,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react';
 
 import { DatePickerWheel } from '@/components/shared/DatePickerWheel';
@@ -38,6 +43,14 @@ const animationStyles = `
   }
   .register-entrance {
     animation: registerFadeInUp 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+    20%, 40%, 60%, 80% { transform: translateX(4px); }
+  }
+  .shake-error {
+    animation: shake 0.5s ease-in-out;
   }
   
   /* Hide scrollbar for clean look */
@@ -66,15 +79,19 @@ const AnimatedInput = ({ children, delay = 0 }: { children: React.ReactNode, del
 
 function RegisterContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialIdentifier = searchParams.get("identifier") || "";
   const { t, isRTL } = useLanguage();
+  const { register } = useAuth();
   
+  const [fullName, setFullName] = useState("");
+  const [nationalId, setNationalId] = useState("");
   const [phone, setPhone] = useState(initialIdentifier && !initialIdentifier.includes('@') ? initialIdentifier : "");
   const [email, setEmail] = useState(initialIdentifier && initialIdentifier.includes('@') ? initialIdentifier : "");
   const [mounted, setMounted] = useState(false);
   const [role, setRole] = useState<Role>('patient');
   const [dob, setDob] = useState<Date>(new Date(2000, 0, 1));
-  const [step, setStep] = useState<1 | 2 | 3>(1);
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -82,6 +99,15 @@ function RegisterContent() {
   const [nationalIdFile, setNationalIdFile] = useState<File | null>(null);
   const [nationalIdBackFile, setNationalIdBackFile] = useState<File | null>(null);
   const [syndicateFile, setSyndicateFile] = useState<File | null>(null);
+
+  // Nurse-specific fields
+  const [nurseNationalId, setNurseNationalId] = useState('');
+  const [syndicateNumber, setSyndicateNumber] = useState('');
+
+  // Loading and error states
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [shakeError, setShakeError] = useState(false);
 
   // --- Secondary Contact States ---
   const [secondaryPhones, setSecondaryPhones] = useState<{id: string, phone: string, owner: string, relation: string}[]>([]);
@@ -118,12 +144,106 @@ function RegisterContent() {
     setMounted(true);
   }, []);
 
-  // Handle file selection (mock placeholder)
+  // Handle file selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, setter: React.Dispatch<React.SetStateAction<File | null>>) => {
     if (e.target.files && e.target.files[0]) {
       setter(e.target.files[0]);
     }
   };
+
+  // National ID input handler (digits only, max 14)
+  const handleNationalIdChange = (value: string) => {
+    const cleaned = value.replace(/\D/g, '').slice(0, 14);
+    setNationalId(cleaned);
+  };
+
+  // Validate step 1
+  const isStep1Valid = useMemo(() => {
+    return fullName.trim().length >= 3 && 
+           nationalId.length === 14 && 
+           /^[23]\d{13}$/.test(nationalId) &&
+           phone.replace(/\D/g, '').length >= 10;
+  }, [fullName, nationalId, phone]);
+
+  // Show error with shake
+  const showError = (msg: string) => {
+    setErrorMsg(msg);
+    setShakeError(true);
+    setTimeout(() => setShakeError(false), 500);
+  };
+
+  // ─── SUBMIT REGISTRATION ─────────────────────────────────────────────
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setErrorMsg(null);
+
+    try {
+      // Parse name into first/last
+      const nameParts = fullName.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      // Build registration payload
+      const registerData = {
+        national_id: nationalId,
+        phone_number: phone.startsWith('0') ? phone : `0${phone}`,
+        password: password,
+        role: role.toUpperCase() as 'PATIENT' | 'NURSE',
+        first_name_ar: firstName,
+        last_name_ar: lastName,
+        ...(email ? { email } : {}),
+      };
+
+      const res = await register(registerData);
+
+      // For nurses: optionally upload KYC documents
+      if (role === 'nurse') {
+        try {
+          if (nationalIdFile) {
+            await authAPI.uploadKYCDocument('NATIONAL_ID', nationalIdFile);
+          }
+          if (syndicateFile) {
+            await authAPI.uploadKYCDocument('SYNDICATE_CARD', syndicateFile);
+          }
+        } catch {
+          // KYC upload failures are non-blocking — nurse can upload later
+          console.warn('KYC upload failed — can retry from dashboard');
+        }
+      }
+
+      // 🎉 Show success celebration
+      setStep(4);
+
+    } catch (err: any) {
+      const errorData = err?.data;
+      if (err?.status === 400) {
+        // Handle common validation errors
+        if (errorData?.national_id || errorData?.phone_number) {
+          showError(t.register.errorDuplicate);
+        } else {
+          const firstError = Object.values(errorData || {})[0];
+          showError(Array.isArray(firstError) ? (firstError as string[])[0] : (firstError as string) || t.register.errorServer);
+        }
+      } else {
+        showError(t.register.errorServer);
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // ─── SUCCESS CELEBRATION (Step 4) ─────────────────────────────────────
+  if (step === 4) {
+    return (
+      <SuccessCelebration
+        role={role}
+        userName={fullName.split(' ')[0]}
+        redirectTo={role === 'patient' ? '/dashboard/patient' : '/dashboard/nurse'}
+        redirectDelay={3500}
+      />
+    );
+  }
 
   return (
     <>
@@ -138,6 +258,7 @@ function RegisterContent() {
             p-8 sm:p-10
             transition-all duration-700
             ${mounted ? "register-entrance" : "opacity-0"}
+            ${shakeError ? "shake-error" : ""}
           `}
           style={{
             boxShadow: `
@@ -168,6 +289,30 @@ function RegisterContent() {
               {step === 1 ? t.register.joinWateen : step === 2 ? t.register.lastStep : t.register.kycDescription}
             </p>
           </div>
+
+          {/* Error Toast */}
+          <AnimatePresence>
+            {errorMsg && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, height: 0 }}
+                animate={{ opacity: 1, y: 0, height: 'auto' }}
+                exit={{ opacity: 0, y: -10, height: 0 }}
+                className="mb-6 relative z-10"
+              >
+                <div className="flex items-center gap-3 p-3.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-300 text-sm">
+                  <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+                  <span>{errorMsg}</span>
+                  <button 
+                    onClick={() => setErrorMsg(null)} 
+                    className="mr-auto text-red-400 hover:text-red-300 transition-colors"
+                    type="button"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* Role Selector - only on step 1 */}
           {step === 1 && (
@@ -212,7 +357,7 @@ function RegisterContent() {
             <form 
               onSubmit={(e) => {
                 e.preventDefault();
-                // TODO: Add actual submission logic here later
+                if (isStep1Valid) setStep(2);
               }}
               className="space-y-5 [&_label]:text-slate-300 [&_label]:font-medium [&_label]:text-sm"
             >
@@ -225,20 +370,55 @@ function RegisterContent() {
                   transition={{ duration: 0.3, ease: "easeInOut" }}
                   className="space-y-5"
                 >
-                  {/* Shared Fields */}
+                  {/* Full Name */}
                   <AnimatedInput delay={0.05}>
                     <div className="relative group">
                       <Input
                         label={t.register.fullName}
                         type="text"
                         required
+                        value={fullName}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFullName(e.target.value)}
                         placeholder={t.register.fullNamePlaceholder}
                         className="pl-12 bg-slate-900/50 border-slate-700/50 focus:border-cyan-400/80 focus:ring-2 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 shadow-inner focus:scale-[1.01]"
                       />
                       <User className="absolute left-3 top-9 w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
                     </div>
                   </AnimatedInput>
+
+                  {/* ═══ National ID (14 digits) ═══ */}
+                  <AnimatedInput delay={0.08}>
+                    <div className="relative group">
+                      <label className="text-slate-300 font-medium text-sm mb-2 block px-1">
+                        {t.register.nationalIdLabel}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="tel"
+                          required
+                          value={nationalId}
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleNationalIdChange(e.target.value)}
+                          placeholder="29901011234567"
+                          maxLength={14}
+                          className="w-full h-10 px-3 pl-12 rounded-md bg-slate-900/50 border border-slate-700/50 focus:border-cyan-400/80 focus:ring-2 focus:ring-cyan-500/10 transition-all text-white placeholder:text-slate-500 shadow-inner focus:scale-[1.01] focus:outline-none tracking-wider font-mono"
+                          dir="ltr"
+                        />
+                        <CreditCard className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 group-focus-within:text-cyan-400 transition-colors" />
+                        {/* Validation indicator */}
+                        {nationalId.length > 0 && (
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                            {nationalId.length === 14 && /^[23]\d{13}$/.test(nationalId) ? (
+                              <Check className="w-4 h-4 text-emerald-400" />
+                            ) : (
+                              <span className="text-xs text-slate-500 font-mono">{nationalId.length}/14</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </AnimatedInput>
                   
+                  {/* Phone */}
                   <AnimatedInput delay={0.1}>
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -339,6 +519,7 @@ function RegisterContent() {
                     ))}
                   </AnimatePresence>
 
+                  {/* Email */}
                   <AnimatedInput delay={0.15}>
                     <div>
                       <div className="flex items-center justify-between mb-2">
@@ -438,22 +619,22 @@ function RegisterContent() {
                     </div>
                   </AnimatedInput>
 
-
-
                 </motion.div>
               </AnimatePresence>
 
               <div className="pt-6 relative z-10 bg-transparent">
                 <Button 
-                  type="button" 
-                  onClick={() => setStep(2)}
+                  type="submit" 
+                  disabled={!isStep1Valid}
                   className={`
                     w-full h-14 text-base font-bold text-white border-0 
                     transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
                     flex items-center justify-center gap-2 group
-                    ${role === 'patient' 
-                      ? 'bg-gradient-to-l from-cyan-600 to-emerald-500 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:from-cyan-500 hover:to-emerald-400' 
-                      : 'bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:from-purple-500 hover:to-indigo-400'}
+                    ${!isStep1Valid 
+                      ? 'opacity-40 cursor-not-allowed bg-slate-700'
+                      : role === 'patient' 
+                        ? 'bg-gradient-to-l from-cyan-600 to-emerald-500 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40 hover:from-cyan-500 hover:to-emerald-400' 
+                        : 'bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 hover:from-purple-500 hover:to-indigo-400'}
                   `}
                 >
                   <span>{t.register.nextCreatePassword}</span>
@@ -626,16 +807,20 @@ function RegisterContent() {
                 <span>{t.common.back}</span>
               </button>
               <Button 
-                type={role === 'patient' ? "submit" : "button"}
+                type={role === 'patient' ? "button" : "button"}
                 onClick={() => {
-                  if (role === 'nurse') setStep(3);
+                  if (role === 'nurse') {
+                    setStep(3);
+                  } else {
+                    handleSubmit();
+                  }
                 }}
-                disabled={!allRulesPassed}
+                disabled={!allRulesPassed || isSubmitting}
                 className={`
                   flex-1 h-14 text-base font-bold text-white border-0 
                   transition-all duration-300 
                   flex items-center justify-center gap-2 group
-                  ${!allRulesPassed 
+                  ${!allRulesPassed || isSubmitting
                     ? 'opacity-40 cursor-not-allowed bg-slate-700' 
                     : role === 'patient'
                       ? 'hover:scale-[1.02] active:scale-[0.98] bg-gradient-to-l from-cyan-600 to-emerald-500 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-500/40'
@@ -643,11 +828,20 @@ function RegisterContent() {
                   }
                 `}
               >
-                <span>{role === 'patient' ? t.register.createPatientAccount : t.register.nextCompleteData}</span>
-                {role === 'patient' ? (
-                  <ShieldCheck className="w-5 h-5 transition-transform group-hover:scale-110" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" /> 
+                    <span>{t.register.registering}</span>
+                  </>
                 ) : (
-                  <ChevronRight className={`w-5 h-5 transition-transform ${isRTL ? 'rtl:rotate-180 group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`} />
+                  <>
+                    <span>{role === 'patient' ? t.register.createPatientAccount : t.register.nextCompleteData}</span>
+                    {role === 'patient' ? (
+                      <ShieldCheck className="w-5 h-5 transition-transform group-hover:scale-110" />
+                    ) : (
+                      <ChevronRight className={`w-5 h-5 transition-transform ${isRTL ? 'rtl:rotate-180 group-hover:-translate-x-1' : 'group-hover:translate-x-1'}`} />
+                    )}
+                  </>
                 )}
               </Button>
             </div>
@@ -671,6 +865,8 @@ function RegisterContent() {
                     label={t.register.nationalId}
                     type="text"
                     required
+                    value={nurseNationalId}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNurseNationalId(e.target.value)}
                     placeholder={t.register.nationalIdPlaceholder}
                     className="pl-10 bg-slate-900/50 border-slate-700/50 focus:border-purple-500 focus:ring-purple-500/20 transition-all text-white placeholder:text-slate-500"
                     dir="ltr"
@@ -685,6 +881,8 @@ function RegisterContent() {
                     label={t.register.syndicateNumber}
                     type="text"
                     required
+                    value={syndicateNumber}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSyndicateNumber(e.target.value)}
                     placeholder={t.register.syndicateNumberPlaceholder}
                     className="pl-10 bg-slate-900/50 border-slate-700/50 focus:border-purple-500 focus:ring-purple-500/20 transition-all text-white placeholder:text-slate-500"
                     dir="ltr"
@@ -708,7 +906,11 @@ function RegisterContent() {
                   {/* National ID Front Upload */}
                   <label className="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-600 rounded-xl hover:border-purple-400 hover:bg-slate-800/50 transition-all cursor-pointer group">
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setNationalIdFile)} />
-                    <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    {nationalIdFile ? (
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-2" />
+                    ) : (
+                      <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    )}
                     <span className="text-xs text-slate-300 font-medium text-center">
                       {nationalIdFile ? nationalIdFile.name : t.register.nationalIdFront}
                     </span>
@@ -718,7 +920,11 @@ function RegisterContent() {
                   {/* National ID Back Upload */}
                   <label className="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-600 rounded-xl hover:border-purple-400 hover:bg-slate-800/50 transition-all cursor-pointer group">
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setNationalIdBackFile)} />
-                    <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    {nationalIdBackFile ? (
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-2" />
+                    ) : (
+                      <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    )}
                     <span className="text-xs text-slate-300 font-medium text-center">
                       {nationalIdBackFile ? nationalIdBackFile.name : t.register.nationalIdBack}
                     </span>
@@ -728,7 +934,11 @@ function RegisterContent() {
                   {/* Syndicate Card Upload */}
                   <label className="relative flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-600 rounded-xl hover:border-purple-400 hover:bg-slate-800/50 transition-all cursor-pointer group">
                     <input type="file" className="hidden" accept="image/*,.pdf" onChange={(e) => handleFileChange(e, setSyndicateFile)} />
-                    <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    {syndicateFile ? (
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400 mb-2" />
+                    ) : (
+                      <UploadCloud className="w-8 h-8 text-slate-400 group-hover:text-purple-400 transition-colors mb-2" />
+                    )}
                     <span className="text-xs text-slate-300 font-medium text-center">
                       {syndicateFile ? syndicateFile.name : t.register.syndicateCard}
                     </span>
@@ -750,27 +960,39 @@ function RegisterContent() {
               </button>
               
               <button
-                type="submit"
-                onClick={(e) => {
-                  e.preventDefault(); // In a real app, this would submit without KYC
-                  console.log("Skipping KYC...");
-                }}
-                className="flex items-center justify-center gap-1.5 px-5 h-14 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:border-slate-600 transition-all text-sm font-medium"
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={isSubmitting}
+                className="flex items-center justify-center gap-1.5 px-5 h-14 rounded-2xl bg-slate-800/50 border border-slate-700/50 text-slate-300 hover:text-white hover:border-slate-600 transition-all text-sm font-medium disabled:opacity-40"
               >
                 <span>{t.common.skip}</span>
               </button>
 
               <Button 
-                type="submit"
+                type="button"
+                onClick={() => handleSubmit()}
+                disabled={isSubmitting}
                 className={`
                   flex-1 h-14 text-base font-bold text-white border-0 
                   transition-all duration-300 hover:scale-[1.02] active:scale-[0.98]
                   flex items-center justify-center gap-2 group
-                  bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40
+                  ${isSubmitting
+                    ? 'opacity-60 cursor-not-allowed bg-slate-700'
+                    : 'bg-gradient-to-l from-purple-600 to-indigo-500 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40'
+                  }
                 `}
               >
-                <span>{t.register.submitApplication}</span>
-                <CheckCircle2 className="w-5 h-5 transition-transform group-hover:scale-110" />
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <span>{t.register.registering}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{t.register.submitApplication}</span>
+                    <CheckCircle2 className="w-5 h-5 transition-transform group-hover:scale-110" />
+                  </>
+                )}
               </Button>
             </div>
           </motion.div>
@@ -782,11 +1004,15 @@ function RegisterContent() {
             <button
               key={s}
               type="button"
-              onClick={() => setStep(s as 1 | 2 | 3)}
+              onClick={() => {
+                if (s < step) setStep(s as 1 | 2 | 3);
+              }}
               className={`rounded-full transition-all duration-300 ${
                 step === s
                   ? `w-8 h-2.5 ${role === 'patient' ? 'bg-cyan-500' : 'bg-purple-500'}`
-                  : 'w-2.5 h-2.5 bg-slate-600 hover:bg-slate-500'
+                  : s < step 
+                    ? `w-2.5 h-2.5 ${role === 'patient' ? 'bg-cyan-500/50' : 'bg-purple-500/50'} cursor-pointer hover:opacity-80`
+                    : 'w-2.5 h-2.5 bg-slate-600'
               }`}
               aria-label={`${t.register.step} ${s}`}
             />

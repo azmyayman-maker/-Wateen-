@@ -45,6 +45,7 @@ export const en: Translations = {
     enterIdentifier: 'Enter your identifier',
     enterPassword: 'Enter your password',
     copyright: 'WATEEN HEALTHCARE',
+    invalidCredentials: 'Phone number or password incorrect.',
   },
   register: {
     createAccount: 'Create New Account',
@@ -105,6 +106,14 @@ export const en: Translations = {
     step: 'Step',
     haveAccount: 'Already have an account?',
     loginHere: 'Sign in here',
+    nationalIdLabel: 'National ID (14 digits)*',
+    registering: 'Creating your account...',
+    successTitle: 'Welcome to Wateen!',
+    successDesc: 'Your account has been created successfully. Redirecting to your dashboard.',
+    redirecting: 'Redirecting...',
+    errorDuplicate: 'This National ID or phone number is already registered.',
+    errorServer: 'A server error occurred. Please try again.',
+    errorRequired: 'Please fill in all required fields.',
   },
   notFound: {
     title: 'Page Not Found',

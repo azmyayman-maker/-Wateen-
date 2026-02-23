@@ -8,6 +8,7 @@ import logging
 from decimal import Decimal
 
 from django.utils import timezone
+import dataclasses
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
@@ -82,7 +83,7 @@ class EstimateView(APIView):
                 "name": service_type.name,
                 "base_price": service_type.base_price,
             },
-            "breakdown": breakdown.to_dict(),
+            "breakdown": dataclasses.asdict(breakdown),
             "is_night_hours": strategy.is_night_hours(request_time),
             "currency": "EGP",
         }
@@ -94,7 +95,7 @@ class EstimateView(APIView):
             latitude=data["latitude"],
             longitude=data["longitude"],
             request_time=request_time,
-            price_components=breakdown.to_dict(),
+            price_components=dataclasses.asdict(breakdown),
             ip_address=self._get_client_ip(request),
         )
 

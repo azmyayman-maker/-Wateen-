@@ -1,6 +1,6 @@
-@import "tailwindcss";
-
-@custom-variant dark (&:is(.dark *));
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
 :root {
   --primary: 8 145 178;
@@ -22,26 +22,6 @@
   --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
   --shadow-lg:
     0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-}
-
-@theme inline {
-  --color-primary: rgb(var(--primary) / <alpha-value>);
-  --color-primary-light: rgb(var(--primary-light) / <alpha-value>);
-  --color-secondary: rgb(var(--secondary) / <alpha-value>);
-  --color-background: rgb(var(--background) / <alpha-value>);
-  --color-surface: rgb(var(--surface) / <alpha-value>);
-  --color-text-primary: rgb(var(--text-primary) / <alpha-value>);
-  --color-text-secondary: rgb(var(--text-secondary) / <alpha-value>);
-  --color-border: rgb(var(--border) / <alpha-value>);
-  --color-success: rgb(var(--success) / <alpha-value>);
-  --color-warning: rgb(var(--warning) / <alpha-value>);
-  --color-error: rgb(var(--error) / <alpha-value>);
-  --font-sans:
-    var(--font-cairo), "Cairo", "Amiri", "Noto Sans Arabic", sans-serif;
-  --line-height-arabic: var(--line-height);
-  --radius-sm-base: 0.25rem;
-  --radius-md-base: 0.5rem;
-  --radius-lg-base: 1rem;
 }
 
 body {

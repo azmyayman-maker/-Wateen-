@@ -233,6 +233,13 @@ USE_TZ = True
 
 STATIC_URL = "static/"
 
+# Media files (user-uploaded content: KYC documents, etc.)
+MEDIA_ROOT = BASE_DIR / "media"
+MEDIA_URL = "/media/"
+
+# Maximum upload size: 10MB (suitable for ID document scans)
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -272,14 +279,42 @@ SIMPLE_JWT = {
     "TOKEN_TYPE_CLAIM": "token_type",
 }
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://wateen.live",
+    "https://www.wateen.live",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:8000",
-    "http://127.0.0.1:8000",
+# CORS origins - configurable via environment variable for production
+# Format: comma-separated URLs without spaces
+# Example: CORS_ALLOWED_ORIGINS=https://example.com,https://www.example.com
+CORS_ALLOWED_ORIGINS = config(
+    "CORS_ALLOWED_ORIGINS",
+    default="http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000",
+    cast=Csv(),
+)
+
+# Additional CORS settings for production
+CORS_ALLOW_ALL_ORIGINS = False  # Never allow all origins in production
+CORS_ALLOW_METHODS = [
+    "DELETE",
+    "GET",
+    "OPTIONS",
+    "PATCH",
+    "POST",
+    "PUT",
+]
+CORS_ALLOW_HEADERS = [
+    "accept",
+    "accept-encoding",
+    "authorization",
+    "content-type",
+    "dnt",
+    "origin",
+    "user-agent",
+    "x-csrftoken",
+    "x-requested-with",
 ]
 
 PASSWORD_HASHERS = [

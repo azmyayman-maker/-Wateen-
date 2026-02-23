@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { useLanguage } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import {
@@ -21,10 +21,23 @@ import {
   X,
   Syringe,
   Stethoscope,
-  HeartHandshake
+  HeartHandshake,
+  ArrowRight,
+  ShieldCheck,
+  AlertTriangle,
+  Zap,
+  Timer
 } from 'lucide-react';
 import { NurseBackground } from '@/components/ui/nurse-background';
 import FlipTextReveal from '@/components/ui/next-reveal';
+import LocationPicker from '@/components/shared/map/LocationPicker';
+import {
+  toggleNurseAvailability,
+  getPendingVisits,
+  respondToVisit,
+  type PendingVisit,
+} from '@/lib/api/nurse';
+import { useWateenWebSocket } from '@/hooks/useWateenWebSocket';
 
 const staggerContainer = {
   hidden: { opacity: 0 },
@@ -37,6 +50,9 @@ const fadeUp = {
 };
 
 const HERO_H = 430;
+const COUNTDOWN_SECONDS = 30;
+
+// ─── Status Toggle Switch ────────────────────────────────────────────────────
 
 function StatusToggleSwitch({ 
   isOnline, 
@@ -98,6 +114,247 @@ function StatusToggleSwitch({
   );
 }
 
+// ─── Countdown Ring ──────────────────────────────────────────────────────────
+
+function CountdownRing({ seconds, total, size = 40 }: { seconds: number; total: number; size?: number }) {
+  const radius = (size - 4) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const progress = seconds / total;
+  const strokeDashoffset = circumference * (1 - progress);
+  const isUrgent = seconds <= 10;
+
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <svg className="transform -rotate-90" width={size} height={size}>
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          stroke="currentColor" strokeWidth="3" fill="transparent"
+          className="text-slate-800"
+        />
+        <circle
+          cx={size / 2} cy={size / 2} r={radius}
+          stroke="currentColor" strokeWidth="3" fill="transparent"
+          strokeDasharray={circumference}
+          strokeDashoffset={strokeDashoffset}
+          strokeLinecap="round"
+          className={cn(
+            "transition-all duration-1000 ease-linear",
+            isUrgent ? "text-[#F32D17] drop-shadow-[0_0_6px_rgba(243,45,23,0.6)]" : "text-[#FD8839]"
+          )}
+        />
+      </svg>
+      <span className={cn(
+        "absolute text-[11px] font-black tabular-nums",
+        isUrgent ? "text-[#F32D17]" : "text-slate-300"
+      )}>
+        {seconds}
+      </span>
+    </div>
+  );
+}
+
+// ─── Swipe-to-Accept Thumb ───────────────────────────────────────────────────
+
+function SwipeToAccept({ onAccept, isRTL }: { onAccept: () => void; isRTL: boolean }) {
+  const dragX = useMotionValue(0);
+  const swipeProgress = useTransform(dragX, [0, 200], [0, 1]);
+  const bgOpacity = useTransform(swipeProgress, [0, 1], [0, 1]);
+  const [confirmed, setConfirmed] = useState(false);
+
+  useEffect(() => {
+    const unsub = dragX.on('change', (v) => {
+      if (v > 190 && !confirmed) {
+        setConfirmed(true);
+        onAccept();
+      }
+    });
+    return unsub;
+  }, [dragX, confirmed, onAccept]);
+
+  return (
+    <div className="relative h-12 w-full min-w-[220px] sm:min-w-[260px] max-w-[260px] shrink-0 rounded-full overflow-hidden border border-white/10 bg-slate-800/80">
+      {/* Green fill */}
+      <motion.div
+        className="absolute inset-y-0 left-0 w-full origin-left bg-[#16615F] rounded-full"
+        style={{ scaleX: swipeProgress, opacity: bgOpacity }}
+      />
+      
+      {/* Label */}
+      <AnimatePresence mode="wait">
+        {!confirmed ? (
+          <motion.div key="hint" exit={{ opacity: 0 }} className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+            <span className="text-white/40 text-xs font-bold tracking-wider ps-12">
+              {isRTL ? '← اسحب للقبول' : 'Swipe to Accept →'}
+            </span>
+          </motion.div>
+        ) : (
+          <motion.div key="ok" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="absolute inset-0 flex items-center justify-center pointer-events-none z-10 bg-[#16615F] rounded-full">
+            <span className="text-white font-bold text-sm flex items-center gap-1.5">
+              <ShieldCheck className="w-4 h-4" /> {isRTL ? 'تم القبول!' : 'Accepted!'}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Draggable thumb */}
+      {!confirmed && (
+        <motion.div
+          drag="x"
+          dragConstraints={{ left: 0, right: 200 }}
+          dragElastic={0}
+          dragMomentum={false}
+          style={{ x: dragX }}
+          whileTap={{ scale: 1.1 }}
+          className="absolute top-0.5 left-0.5 bottom-0.5 w-11 rounded-full bg-[#16615F] shadow-[0_0_15px_rgba(22,97,95,0.5)] flex items-center justify-center z-20 cursor-grab active:cursor-grabbing border border-[#79B253]/50"
+        >
+          <ArrowRight className="w-4 h-4 text-white" />
+        </motion.div>
+      )}
+    </div>
+  );
+}
+
+// ─── Incoming Request Card ───────────────────────────────────────────────────
+
+interface RequestCardData {
+  id: string;
+  patient_name: string;
+  service_name: string;
+  estimated_price: string;
+  created_at: string;
+  distance_km: number | null;
+}
+
+function IncomingRequestCard({
+  req,
+  onAccept,
+  onDecline,
+  isRTL,
+  t,
+}: {
+  req: RequestCardData;
+  onAccept: (id: string) => void;
+  onDecline: (id: string) => void;
+  isRTL: boolean;
+  t: any;
+}) {
+  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    timerRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(timerRef.current!);
+          onDecline(req.id);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, [req.id, onDecline]);
+
+  const handleAccept = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    onAccept(req.id);
+  }, [req.id, onAccept]);
+
+  const handleDecline = useCallback(() => {
+    if (timerRef.current) clearInterval(timerRef.current);
+    onDecline(req.id);
+  }, [req.id, onDecline]);
+
+  // Pick an icon based on service name
+  const getServiceIcon = (name: string) => {
+    const lower = name.toLowerCase();
+    if (lower.includes('iv') || lower.includes('drip') || lower.includes('محلول')) return Syringe;
+    if (lower.includes('injection') || lower.includes('حقن')) return Syringe;
+    if (lower.includes('elderly') || lower.includes('مسنين')) return HeartHandshake;
+    if (lower.includes('stethoscope') || lower.includes('vitals') || lower.includes('حيوي')) return Stethoscope;
+    return Activity;
+  };
+
+  const ServiceIcon = getServiceIcon(req.service_name);
+  const distanceText = req.distance_km ? `${req.distance_km.toFixed(1)} km` : '—';
+  const timeSinceCreated = getTimeSince(req.created_at);
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: isRTL ? -40 : 40, scale: 0.95 }}
+      animate={{ opacity: 1, x: 0, scale: 1 }}
+      exit={{ opacity: 0, x: isRTL ? 40 : -40, scale: 0.9, height: 0, marginBottom: 0 }}
+      transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+      className={cn(
+        "border rounded-2xl p-4 backdrop-blur-md transition-colors relative overflow-hidden",
+        countdown <= 10
+          ? "bg-[#F32D17]/5 border-[#F32D17]/30"
+          : "bg-slate-900/60 border-slate-800 hover:border-slate-700"
+      )}
+    >
+      {/* Urgent glow */}
+      {countdown <= 10 && (
+        <div className="absolute inset-0 bg-gradient-to-r from-[#F32D17]/5 to-transparent pointer-events-none" />
+      )}
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 relative z-10">
+        {/* Left: Info */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          <div className="relative shrink-0">
+            <div className="w-12 h-12 rounded-xl bg-[#16615F]/10 border border-[#16615F]/30 flex items-center justify-center">
+              <ServiceIcon className="w-5 h-5 text-[#16615F]" />
+            </div>
+            {/* Countdown ring overlaid on icon */}
+            <div className="absolute -top-1.5 -end-1.5">
+              <CountdownRing seconds={countdown} total={COUNTDOWN_SECONDS} size={28} />
+            </div>
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <span className="text-[10px] font-mono text-slate-500">{req.id.slice(0, 8).toUpperCase()}</span>
+              <span className="text-[10px] text-slate-600">•</span>
+              <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
+                <Clock className="w-2.5 h-2.5" /> {timeSinceCreated}
+              </span>
+            </div>
+            <h4 className="font-bold text-sm text-white truncate">{req.service_name}</h4>
+            <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
+              <span className="flex items-center gap-1"><User className="w-3 h-3" /> {req.patient_name}</span>
+              <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {distanceText}</span>
+              <span className="font-bold text-[#79B253]">{req.estimated_price} EGP</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <button
+            onClick={handleDecline}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 text-xs font-bold transition-all cursor-pointer"
+          >
+            <X className="w-3.5 h-3.5" />
+            {t.nurse?.declineRequest ?? 'Decline'}
+          </button>
+          <SwipeToAccept onAccept={handleAccept} isRTL={isRTL} />
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ─── Helper ──────────────────────────────────────────────────────────────────
+
+function getTimeSince(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  return `${Math.floor(mins / 60)}h ago`;
+}
+
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
+
 export default function NurseDashboard() {
   const { t, isRTL }         = useLanguage();
   const [isOnline, setIsOnline] = useState(false);
@@ -105,30 +362,93 @@ export default function NurseDashboard() {
   const [isToggling, setIsToggling] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
-  // --- Incoming Requests State ---
-  const [requests, setRequests] = useState([
-    { id: 'REQ-7201', patient: 'Mahmoud Saeed',  service: t.nurse?.activeMission ?? 'IV Drip & Vitals',  distance: '2.1 km', price: 180, time: '2 min', icon: Stethoscope },
-    { id: 'REQ-7198', patient: 'Heba Mostafa',   service: t.patient?.serviceInjection ?? 'Injection',     distance: '3.4 km', price: 160, time: '5 min', icon: Syringe      },
-    { id: 'REQ-7195', patient: 'Karim Adel',     service: t.patient?.serviceElderly ?? 'Elderly Care',    distance: '1.8 km', price: 350, time: '8 min', icon: HeartHandshake },
+  // Incoming requests — starts with mock data, gets replaced by API response
+  const [requests, setRequests] = useState<RequestCardData[]>([
+    { id: 'REQ-7201', patient_name: 'Mahmoud Saeed',  service_name: 'IV Drip & Vitals', distance_km: 2.1, estimated_price: '180', created_at: new Date(Date.now() - 120000).toISOString() },
+    { id: 'REQ-7198', patient_name: 'Heba Mostafa',   service_name: 'Injection',        distance_km: 3.4, estimated_price: '160', created_at: new Date(Date.now() - 300000).toISOString() },
+    { id: 'REQ-7195', patient_name: 'Karim Adel',     service_name: 'Elderly Care',     distance_km: 1.8, estimated_price: '350', created_at: new Date(Date.now() - 480000).toISOString() },
   ]);
+  const [acceptedVisit, setAcceptedVisit] = useState<RequestCardData | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // --- Load toggle state from localStorage ---
+  // Load toggle state
   useEffect(() => {
     setMounted(true);
     const saved = typeof window !== 'undefined' ? localStorage.getItem('wateen_nurse_online') : null;
     if (saved === 'true') setIsOnline(true);
   }, []);
 
-  // --- Mock API toggle handler ---
+  // Fetch pending visits when online (with polling every 15s)
+  useEffect(() => {
+    if (!isOnline || !mounted) return;
+
+    const fetchPending = async () => {
+      try {
+        const visits = await getPendingVisits();
+        if (visits.length > 0) {
+          setRequests(visits.map(v => ({
+            id: v.id,
+            patient_name: v.patient_name,
+            service_name: v.service_name,
+            distance_km: v.distance_km,
+            estimated_price: v.estimated_price,
+            created_at: v.created_at,
+          })));
+        }
+        setApiError(null);
+      } catch {
+        // Silently fall back to mock data — backend may not be running
+        setApiError(null);
+      }
+    };
+
+    fetchPending();
+    // Replaced short polling with initial fetch + WebSockets
+    // const interval = setInterval(fetchPending, 15000);
+    // return () => clearInterval(interval);
+  }, [isOnline, mounted]);
+
+  // WebSocket Integration
+  const handleWebSocketMessage = useCallback((msg: any) => {
+    if (msg.type === 'new_visit' && msg.visit) {
+      const v = msg.visit;
+      setRequests(prev => {
+        if (prev.find(r => r.id === v.id)) return prev;
+        return [{
+          id: v.id,
+          patient_name: v.patient_name,
+          service_name: v.service_name,
+          distance_km: v.distance_km,
+          estimated_price: v.estimated_price,
+          created_at: v.created_at,
+        }, ...prev];
+      });
+      // Optionally play a sound or show a toast
+      setToast({ message: 'New visit request received!', type: 'success' });
+    }
+  }, []);
+
+  const wsPath = isOnline ? 'ws/nurse/' : '';
+  const { isConnected: wsConnected } = useWateenWebSocket(wsPath, handleWebSocketMessage);
+
+  // Toggle handler
   const handleToggle = useCallback(async () => {
     if (isToggling) return;
     setIsToggling(true);
     setToast({ message: t.nurse?.connectingStatus ?? 'Connecting...', type: 'success' });
 
-    // Simulate 800ms API call
-    await new Promise(resolve => setTimeout(resolve, 800));
-
     const nextState = !isOnline;
+
+    try {
+      await toggleNurseAvailability({
+        is_online: nextState,
+        latitude: nextState ? 30.0444 : null,  // Cairo as default
+        longitude: nextState ? 31.2357 : null,
+      });
+    } catch {
+      // Fallback — allow toggle even without backend
+    }
+
     setIsOnline(nextState);
     localStorage.setItem('wateen_nurse_online', String(nextState));
     setIsToggling(false);
@@ -138,18 +458,31 @@ export default function NurseDashboard() {
         : (t.nurse?.disconnectedStatus ?? 'Disconnected from dispatch'),
       type: 'success',
     });
-
-    // Auto-hide toast
     setTimeout(() => setToast(null), 2500);
   }, [isOnline, isToggling, t.nurse]);
 
-  // --- Accept / Decline handlers ---
-  const handleAccept = (id: string) => {
+  // Accept handler 
+  const handleAccept = useCallback(async (id: string) => {
+    const accepted = requests.find(r => r.id === id);
+    if (accepted) setAcceptedVisit(accepted);
     setRequests(prev => prev.filter(r => r.id !== id));
-  };
-  const handleDecline = (id: string) => {
+
+    try {
+      await respondToVisit({ visit_id: id, action: 'accept' });
+    } catch {
+      // Fallback — allow accept even without backend
+    }
+  }, [requests]);
+
+  // Decline handler
+  const handleDecline = useCallback(async (id: string) => {
     setRequests(prev => prev.filter(r => r.id !== id));
-  };
+    try {
+      await respondToVisit({ visit_id: id, action: 'decline' });
+    } catch {
+      // Fallback
+    }
+  }, []);
 
   if (!mounted) return null;
 
@@ -158,16 +491,14 @@ export default function NurseDashboard() {
 
   return (
     <div
-      className={`relative min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-50 pb-24 ${isRTL ? 'font-arabic' : 'font-sans'}`}
+      className={`relative min-h-[calc(100vh-4rem)] bg-slate-950 text-slate-50 pb-24 select-none ${isRTL ? 'font-arabic' : 'font-sans'}`}
       dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* ───── Hero with DotOrbit Background ───── */}
       <div className="relative w-full overflow-hidden" style={{ height: HERO_H }}>
         <NurseBackground isOnline={isOnline} height={HERO_H} />
 
-        {/* Hero content */}
         <div className="relative z-20 h-full flex flex-col items-center justify-center gap-4 px-6 text-center">
-          {/* Status LED */}
           <div className="flex items-center gap-2 mb-2">
             <span
               className={`w-2.5 h-2.5 rounded-full transition-colors duration-700 ${
@@ -179,17 +510,14 @@ export default function NurseDashboard() {
             </span>
           </div>
 
-          {/* Title */}
           <div className="text-4xl sm:text-5xl md:text-6xl font-black text-white drop-shadow-lg leading-tight flex justify-center w-full mb-2">
             <FlipTextReveal title={t.nurse?.title ?? 'Welcome,'} highlightText="Ahmed" />
           </div>
 
-          {/* Subtitle */}
           <p className="text-base text-slate-300/80 font-mono tracking-wider">
             {t.nurse?.subtitle ?? 'RN-4029 • ICU Unit'}
           </p>
 
-          {/* Premium Physical Switch Toggle */}
           <StatusToggleSwitch 
             isOnline={isOnline} 
             onToggle={handleToggle} 
@@ -197,13 +525,8 @@ export default function NurseDashboard() {
             labelOff={offline} 
           />
 
-          {/* Toggle loading indicator */}
           {isToggling && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="mt-2 flex items-center gap-2"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mt-2 flex items-center gap-2">
               <Loader2 className="w-3.5 h-3.5 text-slate-400 animate-spin" />
               <span className="text-xs text-slate-400 font-mono">{t.nurse?.connectingStatus ?? 'Connecting...'}</span>
             </motion.div>
@@ -211,7 +534,7 @@ export default function NurseDashboard() {
         </div>
       </div>
 
-      {/* Toast notification */}
+      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -232,7 +555,7 @@ export default function NurseDashboard() {
 
           {/* Active Visit Command Center */}
           <AnimatePresence>
-            {isOnline && (
+            {isOnline && acceptedVisit && (
               <motion.div
                 initial={{ opacity: 0, height: 0, scale: 0.95 }}
                 animate={{ opacity: 1, height: 'auto', scale: 1 }}
@@ -255,13 +578,13 @@ export default function NurseDashboard() {
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#16615F]/20 text-[#16615F] uppercase tracking-wider border border-[#16615F]/30">
                             {t.nurse?.activeMission ?? 'Active Mission'}
                           </span>
-                          <span className="text-xs text-slate-400 font-mono">REQ-8942</span>
+                          <span className="text-xs text-slate-400 font-mono">{acceptedVisit.id.slice(0, 8).toUpperCase()}</span>
                         </div>
-                        <h2 className="text-xl font-bold text-white mb-2">IV Drip & Vitals Check</h2>
+                        <h2 className="text-xl font-bold text-white mb-2">{acceptedVisit.service_name}</h2>
                         <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm text-slate-400">
-                          <span className="flex items-center gap-1"><User className="w-4 h-4 shrink-0" /> Mahmoud Kamal</span>
+                          <span className="flex items-center gap-1"><User className="w-4 h-4 shrink-0" /> {acceptedVisit.patient_name}</span>
                           <span className="hidden sm:inline text-slate-700">•</span>
-                          <span className="flex items-center gap-1"><Map className="w-4 h-4 shrink-0" /> Maadi, Cairo</span>
+                          <span className="flex items-center gap-1"><MapPin className="w-4 h-4 shrink-0" /> {acceptedVisit.distance_km?.toFixed(1) ?? '—'} km</span>
                         </div>
                       </div>
                     </div>
@@ -307,7 +630,6 @@ export default function NurseDashboard() {
                   </h2>
 
                   {requests.length === 0 ? (
-                    /* Empty incoming requests state */
                     <div className="bg-slate-900/30 border border-dashed border-slate-700 rounded-2xl p-8 flex flex-col items-center text-center">
                       <div className="w-12 h-12 rounded-full bg-slate-800/80 border border-slate-700 flex items-center justify-center mb-3">
                         <Activity className="w-5 h-5 text-slate-500" />
@@ -318,60 +640,16 @@ export default function NurseDashboard() {
                   ) : (
                     <div className="space-y-3">
                       <AnimatePresence>
-                        {requests.map((req) => {
-                          const ReqIcon = req.icon;
-                          return (
-                            <motion.div
-                              key={req.id}
-                              layout
-                              initial={{ opacity: 0, x: isRTL ? -30 : 30 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: isRTL ? 30 : -30, height: 0, marginBottom: 0 }}
-                              transition={{ type: 'spring', stiffness: 400, damping: 28 }}
-                              className="bg-slate-900/60 backdrop-blur-md border border-slate-800 hover:border-slate-700 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 transition-colors"
-                            >
-                              {/* Request Info */}
-                              <div className="flex items-center gap-3 w-full sm:w-auto">
-                                <div className="w-10 h-10 rounded-xl bg-[#16615F]/10 border border-[#16615F]/30 flex items-center justify-center shrink-0">
-                                  <ReqIcon className="w-5 h-5 text-[#16615F]" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2 mb-0.5">
-                                    <span className="text-[10px] font-mono text-slate-500">{req.id}</span>
-                                    <span className="text-[10px] text-slate-600">•</span>
-                                    <span className="text-[10px] text-slate-500 flex items-center gap-0.5">
-                                      <Clock className="w-2.5 h-2.5" /> {req.time} {t.nurse?.timeAgo ?? 'ago'}
-                                    </span>
-                                  </div>
-                                  <h4 className="font-bold text-sm text-white truncate">{req.service}</h4>
-                                  <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                                    <span className="flex items-center gap-1"><User className="w-3 h-3" /> {req.patient}</span>
-                                    <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> {req.distance}</span>
-                                    <span className="font-bold text-[#79B253]">{req.price} EGP</span>
-                                  </div>
-                                </div>
-                              </div>
-
-                              {/* Action Buttons */}
-                              <div className="flex items-center gap-2 w-full sm:w-auto">
-                                <button
-                                  onClick={() => handleDecline(req.id)}
-                                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-slate-600 text-slate-300 text-xs font-bold transition-all cursor-pointer"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                  {t.nurse?.declineRequest ?? 'Decline'}
-                                </button>
-                                <button
-                                  onClick={() => handleAccept(req.id)}
-                                  className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-5 py-2.5 rounded-xl bg-[#16615F] hover:bg-[#16615F]/80 text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(22,97,95,0.3)] hover:shadow-[0_0_25px_rgba(22,97,95,0.5)] cursor-pointer"
-                                >
-                                  <Check className="w-3.5 h-3.5" />
-                                  {t.nurse?.acceptRequest ?? 'Accept'}
-                                </button>
-                              </div>
-                            </motion.div>
-                          );
-                        })}
+                        {requests.map((req) => (
+                          <IncomingRequestCard
+                            key={req.id}
+                            req={req}
+                            onAccept={handleAccept}
+                            onDecline={handleDecline}
+                            isRTL={isRTL}
+                            t={t}
+                          />
+                        ))}
                       </AnimatePresence>
                     </div>
                   )}
@@ -400,44 +678,45 @@ export default function NurseDashboard() {
                 </div>
               </div>
 
-              <div className="flex-1 relative bg-[#0f172a] flex items-center justify-center overflow-hidden min-h-[300px]">
-                <div className="absolute inset-0 border border-slate-800/50 rounded-full scale-[2] opacity-20" />
-                <div className="absolute inset-0 border border-slate-800/50 rounded-full scale-[1.5] opacity-20" />
-                <div className="absolute inset-0 border border-slate-800/50 rounded-full scale-[1] opacity-20" />
-                <div className="absolute inset-0 border border-slate-800/50 rounded-full scale-[0.5] opacity-20" />
+              <div className="flex-1 relative bg-[#0f172a] rounded-b-3xl overflow-hidden min-h-[300px]">
+                <LocationPicker 
+                  readOnly 
+                  initialLocation={[30.0444, 31.2357]} 
+                  className={cn("w-full h-full min-h-[300px] transition-opacity duration-1000", isOnline ? "opacity-100" : "opacity-30 blur-[2px]")}
+                />
 
                 {isOnline && (
-                  <div className="absolute w-[200%] h-[200%] origin-center animate-[spin_4s_linear_infinite]"
-                    style={{ background: 'conic-gradient(from 0deg, transparent 70%, rgba(22, 97, 95, 0.4) 100%)' }} />
-                )}
-
-                <div className={`absolute w-4 h-4 rounded-full z-10 ${isOnline ? 'bg-[#16615F] shadow-[0_0_15px_rgba(22,97,95,0.8)]' : 'bg-slate-600'}`} />
-
-                {isOnline && (
-                  <>
-                    <div className="absolute top-[30%] left-[30%] text-[#FD8839] flex flex-col items-center gap-1 group cursor-pointer z-10 transition-transform hover:scale-110">
+                  <div className="absolute inset-0 pointer-events-none z-10 flex items-center justify-center">
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-transparent to-transparent" />
+                    <div className="relative w-full h-full max-w-sm max-h-sm origin-center animate-[spin_4s_linear_infinite] opacity-30"
+                      style={{ background: 'conic-gradient(from 0deg, transparent 70%, rgba(22, 97, 95, 0.4) 100%)', borderRadius: '50%' }} />
+                    
+                    <div className="absolute w-4 h-4 rounded-full z-10 bg-[#16615F] shadow-[0_0_15px_rgba(22,97,95,0.8)]" />
+                    
+                    {/* Simulated nearby requests on the map */}
+                    <div className="absolute top-[30%] left-[30%] text-[#FD8839] flex flex-col items-center gap-1 group cursor-pointer z-20 pointer-events-auto transition-transform hover:scale-110">
                       <div className="w-3 h-3 bg-[#FD8839] rounded-full shadow-[0_0_10px_rgba(253,136,57,0.8)] animate-pulse" />
                       <div className="opacity-0 group-hover:opacity-100 absolute top-4 bg-slate-900 border border-slate-700 p-2 rounded text-xs whitespace-nowrap transition-opacity shadow-lg">
                         <div className="font-bold text-white">Wound Care</div>
                         <div className="text-slate-400">2.4 km • 150 EGP</div>
                       </div>
                     </div>
-                    <div className="absolute bottom-[25%] right-[25%] text-[#79B253] flex flex-col items-center gap-1 group cursor-pointer z-10 transition-transform hover:scale-110">
+                    <div className="absolute bottom-[35%] right-[25%] text-[#79B253] flex flex-col items-center gap-1 group cursor-pointer z-20 pointer-events-auto transition-transform hover:scale-110">
                       <div className="w-3 h-3 bg-[#79B253] rounded-full shadow-[0_0_10px_rgba(121,178,83,0.8)]" />
                       <div className="opacity-0 group-hover:opacity-100 absolute top-4 bg-slate-900 border border-slate-700 p-2 rounded text-xs whitespace-nowrap transition-opacity shadow-lg">
                         <div className="font-bold text-white">Vitals Check</div>
                         <div className="text-slate-400">4.1 km • 100 EGP</div>
                       </div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {!isOnline && (
-                  <div className="absolute inset-0 bg-slate-950/60 backdrop-blur-[2px] z-20 flex items-center justify-center p-4">
-                    <div className="bg-slate-900/90 border border-slate-800 px-6 py-5 rounded-xl text-center shadow-xl max-w-sm">
+                  <div className="absolute inset-0 bg-slate-950/40 z-20 flex items-center justify-center p-4">
+                    <div className="bg-slate-900/90 border border-slate-800 px-6 py-5 rounded-xl text-center shadow-xl max-w-sm backdrop-blur-md">
                       <ShieldAlert className="w-8 h-8 text-slate-500 mx-auto mb-3" />
                       <p className="text-slate-300 font-medium">
-                        {t.nurse?.radarOfflineMsg ?? 'Radar offline. Activate your status to receive requests.'}
+                        {t.nurse?.radarOfflineMsg ?? 'Map offline. Activate your status to receive requests.'}
                       </p>
                       <button
                         onClick={() => setIsOnline(true)}

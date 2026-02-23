@@ -45,6 +45,7 @@ export const ar: Translations = {
     enterIdentifier: 'أدخل المُعرّف الخاص بك',
     enterPassword: 'أدخل كلمة المرور',
     copyright: 'WATEEN HEALTHCARE',
+    invalidCredentials: 'رقم الهاتف المحمول أو كلمة المرور غير صحيحة.',
   },
   register: {
     createAccount: 'إنشاء حساب جديد',
@@ -105,6 +106,14 @@ export const ar: Translations = {
     step: 'الخطوة',
     haveAccount: 'لديك حساب بالفعل؟',
     loginHere: 'سجل دخولك من هنا',
+    nationalIdLabel: 'الرقم القومي (14 رقم)*',
+    registering: 'جاري إنشاء الحساب...',
+    successTitle: 'مرحباً بك في وَتِين!',
+    successDesc: 'تم إنشاء حسابك بنجاح. سيتم تحويلك إلى لوحة التحكم.',
+    redirecting: 'جاري التحويل...',
+    errorDuplicate: 'هذا الرقم القومي أو رقم الهاتف مسجل بالفعل.',
+    errorServer: 'حدث خطأ في الخادم. يرجى المحاولة مرة أخرى.',
+    errorRequired: 'يرجى ملء جميع الحقول المطلوبة.',
   },
   notFound: {
     title: 'الصفحة غير موجودة',

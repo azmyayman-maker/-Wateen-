@@ -45,6 +45,7 @@ export interface Translations {
     enterIdentifier: string;
     enterPassword: string;
     copyright: string;
+    invalidCredentials: string;
   };
   register: {
     createAccount: string;
@@ -105,6 +106,14 @@ export interface Translations {
     step: string;
     haveAccount: string;
     loginHere: string;
+    nationalIdLabel: string;
+    registering: string;
+    successTitle: string;
+    successDesc: string;
+    redirecting: string;
+    errorDuplicate: string;
+    errorServer: string;
+    errorRequired: string;
   };
   notFound: {
     title: string;

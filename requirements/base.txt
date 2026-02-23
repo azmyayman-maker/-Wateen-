@@ -82,6 +82,18 @@ djangorestframework==3.15.1
 djangorestframework-simplejwt==5.3.1
 
 # -----------------------------------------------------------------------------
+# KYC / Document Processing (Computer Vision + OCR)
+# -----------------------------------------------------------------------------
+# OpenCV (headless — no GUI, for Docker/server environments)
+opencv-python-headless==4.9.0.80
+
+# Python wrapper for Google's Tesseract OCR engine
+pytesseract==0.3.10
+
+# Image processing library (required by pytesseract)
+Pillow==10.2.0
+
+# -----------------------------------------------------------------------------
 # Development & Debugging (Optional - uncomment if needed)
 # -----------------------------------------------------------------------------
 # Django debug toolbar for development

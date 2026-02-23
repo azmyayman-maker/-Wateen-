@@ -132,3 +132,82 @@ class MockPaymentResponseSerializer(serializers.Serializer):
     visit_id = serializers.UUIDField()
     payment_status = serializers.CharField()
     previous_status = serializers.CharField()
+
+
+# ─── Nurse-Side Serializers ───────────────────────────────────────────────────
+
+
+class NurseToggleSerializer(serializers.Serializer):
+    """Input serializer for toggling nurse availability."""
+
+    is_online = serializers.BooleanField(
+        help_text=_("Whether the nurse wants to go online or offline"),
+    )
+    latitude = serializers.FloatField(
+        min_value=-90,
+        max_value=90,
+        required=False,
+        allow_null=True,
+        help_text=_("Nurse latitude (required when going online)"),
+    )
+    longitude = serializers.FloatField(
+        min_value=-180,
+        max_value=180,
+        required=False,
+        allow_null=True,
+        help_text=_("Nurse longitude (required when going online)"),
+    )
+
+    def validate(self, attrs):
+        if attrs["is_online"] and (attrs.get("latitude") is None or attrs.get("longitude") is None):
+            raise serializers.ValidationError(
+                _("Latitude and longitude are required when going online.")
+            )
+        return attrs
+
+
+class NurseRespondSerializer(serializers.Serializer):
+    """Input serializer for accepting or declining a visit."""
+
+    visit_id = serializers.UUIDField(
+        help_text=_("UUID of the visit to respond to"),
+    )
+    action = serializers.ChoiceField(
+        choices=["accept", "decline"],
+        help_text=_("Whether to accept or decline the visit"),
+    )
+
+
+class NursePendingVisitSerializer(serializers.Serializer):
+    """Output serializer for pending visits shown to nurses."""
+
+    id = serializers.UUIDField(read_only=True)
+    status = serializers.CharField(read_only=True)
+    patient_name = serializers.SerializerMethodField()
+    service_name = serializers.SerializerMethodField()
+    latitude = serializers.SerializerMethodField()
+    longitude = serializers.SerializerMethodField()
+    distance_km = serializers.FloatField(read_only=True, required=False, default=None)
+    estimated_price = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_patient_name(self, obj) -> str:
+        if obj.patient:
+            return obj.patient.user.get_full_name()
+        return "Unknown"
+
+    def get_service_name(self, obj) -> str | None:
+        if obj.service_type:
+            return obj.service_type.name
+        return _("General Care")
+
+    def get_latitude(self, obj) -> float | None:
+        return obj.location.y if obj.location else None
+
+    def get_longitude(self, obj) -> float | None:
+        return obj.location.x if obj.location else None
+
+    def get_estimated_price(self, obj) -> str:
+        if obj.service_type and obj.service_type.base_price:
+            return str(obj.service_type.base_price)
+        return "150.00"

@@ -21,6 +21,102 @@ export const TacticalMissionRadar = () => {
     { id: 5, x: "15%", y: "60%", status: "en-route", name: "N-Mona" },
   ];
 
+  const TacticalMapSVG = () => (
+    <svg className="absolute inset-0 w-full h-full p-4 pointer-events-none z-[5]" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <filter id="glow-map" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="4" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <linearGradient id="line-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#0891b2" stopOpacity="0" />
+          <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#0891b2" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+
+      {/* Abstract Grid Details */}
+      <g stroke="#0f172a" strokeWidth="1" opacity="0.5">
+        <line x1="200" y1="0" x2="200" y2="500" />
+        <line x1="600" y1="0" x2="600" y2="500" />
+        <line x1="0" y1="150" x2="800" y2="150" />
+        <line x1="0" y1="350" x2="800" y2="350" />
+      </g>
+
+      {/* Main Map Boundaries (Abstract City/Zones) */}
+      <motion.path
+        d="M 50 100 L 150 50 L 300 120 L 280 250 L 100 300 Z M 400 80 L 650 110 L 750 220 L 600 380 L 450 350 L 350 200 Z"
+        fill="none"
+        stroke="#1e293b"
+        strokeWidth="3"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 0.8 }}
+        transition={{ duration: 4, ease: "easeInOut" }}
+      />
+      <motion.path
+        d="M 120 400 L 250 350 L 380 450 L 200 480 Z M 650 450 L 780 320 L 700 250 Z"
+        fill="none"
+        stroke="#0f172a"
+        strokeWidth="2"
+        initial={{ pathLength: 0, opacity: 0 }}
+        animate={{ pathLength: 1, opacity: 0.6 }}
+        transition={{ duration: 3, delay: 1, ease: "easeInOut" }}
+      />
+
+      {/* Dynamic Data Lines simulating traffic/info */}
+      <motion.path
+        d="M 50 100 L 150 50 L 300 120 L 400 80 L 650 110"
+        fill="none"
+        stroke="url(#line-glow)"
+        strokeWidth="2"
+        filter="url(#glow-map)"
+        initial={{ pathLength: 0, pathOffset: 1 }}
+        animate={{ pathLength: 0.2, pathOffset: 0 }}
+        transition={{ repeat: Infinity, duration: 6, ease: "linear" }}
+      />
+      <motion.path
+        d="M 100 300 L 280 250 L 350 200 L 450 350 L 600 380 L 650 450"
+        fill="none"
+        stroke="rgba(16, 185, 129, 0.5)"
+        strokeWidth="1.5"
+        filter="url(#glow-map)"
+        initial={{ pathLength: 0, pathOffset: 1 }}
+        animate={{ pathLength: 0.3, pathOffset: 0 }}
+        transition={{ repeat: Infinity, duration: 8, ease: "linear", delay: 2 }}
+      />
+      <motion.path
+        d="M 200 480 L 380 450 L 600 380 L 750 220"
+        fill="none"
+        stroke="rgba(244, 63, 94, 0.4)"
+        strokeWidth="1.5"
+        filter="url(#glow-map)"
+        initial={{ pathLength: 0, pathOffset: 1 }}
+        animate={{ pathLength: 0.25, pathOffset: 0 }}
+        transition={{ repeat: Infinity, duration: 5, ease: "linear", delay: 1 }}
+      />
+
+      {/* Static Nodes (representing key hospitals/hubs) */}
+      {[
+        { cx: 150, cy: 50, r: 4 }, { cx: 300, cy: 120, r: 6 }, { cx: 400, cy: 80, r: 5 }, { cx: 650, cy: 110, r: 8 },
+        { cx: 750, cy: 220, r: 4 }, { cx: 600, cy: 380, r: 6 }, { cx: 450, cy: 350, r: 5 }, { cx: 350, cy: 200, r: 7 },
+        { cx: 280, cy: 250, r: 5 }, { cx: 100, cy: 300, r: 6 }, { cx: 380, cy: 450, r: 4 }
+      ].map((node, i) => (
+        <motion.circle
+          key={i}
+          cx={node.cx}
+          cy={node.cy}
+          r={node.r}
+          fill="#334155"
+          stroke="#0f172a"
+          strokeWidth="1.5"
+          initial={{ opacity: 0, r: 0 }}
+          animate={{ opacity: [0.5, 1, 0.5], r: [node.r, node.r + 2, node.r] }}
+          transition={{ repeat: Infinity, duration: 3 + (i % 3), delay: i * 0.2 }}
+        />
+      ))}
+    </svg>
+  );
+
   return (
     <div className="relative w-full h-full min-h-[400px] flex items-center justify-center overflow-hidden rounded-lg bg-[#020617] isolate">
       {/* Background Grid */}
@@ -31,6 +127,9 @@ export const TacticalMissionRadar = () => {
           backgroundSize: "40px 40px"
         }}
       />
+
+      {/* SVG Tactical Map */}
+      <TacticalMapSVG />
 
       {/* Radar Concentric Rings */}
       <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
