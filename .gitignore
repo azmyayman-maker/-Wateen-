@@ -112,3 +112,15 @@ run_tests.bat
 run_tests.sh
 run_tests_manual.py
 verify_age.py
+.agent/
+.kilocode/
+.opencode/
+.specify/
+.vscode/
+node_modules/
+mcp_config.json
+package-lock.json
+package.json
+setup_fw.mjs
+test_output2.txt
+test_output3.txt

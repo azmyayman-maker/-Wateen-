@@ -11,12 +11,15 @@ jobs:
     steps:
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.0
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USERNAME }}
           password: ${{ secrets.VPS_PASSWORD }}
+          envs: GH_TOKEN
           script: |
             cd ~/-Wateen-
-            git pull origin main
+            git pull https://oauth2:${GH_TOKEN}@github.com/azmyayman-maker/-Wateen-.git main
             docker compose down
             docker compose up -d --build
