@@ -423,5 +423,5 @@ class Transaction(models.Model):
 
     def calculate_split(self):
         """Calculates the split between platform and agency."""
-        self.take_rate_amount = (self.total_amount * self.take_rate_percent) / 100
+        self.take_rate_amount = (self.total_amount * self.take_rate_percent) / Decimal("100")
         self.agency_amount = self.total_amount - self.take_rate_amount
