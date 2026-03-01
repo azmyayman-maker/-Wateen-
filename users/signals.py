@@ -25,7 +25,11 @@ def create_user_profile(sender: type[CustomUser], instance: CustomUser, created:
     elif instance.role == UserRole.NURSE:
         # A nurse must be created with an agency assigned initially, handled elsewhere, 
         # but the empty profile can be created here.
-        pass
+        if not getattr(instance, 'agency', None):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Nurses must be attached to an AgencyProfile.")
+        from users.models import NurseProfile
+        NurseProfile.objects.get_or_create(user=instance, defaults={'agency': instance.agency})
 
     elif instance.role == UserRole.AGENCY_ADMIN:
         # The ticket dictates: `if created and instance.role == 'AGENCY_ADMIN':` -> automatically create an empty `AgencyProfile` 

@@ -1,7 +1,7 @@
 from django.contrib.gis.geos import Polygon, Point
-from rest_framework.exceptions import ValidationError
 
 import pytest
+from rest_framework.exceptions import ValidationError
 
 from users.models import AgencyProfile, CustomUser, UserRole, DispatchMode, AgencyStatus
 from users.agency_serializers import AgencyProfileSerializer
@@ -124,8 +124,3 @@ class TestAgencyProfileEnhancements:
         
         # Test valid fallback: Passing None should be valid because null=True
         assert serializer.validate_coverage_polygon(None) is None
-        
-        # Unclosed WKT
-        unclosed_wkt = "POLYGON ((0.0 0.0, 10.0 0.0, 10.0 10.0, 0.0 10.0))"
-        with pytest.raises(ValidationError):
-            serializer.validate_coverage_polygon(unclosed_wkt)

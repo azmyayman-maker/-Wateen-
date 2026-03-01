@@ -1,7 +1,8 @@
-import pytest
 from django.db.utils import IntegrityError
 from django.core.exceptions import ValidationError
 from django.contrib.gis.geos import GEOSException, Polygon, LinearRing
+
+import pytest
 
 from users.models import NurseProfile, AgencyProfile
 
@@ -14,50 +15,40 @@ class TestNurseAgencyFKIntegrity:
     They must be attached to an AgencyProfile.
     """
 
-    def test_nurse_creation_without_agency_raises_integrity_error(self):
+    def test_nurse_creation_without_agency_raises_validation_error(self):
         """
-        Bypassing the ORM's full_clean() should still fail at the DB level
+        NurseProfile.save() calls full_clean() so a ValidationError is expected when agency is None.
+        """
+        from visits.tests.conftest import CustomUserFactory
+        with pytest.raises(ValidationError) as exc_info:
+            CustomUserFactory(role='NURSE', agency=None)
+        assert "AgencyProfile" in str(exc_info.value)
+
+    def test_nurse_save_without_agency_raises_integrity_error(self):
+        """
+        Bypassing model-level cleaning (e.g., via bulk_create) should fail at the DB level
         because agency_id is NOT NULL.
         """
         from visits.tests.conftest import CustomUserFactory
-        user = CustomUserFactory(role='NURSE')
-        with pytest.raises(ValidationError):
-            # Attempt to create directly in DB, full_clean() fires on save
-            NurseProfile.objects.create(
-                user=user,
-                agency=None,
-                is_available=True
-            )
-
-    def test_nurse_save_without_agency_raises_validation_error(self):
-        """
-        Testing the ORM level validation via clean() before it hits the DB.
-        """
-        from visits.tests.conftest import CustomUserFactory
-        user = CustomUserFactory(role='NURSE')
-        nurse = NurseProfile(
-            user=user,
-            agency=None,
-            is_available=True
-        )
-        with pytest.raises(ValidationError) as exc_info:
-            nurse.save()
-        
-        assert "agency" in str(exc_info.value) or "agency_id" in str(exc_info.value)
+        user = CustomUserFactory(role='PATIENT')
+        with pytest.raises(IntegrityError):
+            NurseProfile.objects.bulk_create([
+                NurseProfile(
+                    user=user,
+                    agency=None,
+                    is_available=True
+                )
+            ])
 
     def test_valid_nurse_creation_succeeds(self):
         """
         A valid nurse with an agency should save successfully.
         """
         from visits.tests.conftest import CustomUserFactory, AgencyProfileFactory
-        user = CustomUserFactory(role='NURSE')
         agency = AgencyProfileFactory()
-        nurse = NurseProfile.objects.create(
-            user=user,
-            agency=agency,
-            is_available=True
-        )
-        assert getattr(nurse, 'user_id', None) is not None or nurse.pk is not None
+        user = CustomUserFactory(role='NURSE', agency=agency)
+        nurse = getattr(user, 'nurse_profile')
+        assert nurse.pk is not None
         assert nurse.agency == agency
 
 

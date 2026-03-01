@@ -1,5 +1,3 @@
-from typing import Optional
-
 from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
 from .logging import logger
 
@@ -19,6 +17,11 @@ class SettlementService:
             raise ValueError(
                 f"Cannot create transaction for visit {visit.id}: "
                 f"final_price is None. Ensure pricing is calculated first."
+            )
+        if visit.agency is None:
+            raise ValueError(
+                f"Cannot create transaction for visit {visit.id}: "
+                f"agency is missing. Transactions must map to an agency."
             )
         total = Decimal(str(total))
         

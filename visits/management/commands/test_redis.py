@@ -9,26 +9,19 @@ Usage:
     python manage.py test_redis
 """
 
-import logging
 import os
-import time
+from typing import Any
 
-from django.conf import settings
 from django.core.cache import cache
 from django.core.management.base import BaseCommand
-from django.db import connection
 
-import redis
 
-from users.models import AgencyProfile, NurseProfile
-from visits.models import Visit
-from visits.services.redis_geo import SpatialService
 
 
 class Command(BaseCommand):
     help = 'Test Redis Cloud connectivity for cache and channel layers'
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         self.stdout.write("Testing Redis Cloud connectivity...")
         
         # Get Redis URL (masked for security)
