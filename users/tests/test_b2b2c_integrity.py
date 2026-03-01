@@ -14,27 +14,29 @@ class TestNurseAgencyFKIntegrity:
     They must be attached to an AgencyProfile.
     """
 
-    def test_nurse_creation_without_agency_raises_integrity_error(self, patient):
+    def test_nurse_creation_without_agency_raises_integrity_error(self):
         """
         Bypassing the ORM's full_clean() should still fail at the DB level
         because agency_id is NOT NULL.
-        Note: We use the `patient` fixture user just to have a user instance,
-        though it has PATIENT role, the DB constraint test is what matters here.
         """
+        from visits.tests.conftest import CustomUserFactory
+        user = CustomUserFactory(role='NURSE')
         with pytest.raises(IntegrityError):
             # Attempt to create directly in DB, bypassing full_clean()
             NurseProfile.objects.create(
-                user=patient.user,
+                user=user,
                 agency=None,
                 is_available=True
             )
 
-    def test_nurse_save_without_agency_raises_validation_error(self, patient):
+    def test_nurse_save_without_agency_raises_validation_error(self):
         """
         Testing the ORM level validation via clean() before it hits the DB.
         """
+        from visits.tests.conftest import CustomUserFactory
+        user = CustomUserFactory(role='NURSE')
         nurse = NurseProfile(
-            user=patient.user,
+            user=user,
             agency=None,
             is_available=True
         )
@@ -43,17 +45,20 @@ class TestNurseAgencyFKIntegrity:
         
         assert "agency" in str(exc_info.value) or "agency_id" in str(exc_info.value)
 
-    def test_valid_nurse_creation_succeeds(self, sample_agency, patient):
+    def test_valid_nurse_creation_succeeds(self):
         """
         A valid nurse with an agency should save successfully.
         """
+        from visits.tests.conftest import CustomUserFactory, AgencyProfileFactory
+        user = CustomUserFactory(role='NURSE')
+        agency = AgencyProfileFactory()
         nurse = NurseProfile.objects.create(
-            user=patient.user,
-            agency=sample_agency,
+            user=user,
+            agency=agency,
             is_available=True
         )
         assert nurse.id is not None
-        assert nurse.agency == sample_agency
+        assert nurse.agency == agency
 
 
 class TestGeospatialIntegrity:

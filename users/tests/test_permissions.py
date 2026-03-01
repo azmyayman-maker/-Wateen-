@@ -52,14 +52,23 @@ class TestPermissionClasses:
         
         # Nurse
         mock_request.user.role = UserRole.NURSE
+        mock_request.user.is_nurse = True
+        mock_request.user.is_agency_admin = False
+        mock_request.user.is_superadmin = False
         assert perm.has_permission(mock_request, mock_view) is True
         
         # Superadmin
         mock_request.user.role = UserRole.SUPERADMIN
+        mock_request.user.is_nurse = False
+        mock_request.user.is_agency_admin = False
+        mock_request.user.is_superadmin = True
         assert perm.has_permission(mock_request, mock_view) is True
         
         # Patient
         mock_request.user.role = UserRole.PATIENT
+        mock_request.user.is_nurse = False
+        mock_request.user.is_agency_admin = False
+        mock_request.user.is_superadmin = False
         assert perm.has_permission(mock_request, mock_view) is False
 
     def test_is_owner_or_admin_permission(self, mock_request, mock_view):
@@ -69,6 +78,7 @@ class TestPermissionClasses:
         # Owner
         mock_obj.patient.user = mock_request.user
         mock_request.user.is_superadmin = False
+        mock_request.user.is_agency_admin = False
         assert perm.has_object_permission(mock_request, mock_view, mock_obj) is True
         
         # Not owner, but superadmin

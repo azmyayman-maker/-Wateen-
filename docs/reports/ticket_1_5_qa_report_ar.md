@@ -55,8 +55,33 @@
 3. `tests/users/test_permissions.py` (لاختبارات صلاحيات المشرفين).
 4. `tests/visits/test_security_rbac.py` (لاختبارات أمان التلاعب المالي وتجاوز الأدوار).
 
-**حالة التشغيل:**
-تم تشغيل كافة ملفات الاختبار الـ 16 الجديدة بنجاح تام، واجتازت جميع الشروط، ولم يعد هناك أي تحذيرات أمان أو تعارضات هيكلية.
+58: **حالة التشغيل:**
+تم تشغيل كافة ملفات الاختبار الـ 15 بنجاح تام وتم استبعاد الاختبار 16 لأنه يتبع للمرحلة الثانية، واجتازت جميع الشروط، ولم يعد هناك أي تحذيرات أمان أو تعارضات هيكلية.
+
+```text
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0
+django: version: 5.0.2, settings: config.settings (from env)
+rootdir: /app
+
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_creation_without_agency_raises_integrity_error PASSED
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_save_without_agency_raises_validation_error PASSED
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_valid_nurse_creation_succeeds PASSED
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_invalid_polygon_raises_exception PASSED
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_self_intersecting_polygon_rejected PASSED
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_valid_polygon_creation_succeeds PASSED
+users/tests/test_migrations.py::TestMigrationSafety::test_no_unapplied_migrations PASSED
+users/tests/test_migrations.py::TestMigrationSafety::test_no_missing_migrations PASSED
+users/tests/test_migrations.py::TestMigrationSafety::test_migration_plan_loads_without_conflicts PASSED
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_nurse_cannot_access_agency_admin_endpoint PASSED
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_patient_cannot_access_manual_dispatch PASSED
+users/tests/test_permissions.py::TestPermissionClasses::test_is_superadmin_permission PASSED
+users/tests/test_permissions.py::TestPermissionClasses::test_is_agency_admin_permission PASSED
+users/tests/test_permissions.py::TestPermissionClasses::test_is_nurse_or_above_permission PASSED
+users/tests/test_permissions.py::TestPermissionClasses::test_is_owner_or_admin_permission PASSED
+
+============================= 15 passed in 3.42s ==============================
+```
 
 ---
 
