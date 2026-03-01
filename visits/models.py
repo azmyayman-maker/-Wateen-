@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.gis.db import models as gis_models
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -367,22 +368,26 @@ class Transaction(models.Model):
         _("إجمالي المبلغ"),
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     take_rate_percent = models.DecimalField(
         _("نسبة المنصة"),
         max_digits=5,
         decimal_places=2,
         default=Decimal("15.00"),  # Default 15%
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
     )
     take_rate_amount = models.DecimalField(
         _("مبلغ المنصة"),
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     agency_amount = models.DecimalField(
         _("مبلغ الوكالة"),
         max_digits=10,
         decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     status = models.CharField(
         _("الحالة"),
@@ -392,6 +397,21 @@ class Transaction(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        super().clean()
+        if self.total_amount is not None and self.take_rate_percent is not None:
+            expected_take_rate = (self.total_amount * self.take_rate_percent) / Decimal("100")
+            if self.take_rate_amount is not None and self.take_rate_amount != expected_take_rate:
+                raise ValidationError({"take_rate_amount": _("مبلغ المنصة يجب أن يساوي إجمالي المبلغ مضروباً في نسبة المنصة مقسومة على 100.")})
+            if self.take_rate_amount is not None and self.agency_amount is not None:
+                expected_agency_amount = self.total_amount - self.take_rate_amount
+                if self.agency_amount != expected_agency_amount:
+                    raise ValidationError({"agency_amount": _("مبلغ الوكالة يجب أن يساوي إجمالي المبلغ ناقص مبلغ المنصة.")})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
     class Meta:
         verbose_name = _("عملية مالية")

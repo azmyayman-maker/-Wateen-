@@ -1,4 +1,4 @@
-import openapi
+import uuid
 from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -15,29 +15,31 @@ class VisitRequestSchema(AutoSchema):
     def get_operation(self, path, method):
         operation = super().get_operation(path, method)
         if method == 'POST':
-            operation['parameters'] = operation.get('parameters', []) + [
-                {
-                    'name': 'service_type_id',
-                    'in': 'query',  # Or 'form' based on DRF structure, but OpenAPI uses query/body
-                    'required': True,
-                    'schema': {'type': 'string', 'format': 'uuid'},
-                    'description': 'UUID of the requested service type'
-                },
-                {
-                    'name': 'longitude',
-                    'in': 'query',
-                    'required': True,
-                    'schema': {'type': 'number'},
-                    'description': 'Longitude of patient location'
-                },
-                {
-                    'name': 'latitude',
-                    'in': 'query',
-                    'required': True,
-                    'schema': {'type': 'number'},
-                    'description': 'Latitude of patient location'
+            operation['requestBody'] = {
+                'content': {
+                    'application/json': {
+                        'schema': {
+                            'type': 'object',
+                            'required': ['service_type_id', 'longitude', 'latitude'],
+                            'properties': {
+                                'service_type_id': {
+                                    'type': 'string',
+                                    'format': 'uuid',
+                                    'description': 'UUID of the requested service type'
+                                },
+                                'longitude': {
+                                    'type': 'number',
+                                    'description': 'Longitude of patient location'
+                                },
+                                'latitude': {
+                                    'type': 'number',
+                                    'description': 'Latitude of patient location'
+                                }
+                            }
+                        }
+                    }
                 }
-            ]
+            }
         return operation
 
 class VisitRequestView(generics.CreateAPIView):
@@ -83,7 +85,10 @@ class VisitRequestView(generics.CreateAPIView):
             return Response({"detail": "Coordinates out of bounds. Longitude must be between -180 and 180, Latitude between -90 and 90."}, status=status.HTTP_400_BAD_REQUEST)
             
         try:
+            uuid.UUID(str(service_type_id))
             service = ServiceType.objects.get(id=service_type_id)
+        except (ValueError, TypeError):
+            return Response({"detail": "Invalid service_type_id format. Must be a valid UUID."}, status=status.HTTP_400_BAD_REQUEST)
         except ServiceType.DoesNotExist:
             return Response({"detail": "Service type not found."}, status=status.HTTP_404_NOT_FOUND)
             
