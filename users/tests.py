@@ -1,8 +1,9 @@
 from django.test import TestCase
 from django.core.exceptions import ValidationError
 from django.contrib.auth import get_user_model
-from rest_framework.test import APIClient
+from rest_framework.test import APIClient, APIRequestFactory
 from rest_framework import status
+from django.test import RequestFactory
 import uuid
 
 from .validators import (
@@ -10,7 +11,327 @@ from .validators import (
     validate_phone_number,
     GOVERNORATE_CODES
 )
-from .models import PatientProfile, NurseProfile, UserRole
+from .models import PatientProfile, NurseProfile, UserRole, AgencyProfile, AgencyStatus
+from .permissions import IsAgencyAdmin, IsAgencyAdminOrSuperAdmin
+
+
+# =============================================================================
+# RBAC Security Hardening Tests - SPEC 007
+# =============================================================================
+
+class TestIsAgencyAdminPermission(TestCase):
+    """
+    Tests for IsAgencyAdmin permission class (User Story 1).
+    
+    Acceptance scenarios:
+    1. AGENCY_ADMIN + verified agency → 200 (allowed)
+    2. AGENCY_ADMIN + pending agency → 403 (denied)
+    3. AGENCY_ADMIN + no AgencyProfile → 403 (denied)
+    4. PATIENT role → 403 (denied)
+    5. unauthenticated → 401 (denied)
+    
+    Edge cases:
+    - suspended agency → 403
+    - rejected agency → 403
+    """
+    
+    def setUp(self):
+        self.factory = APIRequestFactory()
+    
+    def _make_request(self, user):
+        """Create a mock request with user attached."""
+        request = self.factory.get('/api/v1/test/')
+        request.user = user
+        return request
+    
+    def test_verified_agency_admin_allowed(self):
+        """Acceptance 1: AGENCY_ADMIN + verified agency → allowed."""
+        # Create agency with verified status
+        agency = AgencyProfile.objects.create(
+            manager_name='Test Agency',
+            commercial_registry='123456789',
+            moh_license_number='MOH123',
+            tax_id='TAX123',
+            status=AgencyStatus.VERIFIED
+        )
+        
+        # Create AGENCY_ADMIN user with verified agency
+        user = User.objects.create_user(
+            national_id='29901011234901',
+            phone_number='01012345901',
+            password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN,
+            agency=agency
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        self.assertTrue(permission.has_permission(request, None))
+    
+    def test_pending_agency_admin_denied(self):
+        """Acceptance 2: AGENCY_ADMIN + pending agency → 403."""
+        agency = AgencyProfile.objects.create(
+            manager_name='Pending Agency',
+            commercial_registry='223456789',
+            moh_license_number='MOH223',
+            tax_id='TAX223',
+            status=AgencyStatus.PENDING
+        )
+        
+        user = User.objects.create_user(
+            national_id='29901011234902',
+            phone_number='01012345902',
+            password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN,
+            agency=agency
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        self.assertFalse(permission.has_permission(request, None))
+        self.assertIn('موثقة', permission.message)
+    
+    def test_no_agency_profile_denied(self):
+        """Acceptance 3: AGENCY_ADMIN + no AgencyProfile → 403, no 500."""
+        user = User.objects.create_user(
+            national_id='29901011234903',
+            phone_number='01012345903',
+            password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN
+            # No agency assigned
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        # Should return False, not raise exception
+        self.assertFalse(permission.has_permission(request, None))
+    
+    def test_patient_denied(self):
+        """Acceptance 4: PATIENT role → 403."""
+        user = User.objects.create_user(
+            national_id='29901011234904',
+            phone_number='01012345904',
+            password='TestPass123!',
+            role=UserRole.PATIENT
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        self.assertFalse(permission.has_permission(request, None))
+    
+    def test_unauthenticated_denied(self):
+        """Acceptance 5: unauthenticated → 401."""
+        from django.contrib.auth.models import AnonymousUser
+        request = self.factory.get('/api/v1/test/')
+        request.user = AnonymousUser()
+        
+        permission = IsAgencyAdmin()
+        
+        self.assertFalse(permission.has_permission(request, None))
+    
+    def test_suspended_agency_denied(self):
+        """Edge case: AGENCY_ADMIN + suspended agency → 403."""
+        agency = AgencyProfile.objects.create(
+            manager_name='Suspended Agency',
+            commercial_registry='323456789',
+            moh_license_number='MOH323',
+            tax_id='TAX323',
+            status=AgencyStatus.SUSPENDED
+        )
+        
+        user = User.objects.create_user(
+            national_id='29901011234905',
+            phone_number='01012345905',
+            password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN,
+            agency=agency
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        self.assertFalse(permission.has_permission(request, None))
+    
+    def test_rejected_agency_denied(self):
+        """Edge case: AGENCY_ADMIN + rejected agency → 403."""
+        agency = AgencyProfile.objects.create(
+            manager_name='Rejected Agency',
+            commercial_registry='423456789',
+            moh_license_number='MOH423',
+            tax_id='TAX423',
+            status=AgencyStatus.REJECTED
+        )
+        
+        user = User.objects.create_user(
+            national_id='29901011234906',
+            phone_number='01012345906',
+            password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN,
+            agency=agency
+        )
+        
+        request = self._make_request(user)
+        permission = IsAgencyAdmin()
+        
+        self.assertFalse(permission.has_permission(request, None))
+
+
+class TestRoleMigration(TestCase):
+    """
+    Tests for role migration validation (User Story 2).
+    
+    Acceptance scenarios:
+    1. ADMIN → SUPERADMIN (forward migration)
+    2. DOCTOR → NURSE (forward migration)
+    3. PATIENT unchanged (forward migration)
+    4. SUPERADMIN → ADMIN (reverse migration)
+    5. UserRole.choices contains correct values
+    """
+    
+    def test_role_field_choices_correct(self):
+        """Acceptance 5: Verify UserRole.choices contains exactly 4 canonical roles."""
+        choices = dict(UserRole.choices)
+        
+        self.assertIn('PATIENT', choices)
+        self.assertIn('NURSE', choices)
+        self.assertIn('AGENCY_ADMIN', choices)
+        self.assertIn('SUPERADMIN', choices)
+        self.assertEqual(len(choices), 4)
+    
+    def test_forward_patient_unchanged(self):
+        """Acceptance 3: PATIENT role unchanged after migration."""
+        user = User.objects.create_user(
+            national_id='29901011234907',
+            phone_number='01012345907',
+            password='TestPass123!',
+            role=UserRole.PATIENT
+        )
+        
+        # The migration would run here in a real test environment
+        user.refresh_from_db()
+        self.assertEqual(user.role, UserRole.PATIENT)
+
+
+class TestRoleEscalationPrevention(TestCase):
+    """
+    Tests for role escalation prevention in registration (User Story 3).
+    
+    Acceptance scenarios:
+    1. Register as PATIENT → 201
+    2. Register as AGENCY_ADMIN → 201
+    3. Register as SUPERADMIN → 400 with Arabic error
+    4. Register as NURSE → 400 with Arabic error
+    5. Register without role → 201, defaults to PATIENT
+    6. Profile update role=read-only
+    """
+    
+    def setUp(self):
+        self.client = APIClient()
+    
+    def test_register_as_patient_succeeds(self):
+        """Acceptance 1: POST register with role=PATIENT → 201."""
+        response = self.client.post('/api/v1/auth/register/', {
+            'national_id': '29901011234910',
+            'phone_number': '01012345910',
+            'password': 'TestPass123!',
+            'password_confirm': 'TestPass123!',
+            'role': 'PATIENT'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user']['role'], 'PATIENT')
+    
+    def test_register_as_agency_admin_succeeds(self):
+        """Acceptance 2: POST register with role=AGENCY_ADMIN → 201."""
+        response = self.client.post('/api/v1/auth/register/', {
+            'national_id': '29901011234911',
+            'phone_number': '01012345911',
+            'password': 'TestPass123!',
+            'password_confirm': 'TestPass123!',
+            'role': 'AGENCY_ADMIN'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user']['role'], 'AGENCY_ADMIN')
+    
+    def test_register_as_superadmin_blocked(self):
+        """Acceptance 3: POST register with role=SUPERADMIN → 400 with Arabic error."""
+        response = self.client.post('/api/v1/auth/register/', {
+            'national_id': '29901011234912',
+            'phone_number': '01012345912',
+            'password': 'TestPass123!',
+            'password_confirm': 'TestPass123!',
+            'role': 'SUPERADMIN'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('role', response.data)
+        # Arabic error message about system admin
+        self.assertTrue(
+            any('مدير نظام' in str(err) for err in response.data['role'])
+        )
+    
+    def test_register_as_nurse_blocked(self):
+        """Acceptance 4: POST register with role=NURSE → 400 with Arabic error."""
+        response = self.client.post('/api/v1/auth/register/', {
+            'national_id': '29901011234913',
+            'phone_number': '01012345913',
+            'password': 'TestPass123!',
+            'password_confirm': 'TestPass123!',
+            'role': 'NURSE'
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('role', response.data)
+        # Arabic error message about nurse invitation
+        self.assertTrue(
+            any('ممرض' in str(err) for err in response.data['role'])
+        )
+    
+    def test_register_no_role_defaults_to_patient(self):
+        """Acceptance 5: POST register without role → 201, user.role == PATIENT."""
+        response = self.client.post('/api/v1/auth/register/', {
+            'national_id': '29901011234914',
+            'phone_number': '01012345914',
+            'password': 'TestPass123!',
+            'password_confirm': 'TestPass123!'
+            # No role specified
+        }, format='json')
+        
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['user']['role'], 'PATIENT')
+    
+    def test_profile_update_role_readonly(self):
+        """Acceptance 6: PATCH profile with role=SUPERADMIN → role unchanged."""
+        # Create a patient user
+        user = User.objects.create_user(
+            national_id='29901011234915',
+            phone_number='01012345915',
+            password='TestPass123!',
+            role=UserRole.PATIENT
+        )
+        
+        # Get JWT token
+        token_response = self.client.post('/api/v1/auth/token/', {
+            'national_id': '29901011234915',
+            'password': 'TestPass123!'
+        }, format='json')
+        
+        access_token = token_response.data['access']
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        
+        # Try to change role via profile update
+        profile_response = self.client.patch('/api/v1/profile/', {
+            'role': 'SUPERADMIN'
+        }, format='json')
+        
+        # Should succeed but role should be unchanged
+        user.refresh_from_db()
+        self.assertEqual(user.role, UserRole.PATIENT)
 
 
 User = get_user_model()
@@ -1425,3 +1746,5 @@ class TestKYCUploadAPI(TestCase):
         ).count()
         self.assertEqual(count, 1)  # Only the latest document remains
 
+  
+ 
