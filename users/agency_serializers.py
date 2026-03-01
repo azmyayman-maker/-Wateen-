@@ -1,10 +1,12 @@
+from django.contrib.auth.hashers import make_password
+from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.db import transaction
+from django.utils.translation import gettext_lazy as _
+
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
-from django.contrib.gis.geos import Polygon, MultiPolygon
-from django.utils.translation import gettext_lazy as _
+
 from .models import AgencyProfile, CustomUser, UserRole
-from django.db import transaction
-from django.contrib.auth.hashers import make_password
 
 class AgencyProfileSerializer(GeoFeatureModelSerializer):
     """
@@ -26,11 +28,11 @@ class AgencyProfileSerializer(GeoFeatureModelSerializer):
         ]
         read_only_fields = ['id', 'status', 'rating', 'wallet_balance']
 
-    def validate_coverage_polygon(self, value):
+    def validate_coverage_polygon(self, value: Polygon | MultiPolygon | None) -> Polygon | MultiPolygon | None:
         """
         Enforce spatial requirements for the coverage_polygon geometry.
         """
-        if not value:
+        if value is None:
             return value
 
         # Only accept Polygon or MultiPolygon

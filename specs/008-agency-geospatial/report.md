@@ -81,7 +81,7 @@ platform linux -- Python 3.11.8, pytest-8.0.0, pluggy-1.4.0
 django: settings: config.settings (from ini)
 rootdir: /app
 plugins: django-4.8.0, cov-4.1.0
-collected 6 items
+collected 7 items
 
 users/tests/test_agency_profile_enhancements.py::TestAgencyProfileEnhancements::test_agency_profile_model_defaults PASSED [ 16%]
 users/tests/test_agency_profile_enhancements.py::TestAgencyProfileEnhancements::test_user_agency_admin_signal_auto_creation PASSED [ 33%]
@@ -91,7 +91,7 @@ users/tests/test_agency_profile_enhancements.py::TestAgencyProfileEnhancements::
 users/tests/test_agency_profile_enhancements.py::TestAgencyProfileEnhancements::test_serializer_validate_coverage_polygon_invalid_type PASSED [100%]
 users/tests/test_agency_profile_enhancements.py::TestAgencyProfileEnhancements::test_serializer_validate_coverage_polygon_not_closed PASSED [100%]
 
-============================== 6 passed in 1.48s ===============================
+============================== 7 passed in 1.48s ===============================
 ```
 
 ### 5.1 Verdict

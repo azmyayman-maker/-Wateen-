@@ -1,3 +1,4 @@
+from typing import Any
 from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -7,7 +8,7 @@ from .models import CustomUser, UserRole, PatientProfile, NurseProfile
 
 @receiver(post_save, sender=CustomUser)
 @transaction.atomic
-def create_user_profile(sender, instance, created, **_kwargs):
+def create_user_profile(sender: type[CustomUser], instance: CustomUser, created: bool, **_kwargs: Any) -> None:
     """
     Automatically create the appropriate profile based on user's role.
     - PATIENT role -> PatientProfile

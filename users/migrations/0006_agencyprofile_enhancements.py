@@ -3,6 +3,16 @@ import django.db.models.deletion
 from django.db import migrations, models
 
 
+def deduplicate_agency_users(apps, schema_editor):
+    CustomUser = apps.get_model('users', 'CustomUser')
+    AgencyProfile = apps.get_model('users', 'AgencyProfile')
+    
+    for agency in AgencyProfile.objects.all():
+        users = CustomUser.objects.filter(agency=agency).order_by('created_at')
+        if users.count() > 1:
+            first_user = users.first()
+            CustomUser.objects.filter(agency=agency).exclude(pk=first_user.pk).update(agency=None)
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,6 +20,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        # Data deduplication step before uniqueness constraint applies
+        migrations.RunPython(deduplicate_agency_users, reverse_code=migrations.RunPython.noop),
+
         # Change `rating` to FloatField from DecimalField
         migrations.AlterField(
             model_name='agencyprofile',

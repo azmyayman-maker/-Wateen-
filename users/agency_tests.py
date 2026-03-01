@@ -56,6 +56,11 @@ class TestAgencyOnboarding:
         url = reverse('users:agency_approve', kwargs={'pk': str(agency.id)})
         response = api_client.patch(url, {'status': AgencyStatus.VERIFIED}, format='json')
         
+        assert response.status_code in [status.HTTP_200_OK, status.HTTP_204_NO_CONTENT]
+        if 'status' in response.data:
+            assert response.data['status'] == AgencyStatus.VERIFIED
+            
+        agency.refresh_from_db()
         assert agency.status == AgencyStatus.VERIFIED
         
         # Test signal handled profile creation for other AgencyAdmins
