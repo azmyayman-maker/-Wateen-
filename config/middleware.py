@@ -3,21 +3,29 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import TokenError
 import logging
+from typing import Tuple, Optional
 
 logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
 @database_sync_to_async
-def get_user_from_token(token: str):
+def get_user_and_agency_from_token(token: str) -> Tuple[object, Optional[str]]:
+    """
+    Extracts user and agency_id from JWT token.
+    Returns (user, agency_id) tuple.
+    """
     try:
         access_token = AccessToken(token)
         user = User.objects.get(id=access_token['user_id'])
-        return user
-    except Exception as e:
+        # Extract agency_id from token claims (set by CustomTokenObtainPairSerializer)
+        agency_id = access_token.get('agency_id', None)
+        return user, agency_id
+    except (TokenError, User.DoesNotExist) as e:
         logger.warning("WebSocket auth failed: %s", e)
-        return AnonymousUser()
+        return AnonymousUser(), None
 
 class JWTAuthMiddleware:
     """
@@ -54,8 +62,11 @@ class JWTAuthMiddleware:
                 token = protocols[0]
 
         if token:
-            scope['user'] = await get_user_from_token(token)
+            user, agency_id = await get_user_and_agency_from_token(token)
+            scope['user'] = user
+            scope['agency_id'] = agency_id  # For AgencyConsumer B2B2C support
         else:
             scope['user'] = AnonymousUser()
+            scope['agency_id'] = None
             
         return await self.app(scope, receive, send)

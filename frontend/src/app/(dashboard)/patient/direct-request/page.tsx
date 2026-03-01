@@ -81,6 +81,7 @@ export default function DirectRequestPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [requestConfirmed, setRequestConfirmed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [patientLocation, setPatientLocation] = useState<[number, number]>([31.2357, 30.0444]);
 
   useEffect(() => setMounted(true), []);
 
@@ -94,7 +95,9 @@ export default function DirectRequestPage() {
       if (latest > 235 && !requestConfirmed) {
         setRequestConfirmed(true);
         setTimeout(() => {
-          window.location.href = '/patient/simulator';
+          // Pass the coordinates and selected service to the simulator via URL parameters
+          const serviceParam = selectedTags.length > 0 ? selectedTags[0] : 'iv-drip';
+          window.location.href = `/patient/simulator?lng=${patientLocation[0]}&lat=${patientLocation[1]}&service=${serviceParam}`;
         }, 1800);
       }
     });
@@ -136,7 +139,11 @@ export default function DirectRequestPage() {
       
       {/* ── Full-Screen Dark Map ── */}
       <div className="absolute inset-0 z-0">
-         <LocationPicker readOnly initialLocation={[30.0444, 31.2357]} className="w-full h-full opacity-60" />
+         <LocationPicker 
+            initialLocation={[30.0444, 31.2357]} 
+            className="w-full h-full opacity-60"
+            onLocationSelect={(lat, lng) => setPatientLocation([lng, lat])}
+         />
          
          {/* Atmospheric gradient overlays */}
          <div className="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-slate-950/30 to-slate-950/95 pointer-events-none" />

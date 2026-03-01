@@ -32,11 +32,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config(
     "SECRET_KEY",
-    default="django-insecure-dev-only-key-do-not-use-in-production" if config("DEBUG", default=False, cast=bool) else None
+    default="django-insecure-dev-only-key-do-not-use-in-production"
+    if config("DEBUG", default=False, cast=bool)
+    else None,
 )
 
 if not SECRET_KEY:
-    raise ImproperlyConfigured("SECRET_KEY environment variable is required in production")
+    raise ImproperlyConfigured(
+        "SECRET_KEY environment variable is required in production"
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
@@ -339,3 +343,26 @@ if not DEBUG:
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = "DENY"
+
+# =============================================================================
+# Celery Configuration
+# =============================================================================
+_redis_url = config("REDIS_URL", default=None)
+
+if DEBUG:
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+    CELERY_TASK_ALWAYS_EAGER = True
+elif not _redis_url:
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+else:
+    CELERY_BROKER_URL = _redis_url
+    CELERY_RESULT_BACKEND = _redis_url
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes

@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.gis.db import models as gis_models
 from django.core.exceptions import ValidationError
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -107,23 +108,25 @@ class PricingFactor(models.Model):
 
 
 class VisitStatus(models.TextChoices):
-    PENDING = "PENDING", _("قيد الانتظار")
-    MATCHED = "MATCHED", _("تم المطابقة")
-    ACCEPTED = "ACCEPTED", _("مقبولة")
-    ON_WAY = "ON_WAY", _("في الطريق")
-    ARRIVED = "ARRIVED", _("وصل")
-    IN_PROGRESS = "IN_PROGRESS", _("جارية")
-    COMPLETED = "COMPLETED", _("مكتملة")
-    CANCELLED = "CANCELLED", _("ملغاة")
+    PENDING_AGENCY = "pending_agency", _("في انتظار الوكالة")
+    PENDING_NURSE = "pending_nurse", _("في انتظار الممرض")
+    ACCEPTED = "accepted", _("مقبولة")
+    EN_ROUTE = "en_route", _("في الطريق")
+    IN_PROGRESS = "in_progress", _("جارية")
+    COMPLETED = "completed", _("مكتملة")
+    CANCELLED = "cancelled", _("ملغاة")
 
 
 # Explicit allowed transitions map — the single source of truth for the state machine.
 ALLOWED_TRANSITIONS = {
-    VisitStatus.PENDING: [VisitStatus.MATCHED, VisitStatus.CANCELLED],
-    VisitStatus.MATCHED: [VisitStatus.ACCEPTED, VisitStatus.CANCELLED],
-    VisitStatus.ACCEPTED: [VisitStatus.ON_WAY, VisitStatus.CANCELLED],
-    VisitStatus.ON_WAY: [VisitStatus.ARRIVED, VisitStatus.CANCELLED],
-    VisitStatus.ARRIVED: [VisitStatus.IN_PROGRESS, VisitStatus.CANCELLED],
+    VisitStatus.PENDING_AGENCY: [
+        VisitStatus.PENDING_NURSE,
+        VisitStatus.ACCEPTED,
+        VisitStatus.CANCELLED,
+    ],
+    VisitStatus.PENDING_NURSE: [VisitStatus.ACCEPTED, VisitStatus.CANCELLED],
+    VisitStatus.ACCEPTED: [VisitStatus.EN_ROUTE, VisitStatus.CANCELLED],
+    VisitStatus.EN_ROUTE: [VisitStatus.IN_PROGRESS, VisitStatus.CANCELLED],
     VisitStatus.IN_PROGRESS: [VisitStatus.COMPLETED, VisitStatus.CANCELLED],
     VisitStatus.COMPLETED: [],  # Terminal state
     VisitStatus.CANCELLED: [],  # Terminal state
@@ -145,6 +148,14 @@ class Visit(models.Model):
         related_name="visits",
         verbose_name=_("المريض"),
     )
+    agency = models.ForeignKey(
+        "users.AgencyProfile",
+        on_delete=models.SET_NULL,
+        related_name="visits",
+        verbose_name=_("الشركة/الوكالة المنفذة"),
+        null=True,  # Allow null temporarily for initial migration of existing P2P visits
+        blank=True,
+    )
     nurse = models.ForeignKey(
         "users.NurseProfile",
         on_delete=models.SET_NULL,
@@ -157,7 +168,7 @@ class Visit(models.Model):
         _("الحالة"),
         max_length=15,
         choices=VisitStatus.choices,
-        default=VisitStatus.PENDING,
+        default=VisitStatus.PENDING_AGENCY,
         db_index=True,
     )
     location = gis_models.PointField(
@@ -221,6 +232,11 @@ class Visit(models.Model):
     updated_at = models.DateTimeField(
         _("تاريخ التحديث"),
         auto_now=True,
+    )
+    reroute_attempts = models.PositiveIntegerField(
+        _("محاولات إعادة التوجيه"),
+        default=0,
+        help_text=_("عدد محاولات إعادة توجيه الزيارة إلى وكالات أخرى"),
     )
 
     class Meta:
@@ -315,3 +331,97 @@ class EstimateLog(models.Model):
 
     def __str__(self) -> str:
         return f"EstimateLog({str(self.id)[:8]}—{self.request_time})"
+
+
+class TransactionStatus(models.TextChoices):
+    PENDING = "PENDING", _("قيد المعالجة")
+    ESCROWED = "ESCROWED", _("في الضمان")
+    SETTLED = "SETTLED", _("تمت التسوية")
+    REFUNDED = "REFUNDED", _("تم الاسترجاع")
+    FAILED = "FAILED", _("فشلت")
+
+
+class Transaction(models.Model):
+    """
+    T027: Represents a financial transaction associated with a visit.
+    Handles the split between the platform (take rate) and the agency.
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+    )
+    visit = models.OneToOneField(
+        Visit,
+        on_delete=models.CASCADE,
+        related_name="transaction",
+        verbose_name=_("الزيارة"),
+    )
+    stripe_payment_intent_id = models.CharField(
+        _("معرف الدفع في سترايب"),
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    total_amount = models.DecimalField(
+        _("إجمالي المبلغ"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    take_rate_percent = models.DecimalField(
+        _("نسبة المنصة"),
+        max_digits=5,
+        decimal_places=2,
+        default=Decimal("15.00"),  # Default 15%
+        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+    )
+    take_rate_amount = models.DecimalField(
+        _("مبلغ المنصة"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    agency_amount = models.DecimalField(
+        _("مبلغ الوكالة"),
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    status = models.CharField(
+        _("الحالة"),
+        max_length=20,
+        choices=TransactionStatus.choices,
+        default=TransactionStatus.PENDING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def clean(self):
+        super().clean()
+        if self.total_amount is not None and self.take_rate_percent is not None:
+            expected_take_rate = (self.total_amount * self.take_rate_percent) / Decimal("100")
+            if self.take_rate_amount is not None and self.take_rate_amount != expected_take_rate:
+                raise ValidationError({"take_rate_amount": _("مبلغ المنصة يجب أن يساوي إجمالي المبلغ مضروباً في نسبة المنصة مقسومة على 100.")})
+            if self.take_rate_amount is not None and self.agency_amount is not None:
+                expected_agency_amount = self.total_amount - self.take_rate_amount
+                if self.agency_amount != expected_agency_amount:
+                    raise ValidationError({"agency_amount": _("مبلغ الوكالة يجب أن يساوي إجمالي المبلغ ناقص مبلغ المنصة.")})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    class Meta:
+        verbose_name = _("عملية مالية")
+        verbose_name_plural = _("العمليات المالية")
+        db_table = "visits_transaction"
+
+    def __str__(self):
+        return f"Transaction({self.id}) - {self.status}"
+
+    def calculate_split(self):
+        """Calculates the split between platform and agency."""
+        self.take_rate_amount = (self.total_amount * self.take_rate_percent) / Decimal("100")
+        self.agency_amount = self.total_amount - self.take_rate_amount

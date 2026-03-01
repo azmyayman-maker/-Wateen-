@@ -296,12 +296,12 @@ class TestIntegrationFlow:
             patient=patient_user.patient_profile,
             location=Point(31.2357, 30.0444),
             service_type=service_type,
-            status=VisitStatus.PENDING,
+            status=VisitStatus.PENDING_AGENCY,
             base_price=Decimal(price_data["breakdown"]["base_price"]),
             final_price=final_price,
         )
 
-        assert visit.status == VisitStatus.PENDING
+        assert visit.status == VisitStatus.PENDING_AGENCY
 
         # 3. Match
         visit.nurse = nurse_user.nurse_profile
