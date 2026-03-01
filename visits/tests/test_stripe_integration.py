@@ -15,11 +15,10 @@ class TestStripeIntegration:
         """Verifies that a transaction is correctly initialized."""
         transaction = SettlementService.create_transaction_for_visit(sample_visit)
         
-        assert transaction.status == TransactionStatus.PENDING
-        assert transaction.total_amount == sample_visit.final_price
-        assert transaction.take_rate_percent == Decimal('15.00')
-        assert transaction.take_rate_amount == (sample_visit.final_price * Decimal('0.15'))
-        assert transaction.agency_amount == sample_visit.final_price - transaction.take_rate_amount
+        assert transaction.status == TransactionStatus.ESCROWED
+        assert transaction.amount_paid == sample_visit.final_price
+        assert transaction.wateen_take_rate == Decimal('15.00')
+        assert transaction.agency_payout == sample_visit.final_price * Decimal('0.85')
 
     @patch('stripe.PaymentIntent.create')
     def test_create_payment_intent(self, mock_stripe_create, sample_visit, sample_agency):
@@ -44,10 +43,6 @@ class TestStripeIntegration:
         sample_visit.agency = sample_agency
         sample_visit.save()
         
-        transaction = SettlementService.create_transaction_for_visit(sample_visit)
-        transaction.status = TransactionStatus.ESCROWED
-        transaction.save()
-        
         initial_balance = sample_agency.wallet_balance
         
         # Execute
@@ -56,7 +51,6 @@ class TestStripeIntegration:
         # Verify
         assert success is True
         sample_agency.refresh_from_db()
-        transaction.refresh_from_db()
-        
+        transaction = sample_visit.transaction
         assert transaction.status == TransactionStatus.SETTLED
-        assert sample_agency.wallet_balance == initial_balance + transaction.agency_amount
+        assert sample_agency.wallet_balance == initial_balance + transaction.agency_payout

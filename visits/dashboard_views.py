@@ -58,7 +58,7 @@ class AgencyDashboardOverviewView(generics.GenericAPIView):
             visit__agency_id=agency_id,
             status=TransactionStatus.SETTLED,
             created_at__date=today,
-        ).aggregate(total=Coalesce(Sum("agency_amount"), Decimal("0")))
+        ).aggregate(total=Coalesce(Sum("agency_payout"), Decimal("0")))
         daily_revenue = today_transactions["total"]
 
         financials = {

@@ -1,6 +1,6 @@
-import django.core.validators
-import django.db.models.deletion
 from decimal import Decimal
+
+import django.core.validators
 from django.db import migrations, models, transaction
 
 

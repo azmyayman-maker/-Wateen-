@@ -276,7 +276,7 @@ class Visit(models.Model):
     def __str__(self) -> str:
         return f"Visit({str(self.id)[:8]}—{self.status})"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         update_fields = kwargs.get("update_fields", None)
         pricing_fields_touched = (
             update_fields is not None
@@ -470,7 +470,7 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         from django.utils import timezone
 
         if self.amount_paid is not None:
@@ -479,6 +479,15 @@ class Transaction(models.Model):
             )
         if self.status == TransactionStatus.SETTLED and not self.settled_at:
             self.settled_at = timezone.now()
+
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields_set = set(update_fields)
+            update_fields_set.add("agency_payout")
+            if self.settled_at is not None:
+                update_fields_set.add("settled_at")
+            kwargs["update_fields"] = list(update_fields_set)
+
         super().save(*args, **kwargs)
 
     class Meta:
