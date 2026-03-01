@@ -500,7 +500,6 @@ class NurseInvitation(models.Model):
         verbose_name_plural = _("دعوات الممرضين")
         db_table = "users_nurse_invitation"
         indexes = [
-            models.Index(fields=["token"]),
             models.Index(fields=["status"]),
         ]
 

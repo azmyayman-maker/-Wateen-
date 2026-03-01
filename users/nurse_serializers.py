@@ -1,6 +1,7 @@
-from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
-from .models import NurseProfile, NurseInvitation, AgencyProfile, UserRole
+from rest_framework import serializers
+
+from .models import AgencyProfile, NurseInvitation, NurseProfile, UserRole
 
 class NurseInvitationSerializer(serializers.ModelSerializer):
     """
@@ -37,7 +38,7 @@ class NurseProfileSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(_("Only an Agency Admin can assign a nurse to an agency."))
         
         # Explicitly check that the authenticated user actually manages this agency
-        if getattr(user, "admin_user", None) != value:
+        if getattr(user, "agency", None) != value:
             raise serializers.ValidationError(_("You can only assign nurses to your own agency."))
 
         return value

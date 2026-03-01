@@ -18,7 +18,7 @@
 -->
 
 **Language/Version**: Python 3.11  
-**Primary Dependencies**: Django 5.2, Django REST Framework, PostGIS 3.4  
+**Primary Dependencies**: Django 5.0.2, Django REST Framework, PostGIS 3.4  
 **Storage**: PostgreSQL 16 + PostGIS  
 **Testing**: pytest  
 **Target Platform**: Linux server (Dockerized)  

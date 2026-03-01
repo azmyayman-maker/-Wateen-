@@ -51,3 +51,24 @@
   "agency_id": "a2a3a4..."
 }
 ```
+
+**Error Parameters**:
+
+- **400 Bad Request**: Invalid or missing fields.
+  ```json
+  {
+    "detail": "token, password, national_id, syndicate_number and phone are required."
+  }
+  ```
+- **404 Not Found**: Unknown token.
+  ```json
+  {
+    "detail": "Invalid or already consumed invitation token."
+  }
+  ```
+- **410 Gone**: Expired or consumed token.
+  ```json
+  {
+    "detail": "Invitation has expired."
+  }
+  ```

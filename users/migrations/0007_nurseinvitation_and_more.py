@@ -38,10 +38,7 @@ class Migration(migrations.Migration):
             name='agency',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='invitations', to='users.agencyprofile', verbose_name='الوكالة'),
         ),
-        migrations.AddIndex(
-            model_name='nurseinvitation',
-            index=models.Index(fields=['token'], name='users_nurse_token_317cf1_idx'),
-        ),
+
         migrations.AddIndex(
             model_name='nurseinvitation',
             index=models.Index(fields=['status'], name='users_nurse_status_354f07_idx'),

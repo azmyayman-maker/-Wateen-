@@ -85,7 +85,7 @@ djangorestframework==3.15.1
 djangorestframework-simplejwt==5.3.1
 
 # GIS Support for DRF
-djangorestframework-gis==1.0.1
+djangorestframework-gis==1.2.0
 
 # Stripe SDK for payments
 stripe==8.0.0

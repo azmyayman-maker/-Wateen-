@@ -7,6 +7,7 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 from users.models import CustomUser, AgencyProfile, NurseInvitation, NurseProfile, UserRole, InvitationStatus
+from visits.tests.conftest import AgencyProfileFactory
 
 @pytest.fixture
 def agency_admin_user(db):
@@ -16,7 +17,7 @@ def agency_admin_user(db):
         password="Password123!",
         role=UserRole.AGENCY_ADMIN
     )
-    agency = AgencyProfile.objects.create(
+    agency = AgencyProfileFactory(
         manager_name="Manager 1",
         status="verified"
     )
@@ -32,7 +33,7 @@ def agency_admin_user_2(db):
         password="Password123!",
         role=UserRole.AGENCY_ADMIN
     )
-    agency = AgencyProfile.objects.create(
+    agency = AgencyProfileFactory(
         manager_name="Manager 2",
         status="verified"
     )
@@ -48,7 +49,7 @@ def unverified_agency_admin(db):
         password="Password123!",
         role=UserRole.AGENCY_ADMIN
     )
-    agency = AgencyProfile.objects.create(
+    agency = AgencyProfileFactory(
         manager_name="Manager 3",
         status="pending"
     )
@@ -95,6 +96,25 @@ class TestNurseInvitationFlow:
             role=UserRole.PATIENT
         )
         api_client.force_authenticate(user=patient)
+        url = reverse("users:invite_nurse")
+        data = {"phone": "01099999999"}
+        response = api_client.post(url, data, secure=True)
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    def test_invite_nurse_nurse_user(self, api_client, agency_admin_user):
+        """Test that a NURSE cannot invite a nurse."""
+        nurse_user = CustomUser.objects.create_user(
+            national_id="29007071212345",
+            phone_number="01077777777",
+            password="Password123!",
+            role=UserRole.NURSE
+        )
+        NurseProfile.objects.create(
+            user=nurse_user,
+            agency=agency_admin_user.agency,
+            syndicate_number="SYN-999"
+        )
+        api_client.force_authenticate(user=nurse_user)
         url = reverse("users:invite_nurse")
         data = {"phone": "01099999999"}
         response = api_client.post(url, data, secure=True)

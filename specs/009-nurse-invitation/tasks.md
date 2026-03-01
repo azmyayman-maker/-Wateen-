@@ -46,5 +46,5 @@ graph TD
 
 ## Phase 5: Verification & Polish
 
-- [x] T007 Write unit tests in `users/tests/test_nurse_invitation.py` covering IDOR rejections, token expiry, and strict `transation.atomic` behavior.
+- [x] T007 Write unit tests in `users/tests/test_nurse_invitation.py` covering IDOR rejections, token expiry, and strict `transaction.atomic` behavior.
 - [x] T008 Execute `pytest` to ensure all functionality passes perfectly.

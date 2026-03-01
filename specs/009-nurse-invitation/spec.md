@@ -1,115 +1,65 @@
-# Feature Specification: [FEATURE NAME]
+# Feature Specification: Nurse Invitation Flow
 
-**Feature Branch**: `[###-feature-name]`  
-**Created**: [DATE]  
-**Status**: Draft  
-**Input**: User description: "$ARGUMENTS"
+**Feature Branch**: `009-nurse-invitation`  
+**Created**: 2026-03-01  
+**Status**: Active  
+**Input**: User description: "Implementing the cryptographic Nurse Invitation Flow and secure serializers against cross-agency hijacking (IDOR)."
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
-<!--
-  IMPORTANT: User stories should be PRIORITIZED as user journeys ordered by importance.
-  Each user story/journey must be INDEPENDENTLY TESTABLE - meaning if you implement just ONE of them,
-  you should still have a viable MVP (Minimum Viable Product) that delivers value.
-  
-  Assign priorities (P1, P2, P3, etc.) to each story, where P1 is the most critical.
-  Think of each story as a standalone slice of functionality that can be:
-  - Developed independently
-  - Tested independently
-  - Deployed independently
-  - Demonstrated to users independently
--->
+### User Story 1 - Agency Admin Invites Nurse (Priority: P1)
 
-### User Story 1 - [Brief Title] (Priority: P1)
+Agency Admins need a way to securely invite nurses to their agency, ensuring the nurse is inextricably bound to the agency.
 
-[Describe this user journey in plain language]
+**Why this priority**: Without this, agencies cannot onboard the primary service providers to the platform.
 
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently - e.g., "Can be fully tested by [specific action] and delivers [specific value]"]
+**Independent Test**: Can be fully tested by authenticating an `AGENCY_ADMIN` and hitting the `POST /api/v1/agencies/invite-nurse/` endpoint with a phone number, expecting a cryptographic token in return.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-2. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** an authenticated agency admin, **When** they POST to the invite endpoint with a phone number, **Then** a 72-hour valid UUID token is returned.
+2. **Given** a patient or unauthorized user, **When** they attempt to POST to the endpoint, **Then** a `403 Forbidden` error is returned.
 
 ---
 
-### User Story 2 - [Brief Title] (Priority: P2)
+### User Story 2 - Nurse Accepts Invitation (Priority: P1)
 
-[Describe this user journey in plain language]
+Nurses need to accept the invitation using the cryptographic token to register and become active in the system under the agency.
 
-**Why this priority**: [Explain the value and why it has this priority level]
+**Why this priority**: The invitation flow is useless if the nurse cannot consume the token and register.
 
-**Independent Test**: [Describe how this can be tested independently]
+**Independent Test**: Can be fully tested by POSTing valid credentials and a valid token to `POST /api/v1/auth/accept-invitation/`, checking that the `CustomUser` and `NurseProfile` are atomically created and bound to the agency.
 
 **Acceptance Scenarios**:
 
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
+1. **Given** a valid token and valid user details, **When** POSTing to the accept endpoint, **Then** the nurse is registered securely under the exact agency that issued the token.
+2. **Given** an expired token, **When** POSTing to the accept endpoint, **Then** a `410/400` error is returned.
 
 ---
-
-### User Story 3 - [Brief Title] (Priority: P3)
-
-[Describe this user journey in plain language]
-
-**Why this priority**: [Explain the value and why it has this priority level]
-
-**Independent Test**: [Describe how this can be tested independently]
-
-**Acceptance Scenarios**:
-
-1. **Given** [initial state], **When** [action], **Then** [expected outcome]
-
----
-
-[Add more user stories as needed, each with an assigned priority]
 
 ### Edge Cases
 
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right edge cases.
--->
+- What happens when a user submits an arbitrary string instead of a UUID token? The system handles this gracefully returning a 400 error.
+- How does system handle creating a user if the National ID is already in use? The system will utilize `transaction.atomic` to completely rollback any partial profile creations and will return a validation error.
 
-- What happens when [boundary condition]?
-- How does system handle [error scenario]?
-
-## Requirements *(mandatory)*
-
-<!--
-  ACTION REQUIRED: The content in this section represents placeholders.
-  Fill them out with the right functional requirements.
--->
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: System MUST [specific capability, e.g., "allow users to create accounts"]
-- **FR-002**: System MUST [specific capability, e.g., "validate email addresses"]  
-- **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
-- **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
-- **FR-005**: System MUST [behavior, e.g., "log all security events"]
+- **FR-001**: System MUST allow Agency Admins to generate 72-hour cryptographic tokens mapped to their agency.
+- **FR-002**: System MUST validate Egyptian National IDs (14 digits) during registration.
+- **FR-003**: System MUST securely attribute the newly registered nurse ONLY to the inviting agency (IDOR prevention).
+- **FR-004**: System MUST perform registration atomically to prevent dangling `CustomUser` records without a `NurseProfile`.
 
-*Example of marking unclear requirements:*
+### Key Entities
 
-- **FR-006**: System MUST authenticate users via [NEEDS CLARIFICATION: auth method not specified - email/password, SSO, OAuth?]
-- **FR-007**: System MUST retain user data for [NEEDS CLARIFICATION: retention period not specified]
+- **NurseProfile**: Extended user profile for Nurses including syndicate data, documents, and a hard constraint `ForeignKey` to `AgencyProfile`.
+- **NurseInvitation**: Cryptographic tracking model storing the token, agency reference, expiration, and status.
 
-### Key Entities *(include if feature involves data)*
-
-- **[Entity 1]**: [What it represents, key attributes without implementation]
-- **[Entity 2]**: [What it represents, relationships to other entities]
-
-## Success Criteria *(mandatory)*
-
-<!--
-  ACTION REQUIRED: Define measurable success criteria.
-  These must be technology-agnostic and measurable.
--->
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 
-- **SC-001**: [Measurable metric, e.g., "Users can complete account creation in under 2 minutes"]
-- **SC-002**: [Measurable metric, e.g., "System handles 1000 concurrent users without degradation"]
-- **SC-003**: [User satisfaction metric, e.g., "90% of users successfully complete primary task on first attempt"]
-- **SC-004**: [Business metric, e.g., "Reduce support tickets related to [X] by 50%"]
+- **SC-001**: 100% test coverage on IDOR prevention inside the Nurse Invitation view.
+- **SC-002**: Zero dangling profiles in the database after failed registrations due to the implementation of `transaction.atomic`.
+- **SC-003**: Secure registration APIs are deployed with HTTP 201 statuses and proper cryptographic expirations.

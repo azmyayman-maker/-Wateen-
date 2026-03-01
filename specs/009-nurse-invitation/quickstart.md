@@ -3,8 +3,7 @@
 ## Setup
 
 1. Ensure the PostgreSQL and Redis containers are running via Docker.
-2. Run database migrations to create the `NurseInvitation` model and update `NurseProfile`:
-   `python manage.py makemigrations`
+2. Run database migrations to apply the committed `NurseInvitation` model and update `NurseProfile`:
    `python manage.py migrate`
 
 ## Testing the Flow

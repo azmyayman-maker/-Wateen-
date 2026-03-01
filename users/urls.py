@@ -31,6 +31,6 @@ urlpatterns = [
     # B2B Agency Onboarding
     path('agency/register/', AgencyRegisterView.as_view(), name='agency_register'),
     path('agency/<uuid:pk>/coverage/', AgencyCoverageUpdateView.as_view(), name='agency_coverage'),
-    path('agencies/invite-nurse/', InviteNurseView.as_view(), name='invite_nurse'),
+    path('agency/invite-nurse/', InviteNurseView.as_view(), name='invite_nurse'),
     path('admin/agencies/<uuid:pk>/approve/', AgencyApprovalView.as_view(), name='agency_approve'),
 ]

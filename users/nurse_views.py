@@ -1,9 +1,11 @@
+import logging
 import uuid
 from datetime import timedelta
-from django.utils import timezone
-from django.db import transaction, IntegrityError
-from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.contrib.auth.password_validation import validate_password
+from django.db import transaction, IntegrityError
+from django.http import HttpRequest, HttpResponse
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -13,6 +15,8 @@ from .models import NurseInvitation, CustomUser, NurseProfile, UserRole, Invitat
 from .permissions import IsAgencyAdmin
 from .nurse_serializers import NurseInvitationSerializer
 
+logger = logging.getLogger(__name__)
+
 
 class InviteNurseView(APIView):
     """
@@ -21,7 +25,7 @@ class InviteNurseView(APIView):
     """
     permission_classes = [IsAuthenticated, IsAgencyAdmin]
 
-    def post(self, request):
+    def post(self, request: HttpRequest) -> HttpResponse:
         agency = getattr(request.user, "agency", None)
         if not agency:
             return Response(
@@ -53,7 +57,7 @@ class AcceptNurseInvitationView(APIView):
     permission_classes = [AllowAny]
 
     @transaction.atomic
-    def post(self, request):
+    def post(self, request: HttpRequest) -> HttpResponse:
         token_str = request.data.get("token")
         password = request.data.get("password")
         
@@ -111,7 +115,7 @@ class AcceptNurseInvitationView(APIView):
                 last_name_ar=last_name
             )
 
-            profile = NurseProfile.objects.create(
+            _profile = NurseProfile.objects.create(
                 user=user,
                 agency=invitation.agency,
                 syndicate_number=syndicate_number
@@ -126,7 +130,8 @@ class AcceptNurseInvitationView(APIView):
             return Response({"detail": "A user with this national_id or phone already exists.", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
             transaction.set_rollback(True)
-            return Response({"detail": f"Failed to register nurse: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+            logger.exception("Failed to register nurse")
+            return Response({"detail": "Failed to register nurse"}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response(
             {
