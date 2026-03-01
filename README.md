@@ -1,7 +1,7 @@
 # Wateen (وَتِين) — The Nerve System of Home Healthcare
 
 <p align="center">
-  <img src="docs/assets/wateen-logo.png" alt="Wateen Logo" width="200" />
+  <img src="[docs/assets/wateen-logo.png](https://github.com/azmyayman-maker/-Wateen-/blob/main/icon.ico)" alt="Wateen Logo" width="200" />
 </p>
 
 [![Build Passing](https://img.shields.io/badge/Build-Passing-brightgreen?style=flat&logo=github-actions)](https://github.com/wateen/wateen/actions)
