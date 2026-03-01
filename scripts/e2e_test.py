@@ -61,7 +61,7 @@ async def patient_flow(context, patient_phone, patient_password):
     print(f"[{patient_phone}] Requesting Visit...")
     try:
         await page.get_by_role("button", name="طلب زيارة").click()
-    except Exception as e:
+    except Exception:
         print(f"[{patient_phone}] Could not find Request button natively, attempting via API...")
         # Fallback to pure API if UI button is not found for testing stability
         pass

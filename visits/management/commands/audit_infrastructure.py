@@ -1,9 +1,7 @@
 from django.core.management.base import BaseCommand
 from django.db import connections
 from django.db.utils import OperationalError
-from django.conf import settings
 from django_redis import get_redis_connection
-import sys
 
 class Command(BaseCommand):
     help = 'Audits infrastructure connectivity (DB, PostGIS, Redis)'
@@ -42,7 +40,7 @@ class Command(BaseCommand):
         try:
             con = get_redis_connection("default")
             con.ping()
-            self.stdout.write(self.style.SUCCESS(f"[OK] Redis Connected (Ping success)"))
+            self.stdout.write(self.style.SUCCESS("[OK] Redis Connected (Ping success)"))
             
             # Geo Test
             key = "audit:geo_test"

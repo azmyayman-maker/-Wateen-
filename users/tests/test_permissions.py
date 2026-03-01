@@ -1,0 +1,81 @@
+import pytest
+from unittest.mock import Mock
+from users.permissions import (
+    IsSuperAdmin, IsAgencyAdmin, IsNurseOrAbove, IsOwnerOrAdmin
+)
+from users.models import UserRole, AgencyStatus
+
+class TestPermissionClasses:
+    """
+    Unit tests for custom DRF permission classes guarding B2B2C API endpoints.
+    """
+    
+    @pytest.fixture
+    def mock_request(self):
+        return Mock()
+        
+    @pytest.fixture
+    def mock_view(self):
+        return Mock()
+        
+    def test_is_superadmin_permission(self, mock_request, mock_view):
+        perm = IsSuperAdmin()
+        
+        # User is superadmin
+        mock_request.user.role = UserRole.SUPERADMIN
+        mock_request.user.is_superadmin = True
+        assert perm.has_permission(mock_request, mock_view) is True
+        
+        # User is patient (not superadmin)
+        mock_request.user.role = UserRole.PATIENT
+        mock_request.user.is_superadmin = False
+        assert perm.has_permission(mock_request, mock_view) is False
+
+    def test_is_agency_admin_permission(self, mock_request, mock_view):
+        perm = IsAgencyAdmin()
+        
+        # Verified agency admin
+        mock_request.user.role = UserRole.AGENCY_ADMIN
+        mock_request.user.agency = Mock(status=AgencyStatus.VERIFIED)
+        assert perm.has_permission(mock_request, mock_view) is True
+        
+        # Unverified agency admin
+        mock_request.user.agency = Mock(status=AgencyStatus.PENDING)
+        assert perm.has_permission(mock_request, mock_view) is False
+        
+        # Nurse role (no agency admin)
+        mock_request.user.role = UserRole.NURSE
+        assert perm.has_permission(mock_request, mock_view) is False
+
+    def test_is_nurse_or_above_permission(self, mock_request, mock_view):
+        perm = IsNurseOrAbove()
+        
+        # Nurse
+        mock_request.user.role = UserRole.NURSE
+        assert perm.has_permission(mock_request, mock_view) is True
+        
+        # Superadmin
+        mock_request.user.role = UserRole.SUPERADMIN
+        assert perm.has_permission(mock_request, mock_view) is True
+        
+        # Patient
+        mock_request.user.role = UserRole.PATIENT
+        assert perm.has_permission(mock_request, mock_view) is False
+
+    def test_is_owner_or_admin_permission(self, mock_request, mock_view):
+        perm = IsOwnerOrAdmin()
+        mock_obj = Mock()
+        
+        # Owner
+        mock_obj.patient.user = mock_request.user
+        mock_request.user.is_superadmin = False
+        assert perm.has_object_permission(mock_request, mock_view, mock_obj) is True
+        
+        # Not owner, but superadmin
+        mock_obj.patient.user = Mock()  # Different user
+        mock_request.user.is_superadmin = True
+        assert perm.has_object_permission(mock_request, mock_view, mock_obj) is True
+        
+        # Not owner, not superadmin
+        mock_request.user.is_superadmin = False
+        assert perm.has_object_permission(mock_request, mock_view, mock_obj) is False

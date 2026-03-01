@@ -35,10 +35,10 @@ class VisitResponseSerializer(serializers.Serializer):
     service_type = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
 
-    def get_latitude(self, obj) -> float:
+    def get_latitude(self, obj) -> float | None:
         return obj.location.y if obj.location else None
 
-    def get_longitude(self, obj) -> float:
+    def get_longitude(self, obj) -> float | None:
         return obj.location.x if obj.location else None
 
     def get_service_type(self, obj) -> str | None:
@@ -192,14 +192,14 @@ class NursePendingVisitSerializer(serializers.Serializer):
     created_at = serializers.DateTimeField(read_only=True)
 
     def get_patient_name(self, obj) -> str:
-        if obj.patient:
-            return obj.patient.user.get_full_name()
+        if getattr(obj, "patient", None):
+            return str(obj.patient.user.get_full_name())
         return "Unknown"
 
-    def get_service_name(self, obj) -> str | None:
-        if obj.service_type:
-            return obj.service_type.name
-        return _("General Care")
+    def get_service_name(self, obj) -> str:
+        if getattr(obj, "service_type", None):
+            return str(obj.service_type.name)
+        return str(_("General Care"))
 
     def get_latitude(self, obj) -> float | None:
         return obj.location.y if obj.location else None

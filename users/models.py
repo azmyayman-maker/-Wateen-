@@ -7,7 +7,6 @@ from django.contrib.gis.db import models as gis_models
 from django.contrib.postgres.indexes import GistIndex
 from django.core.exceptions import ValidationError
 from django.db import models
-from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import uuid

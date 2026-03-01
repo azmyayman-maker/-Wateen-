@@ -904,7 +904,7 @@ class TestNonBlockingLogging:
 
     def test_log_uses_transaction_on_commit(self, db):
         """Test that log_estimate_request uses transaction.on_commit for async logging."""
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import patch
         from visits.signals import log_estimate_request
 
         with patch("visits.signals.transaction.on_commit") as mock_on_commit:

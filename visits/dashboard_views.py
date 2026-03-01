@@ -1,7 +1,7 @@
-from rest_framework import generics, status
+from rest_framework import generics
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count, Sum
+from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
 from decimal import Decimal

@@ -1,7 +1,5 @@
 import pytest
-from django.urls import reverse
-from rest_framework import status
-from visits.models import Visit, VisitStatus
+from visits.models import VisitStatus
 
 pytestmark = pytest.mark.django_db
 

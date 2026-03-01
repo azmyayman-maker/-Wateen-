@@ -8,7 +8,6 @@ for caching and channel layers.
 import os
 import uuid
 import pytest
-from unittest.mock import patch, MagicMock
 
 
 def is_redis_available() -> bool:

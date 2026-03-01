@@ -11,10 +11,8 @@ from users.models import (
     NurseProfile,
     VerificationStatus,
 )
-from visits.models import ServiceType, PricingFactor, Visit, VisitStatus, EstimateLog
+from visits.models import ServiceType, PricingFactor, Visit, VisitStatus
 from visits.services.pricing import RuleBasedPricingStrategy
-from visits.services.matching import GeoMatchingService
-from datetime import timedelta
 
 # --- Fixtures ---
 

@@ -8,7 +8,6 @@ import json
 import os
 import pytest
 import tempfile
-from pathlib import Path
 
 
 @pytest.fixture(autouse=True)

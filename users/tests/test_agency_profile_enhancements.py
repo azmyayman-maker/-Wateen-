@@ -1,5 +1,5 @@
 import pytest
-from django.contrib.gis.geos import Polygon, LinearRing, Point
+from django.contrib.gis.geos import Polygon, Point
 from rest_framework.exceptions import ValidationError
 from users.models import AgencyProfile, CustomUser, UserRole, DispatchMode, AgencyStatus
 from users.agency_serializers import AgencyProfileSerializer

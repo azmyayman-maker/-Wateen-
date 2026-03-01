@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock
 from decimal import Decimal
-from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
+from visits.models import VisitStatus, TransactionStatus
 from visits.services.payment import PaymentService
 from visits.services.settlement import SettlementService
 

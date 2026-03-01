@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
-from users.models import CustomUser, AgencyProfile, NurseInvitation, NurseProfile, UserRole, InvitationStatus
+from users.models import CustomUser, NurseInvitation, NurseProfile, UserRole, InvitationStatus
 from visits.tests.conftest import AgencyProfileFactory
 
 @pytest.fixture

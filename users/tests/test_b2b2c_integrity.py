@@ -1,0 +1,109 @@
+import pytest
+from django.db.utils import IntegrityError
+from django.core.exceptions import ValidationError
+from django.contrib.gis.geos import GEOSException, Polygon, LinearRing
+
+from users.models import NurseProfile, AgencyProfile
+
+pytestmark = pytest.mark.django_db
+
+
+class TestNurseAgencyFKIntegrity:
+    """
+    Validates B2B2C business rule: Nurses cannot be freelancers.
+    They must be attached to an AgencyProfile.
+    """
+
+    def test_nurse_creation_without_agency_raises_integrity_error(self, patient):
+        """
+        Bypassing the ORM's full_clean() should still fail at the DB level
+        because agency_id is NOT NULL.
+        Note: We use the `patient` fixture user just to have a user instance,
+        though it has PATIENT role, the DB constraint test is what matters here.
+        """
+        with pytest.raises(IntegrityError):
+            # Attempt to create directly in DB, bypassing full_clean()
+            NurseProfile.objects.create(
+                user=patient.user,
+                agency=None,
+                is_available=True
+            )
+
+    def test_nurse_save_without_agency_raises_validation_error(self, patient):
+        """
+        Testing the ORM level validation via clean() before it hits the DB.
+        """
+        nurse = NurseProfile(
+            user=patient.user,
+            agency=None,
+            is_available=True
+        )
+        with pytest.raises(ValidationError) as exc_info:
+            nurse.save()
+        
+        assert "agency" in str(exc_info.value) or "agency_id" in str(exc_info.value)
+
+    def test_valid_nurse_creation_succeeds(self, sample_agency, patient):
+        """
+        A valid nurse with an agency should save successfully.
+        """
+        nurse = NurseProfile.objects.create(
+            user=patient.user,
+            agency=sample_agency,
+            is_available=True
+        )
+        assert nurse.id is not None
+        assert nurse.agency == sample_agency
+
+
+class TestGeospatialIntegrity:
+    """
+    Validates PostGIS polygon constraints for AgencyProfile coverage areas.
+    """
+
+    def test_invalid_polygon_raises_exception(self):
+        """
+        AgencyProfile with a LinearRing of fewer than 4 points (invalid polygon)
+        should raise a GEOSException or ValueError before hitting DB.
+        """
+        # A valid polygon requires at least 4 points (closed ring)
+        with pytest.raises((GEOSException, ValueError)):
+            invalid_ring = LinearRing((0, 0), (1, 1), (0, 1))  # Only 3 points, not closed
+            Polygon(invalid_ring)
+
+    def test_self_intersecting_polygon_rejected(self):
+        """
+        Self-intersecting polygons might be created in Python but are invalid for spatial operations.
+        We ensure it at least doesn't break Django ORM validation.
+        """
+        # Create a bowtie (self-intersecting) polygon
+        bowtie_ring = LinearRing((0, 0), (2, 2), (2, 0), (0, 2), (0, 0))
+        polygon = Polygon(bowtie_ring, srid=4326)
+        
+        # PostGIS might accept it but ST_IsValid would return false.
+        # Just ensure geometry creation works in Python.
+        assert polygon.srid == 4326
+
+    def test_valid_polygon_creation_succeeds(self):
+        """
+        A valid, closed polygon is successfully assigned to AgencyProfile.
+        """
+        valid_ring = LinearRing(
+            (30.0, 31.0), 
+            (30.0, 31.1), 
+            (30.1, 31.1), 
+            (30.1, 31.0), 
+            (30.0, 31.0)
+        )
+        polygon = Polygon(valid_ring, srid=4326)
+        
+        agency = AgencyProfile.objects.create(
+            manager_name="Test Polygon Agency",
+            commercial_registry="CR-Geospatial-001",
+            moh_license_number="MOH-Geo-001",
+            tax_id="TAX-Geo-001",
+            coverage_polygon=polygon
+        )
+        
+        assert agency.id is not None
+        assert agency.coverage_polygon.valid

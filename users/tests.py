@@ -2,15 +2,15 @@ import uuid
 
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.http import HttpRequest
 
 from rest_framework import status
 from rest_framework.test import APIClient, APIRequestFactory
 
 from .models import AgencyProfile, AgencyStatus, NurseProfile, PatientProfile, UserRole
-from .permissions import IsAgencyAdmin, IsAgencyAdminOrSuperAdmin
-from .validators import GOVERNORATE_CODES, validate_egyptian_national_id, validate_phone_number
+from .permissions import IsAgencyAdmin
+from .validators import validate_egyptian_national_id, validate_phone_number
 
 
 # =============================================================================
@@ -1347,7 +1347,6 @@ class TestSignalEdgeCases(TestCase):
 
     def test_signal_transaction_rollback(self) -> None:
         """Test that profile creation is part of user creation transaction."""
-        from django.db import transaction, IntegrityError
 
         # Create a user that will succeed
         user1 = User.objects.create_user(

@@ -17,7 +17,6 @@ import logging
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from django.utils.translation import gettext_lazy as _
 
 logger = logging.getLogger(__name__)
 

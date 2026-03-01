@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 # Add project root to sys.path
@@ -12,10 +11,9 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from users.models import UserRole, PatientProfile, NurseProfile
+from users.models import UserRole
 from visits.models import ServiceType, Visit, VisitStatus
 from decimal import Decimal
-from django.utils import timezone
 from django.contrib.gis.geos import Point
 from django.conf import settings
 

@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import pytest
 import secrets
-from django.contrib.gis.geos import Polygon, Point
+from django.contrib.gis.geos import Polygon
 
 from users.models import AgencyProfile, CustomUser, UserRole
 

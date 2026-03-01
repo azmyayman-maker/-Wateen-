@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import CustomUser, UserRole, PatientProfile, NurseProfile
+from .models import CustomUser, UserRole, PatientProfile
 
 
 @receiver(post_save, sender=CustomUser)

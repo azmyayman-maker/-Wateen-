@@ -1,5 +1,4 @@
-from django.utils import timezone
-from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
+from visits.models import VisitStatus, Transaction, TransactionStatus
 from .logging import logger
 
 

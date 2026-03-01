@@ -141,13 +141,16 @@ class GeoMatchingService:
                 sort="ASC",
                 withcoord=False,
                 withdist=True,
-            )
+            )  # type: ignore[misc]
 
             candidates: list[dict[str, Any]] = []
-            for member, distance in results:
+            for item in results:
+                member_val: Any = item[0]  # type: ignore
+                distance: Any = item[1]  # type: ignore
+                
                 # FIX: Decode bytes to string if necessary
                 member_str = (
-                    member.decode("utf-8") if isinstance(member, bytes) else member
+                    member_val.decode("utf-8") if isinstance(member_val, bytes) else member_val
                 )
 
                 try:
@@ -225,7 +228,7 @@ class GeoMatchingService:
             if not positions or positions[0] is None:
                 return None
 
-            lng, lat = positions[0]
+            lng, lat = positions[0]  # type: ignore
             return (float(lat), float(lng))
         except redis.RedisError as e:
             logger.error(
@@ -251,7 +254,7 @@ class GeoMatchingService:
 
         try:
             member: str = f"nurse:{nurse_id}"
-            removed: int = self._redis.zrem(GEO_KEY, member)
+            removed: Any = self._redis.zrem(GEO_KEY, member)
             if removed:
                 logger.debug("Removed nurse %s from geo index", nurse_id)
             return bool(removed)

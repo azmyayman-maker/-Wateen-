@@ -10,7 +10,6 @@ This module handles:
 SECURITY: This module NEVER logs raw National ID images or extracted text.
 """
 
-import io
 import re
 import logging
 from typing import Optional
@@ -167,7 +166,7 @@ def verify_kyc_document(nurse_document, expected_national_id: str) -> dict:
         - Updates nurse_document.status, .ocr_data, .extracted_national_id, .verified_at
         - Updates NurseProfile.verification_status if all documents are verified
     """
-    from users.models import DocumentStatus, DocumentType, VerificationStatus
+    from users.models import DocumentStatus
 
     extracted_id, raw_text = extract_national_id(nurse_document.document_file)
 

@@ -1,10 +1,9 @@
 
 import sys
-import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
@@ -51,7 +50,7 @@ sys.modules['visits.models'] = MagicMock()
 
 
 # Import the code under test
-from visits.services.pricing import RuleBasedPricingStrategy, PriceBreakdown
+from visits.services.pricing import RuleBasedPricingStrategy
 from visits.services.matching import GeoMatchingService
 
 class TestLevel5Audit(unittest.TestCase):

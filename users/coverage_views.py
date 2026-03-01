@@ -4,7 +4,6 @@ from rest_framework.permissions import IsAuthenticated
 from django.contrib.gis.geos import GEOSGeometry
 
 from .models import AgencyProfile
-from .agency_serializers import AgencyRegistrationSerializer
 from .permissions import IsAgencyAdminOrSuperAdmin
 
 class AgencyCoverageUpdateView(generics.UpdateAPIView):

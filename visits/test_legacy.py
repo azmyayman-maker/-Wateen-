@@ -7,7 +7,7 @@ from django.contrib.gis.geos import Point
 from rest_framework.test import APIClient
 from rest_framework import status as http_status
 
-from users.models import UserRole, PatientProfile, NurseProfile
+from users.models import UserRole, PatientProfile
 from .models import Visit, VisitStatus, ALLOWED_TRANSITIONS
 from .services import create_visit_request
 
