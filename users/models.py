@@ -4,6 +4,7 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.contrib.gis.db import models as gis_models
+from django.contrib.postgres.indexes import GistIndex
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import CheckConstraint, Q
@@ -297,7 +298,7 @@ class AgencyProfile(models.Model):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["rating"]),
-            gis_models.GistIndex(fields=["coverage_polygon"]),
+            GistIndex(fields=["coverage_polygon"]),
         ]
 
     def __str__(self) -> str:
@@ -393,6 +394,7 @@ class NurseProfile(models.Model):
         max_length=50,
         blank=True,
         default="",
+        unique=True,
     )
     syndicate_expiry = models.DateField(
         _("انتهاء عضوية النقابة"),
@@ -434,13 +436,15 @@ class NurseProfile(models.Model):
         verbose_name = _("ملف الممرض/ة")
         verbose_name_plural = _("ملفات الممرضين")
         db_table = "users_nurse_profile"
-        # TODO: [Phase 1.5] Add database constraint after data migration
         # constraints = [
         #     CheckConstraint(
         #         check=~Q(agency__isnull=True),
         #         name='nurse_must_belong_to_agency'
         #     ),
         # ]
+        indexes = [
+            GistIndex(fields=["last_location"]),
+        ]
 
     def __str__(self) -> str:
         return f"NurseProfile({self.user.national_id})"
@@ -464,6 +468,50 @@ class NurseProfile(models.Model):
         if not skip_full_clean:
             self.full_clean()
         super().save(*args, **kwargs)
+
+class InvitationStatus(models.TextChoices):
+    PENDING = "PENDING", _("قيد الانتظار")
+    ACCEPTED = "ACCEPTED", _("مقبول")
+    EXPIRED = "EXPIRED", _("منتهي الصلاحية")
+
+
+class NurseInvitation(models.Model):
+    """
+    Cryptographic Nurse Invitation Model.
+    Binds a nurse to a specific agency securely prior to the nurse registering an account.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    agency = models.ForeignKey(
+        "AgencyProfile",
+        on_delete=models.CASCADE,
+        related_name="invitations",
+        verbose_name=_("الوكالة"),
+    )
+    phone = models.CharField(_("الهاتف"), max_length=20)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
+    status = models.CharField(
+        _("الحالة"),
+        max_length=15,
+        choices=InvitationStatus.choices,
+        default=InvitationStatus.PENDING,
+    )
+    expires_at = models.DateTimeField(_("تاريخ الانتهاء"))
+    created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
+
+    class Meta:
+        verbose_name = _("دعوة ممرض/ة")
+        verbose_name_plural = _("دعوات الممرضين")
+        db_table = "users_nurse_invitation"
+        indexes = [
+            models.Index(fields=["status"]),
+        ]
+
+    def __str__(self) -> str:
+        return f"Invite({self.phone}) -> {self.agency.manager_name}"
+
+    @property
+    def is_valid(self) -> bool:
+        return self.status == InvitationStatus.PENDING and self.expires_at > timezone.now()
 
 
 class DocumentType(models.TextChoices):
