@@ -1,6 +1,8 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.contrib.gis.db import models as gis_models
+from django.core.exceptions import ValidationError
 from django.db import models
+from django.db.models import CheckConstraint, Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import uuid
@@ -388,7 +390,11 @@ class NurseProfile(models.Model):
         on_delete=models.CASCADE,
         related_name='nurses',
         verbose_name=_('الشركة/الوكالة التابع لها'),
-        null=True,  # Initially true so migrations pass, then we will seed.
+        # TODO: [Phase 1.5] Data migration required before removing null=True
+        # 1. Create a default agency OR assign existing nurses to agencies
+        # 2. Run: python manage.py shell < scripts/assign_nurses_to_agencies.py
+        # 3. Then remove null=True, blank=True from this field
+        null=True,
         blank=True,
     )
     national_id_document = models.CharField(
@@ -443,9 +449,34 @@ class NurseProfile(models.Model):
         verbose_name = _('ملف الممرض/ة')
         verbose_name_plural = _('ملفات الممرضين')
         db_table = 'users_nurse_profile'
+        # TODO: [Phase 1.5] Add database constraint after data migration
+        # constraints = [
+        #     CheckConstraint(
+        #         check=~Q(agency__isnull=True),
+        #         name='nurse_must_belong_to_agency'
+        #     ),
+        # ]
 
     def __str__(self) -> str:
         return f'NurseProfile({self.user.national_id})'
+
+    def clean(self):
+        """
+        Validate that the nurse is assigned to an agency.
+        
+        B2B2C Rule: Nurses must belong to an agency - they are not freelancers.
+        This enforces the business rule at model validation level.
+        """
+        super().clean()
+        if not self.agency_id:
+            raise ValidationError(
+                {'agency': _('الممرض/ة يجب أن تكون تابعة для агентства.')}
+            )
+
+    def save(self, *args, **kwargs):
+        """Override save to run full validation including clean()."""
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 class DocumentType(models.TextChoices):

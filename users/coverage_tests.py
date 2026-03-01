@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from django.contrib.gis.geos import Polygon
 
-from users.models import AgencyProfile, CustomUser
+from users.models import AgencyProfile, CustomUser, UserRole
 
 @pytest.mark.django_db
 class TestAgencyCoverageValidation:
@@ -21,7 +21,7 @@ class TestAgencyCoverageValidation:
             national_id="29001011234568",
             phone_number="01001234568",
             password="Password1234!",
-            role="ADMIN"
+            role=UserRole.AGENCY_ADMIN
         )
         return agency, user
 

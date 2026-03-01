@@ -26,7 +26,7 @@ class TestAgencyOnboarding:
         
         # Verify user creation
         user = CustomUser.objects.get(national_id='29001011234567')
-        assert user.role == 'ADMIN'
+        assert user.role == 'AGENCY_ADMIN'
         
     def test_superadmin_agency_approval(self, client):
         # Create an agency

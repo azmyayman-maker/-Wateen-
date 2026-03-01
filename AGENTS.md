@@ -19,7 +19,7 @@ Patients never interact with nurses directly outside of assigned visits.
 
 | Layer             | Technology                                                              |
 | :---------------- | :---------------------------------------------------------------------- |
-| **Backend**       | Python 3.11+, Django 5.2, Django REST Framework                         |
+| **Backend**       | Python 3.11+, Django 5.2, Django REST  Framework  all that in docker                        |
 | **Database**      | PostgreSQL 16 + PostGIS 3.4 (spatial queries)                           |
 | **Cache/PubSub**  | Redis 7 (django-redis, channels_redis)                                  |
 | **WebSockets**    | Django Channels + Redis Channel Layer                                   |
