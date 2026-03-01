@@ -149,7 +149,7 @@ class Visit(models.Model):
     )
     agency = models.ForeignKey(
         "users.AgencyProfile",
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="visits",
         verbose_name=_("الشركة/الوكالة المنفذة"),
         null=True,  # Allow null temporarily for initial migration of existing P2P visits

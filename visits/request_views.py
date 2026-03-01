@@ -1,5 +1,5 @@
-import coreapi
-import coreschema
+import openapi
+from django.db import transaction
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
@@ -12,30 +12,33 @@ from .serializers import VisitSerializer
 from .services.dispatch import DispatchEngine
 
 class VisitRequestSchema(AutoSchema):
-    def get_manual_fields(self, path, method):
-        fields = super().get_manual_fields(path, method)
+    def get_operation(self, path, method):
+        operation = super().get_operation(path, method)
         if method == 'POST':
-            fields += [
-                coreapi.Field(
-                    name='service_type_id',
-                    required=True,
-                    location='form',
-                    schema=coreschema.String(description='UUID of the requested service type')
-                ),
-                coreapi.Field(
-                    name='longitude',
-                    required=True,
-                    location='form',
-                    schema=coreschema.Number(description='Longitude of patient location')
-                ),
-                coreapi.Field(
-                    name='latitude',
-                    required=True,
-                    location='form',
-                    schema=coreschema.Number(description='Latitude of patient location')
-                ),
+            operation['parameters'] = operation.get('parameters', []) + [
+                {
+                    'name': 'service_type_id',
+                    'in': 'query',  # Or 'form' based on DRF structure, but OpenAPI uses query/body
+                    'required': True,
+                    'schema': {'type': 'string', 'format': 'uuid'},
+                    'description': 'UUID of the requested service type'
+                },
+                {
+                    'name': 'longitude',
+                    'in': 'query',
+                    'required': True,
+                    'schema': {'type': 'number'},
+                    'description': 'Longitude of patient location'
+                },
+                {
+                    'name': 'latitude',
+                    'in': 'query',
+                    'required': True,
+                    'schema': {'type': 'number'},
+                    'description': 'Latitude of patient location'
+                }
             ]
-        return fields
+        return operation
 
 class VisitRequestView(generics.CreateAPIView):
     """
@@ -64,19 +67,27 @@ class VisitRequestView(generics.CreateAPIView):
         lon = request.data.get('longitude')
         lat = request.data.get('latitude')
         
-        if not all([service_type_id, lon, lat]):
+        if service_type_id is None or lon is None or lat is None:
             return Response(
                 {"detail": "Missing required fields: service_type_id, longitude, latitude."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
             
         try:
-            service = ServiceType.objects.get(id=service_type_id)
-            location_point = Point(float(lon), float(lat), srid=4326)
+            float_lon = float(lon)
+            float_lat = float(lat)
         except (ValueError, TypeError):
-            return Response({"detail": "Invalid coordinates."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "Invalid coordinates format. Must be numeric."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if not (-180 <= float_lon <= 180) or not (-90 <= float_lat <= 90):
+            return Response({"detail": "Coordinates out of bounds. Longitude must be between -180 and 180, Latitude between -90 and 90."}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            service = ServiceType.objects.get(id=service_type_id)
         except ServiceType.DoesNotExist:
             return Response({"detail": "Service type not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+        location_point = Point(float_lon, float_lat, srid=4326)
             
         # ── T018: Implement ST_Intersects spatial matching query ──
         # Find verified agencies whose coverage polygon intersects the patient's point
@@ -99,29 +110,33 @@ class VisitRequestView(generics.CreateAPIView):
         # the top-rated eligible agency and set state to PENDING_AGENCY.
         assigned_agency = eligible_agencies.first()
         
-        visit = Visit.objects.create(
-            patient=patient_profile,
-            agency=assigned_agency,
-            service_type=service,
-            location=location_point,
-            status=VisitStatus.PENDING_AGENCY,
-            base_price=service.base_price,
-            final_price=service.base_price, # Calculate distance/surge later
-        )
-        
-        serializer = self.get_serializer(visit)
-        
-        # NOTE: Websocket broadcast is now handled by DispatchEngine
-        dispatch_engine = DispatchEngine()
-        dispatch_engine.trigger_dispatch(visit)
-        
-        # Schedule timeout re-routing task (5 minutes)
-        from .tasks import re_route_visit
-        re_route_visit.apply_async((str(visit.id),), countdown=300)
-        
-        # Initialize Transaction (T027)
-        from .services.settlement import SettlementService
-        SettlementService.create_transaction_for_visit(visit)
+        with transaction.atomic():
+            visit = Visit.objects.create(
+                patient=patient_profile,
+                agency=assigned_agency,
+                service_type=service,
+                location=location_point,
+                status=VisitStatus.PENDING_AGENCY,
+                base_price=service.base_price,
+                final_price=service.base_price, # Calculate distance/surge later
+            )
+            
+            serializer = self.get_serializer(visit)
+            
+            def trigger_side_effects():
+                # NOTE: Websocket broadcast is now handled by DispatchEngine
+                dispatch_engine = DispatchEngine()
+                dispatch_engine.trigger_dispatch(visit)
+                
+                # Schedule timeout re-routing task (5 minutes)
+                from .tasks import re_route_visit
+                re_route_visit.apply_async((str(visit.id),), countdown=300)
+                
+                # Initialize Transaction (T027)
+                from .services.settlement import SettlementService
+                SettlementService.create_transaction_for_visit(visit)
+                
+            transaction.on_commit(trigger_side_effects)
         
         return Response({
             "detail": "Visit request registered and assigned to an agency for review.",
