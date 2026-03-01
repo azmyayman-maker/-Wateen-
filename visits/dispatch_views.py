@@ -5,6 +5,7 @@ from django.utils.translation import gettext_lazy as _
 
 from visits.models import Visit, VisitStatus
 from users.models import NurseProfile
+from users.permissions import IsAgencyAdminOrSuperAdmin
 from .serializers import VisitResponseSerializer
 
 class ManualDispatchView(generics.GenericAPIView):
@@ -16,21 +17,21 @@ class ManualDispatchView(generics.GenericAPIView):
     - visit_id: UUID
     - nurse_id: UUID
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAgencyAdminOrSuperAdmin]
     
     def post(self, request, *args, **kwargs):
         user = request.user
         agency_id = self.kwargs.get('agency_id')
         
-        # 1. RBAC check (Simplified for MVP, would use middleware/permission class)
-        # Check if user is associated with the agency
-        # For this MVP, we verify their agency_id claim matches the URL
-        claim_agency_id = request.auth.get('agency_id') if hasattr(request, 'auth') else None
+        # Object-level check: Agency admin can only dispatch for their own agency
+        if not user.is_superadmin:
+            # For agency admins, verify they belong to this agency
+            if hasattr(user, 'agency') and str(user.agency.id) != str(agency_id):
+                return Response(
+                    {"detail": "You can only dispatch visits for your own agency."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
         
-        # If not superuser and not the agency, deny.
-        # if not user.is_superuser and str(claim_agency_id) != str(agency_id):
-        #    return Response({"detail": "Forbidden access to this agency."}, status=403)
-
         visit_id = request.data.get('visit_id')
         nurse_id = request.data.get('nurse_id')
 
