@@ -21,6 +21,7 @@ class AgencyProfileSerializer(GeoFeatureModelSerializer):
             'commercial_registry',
             'moh_license_number',
             'tax_id',
+            'coverage_polygon',
             'status',
             'rating',
             'dispatch_mode',

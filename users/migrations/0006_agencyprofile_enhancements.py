@@ -1,5 +1,6 @@
 import django.contrib.gis.db.models.fields
 import django.db.models.deletion
+from django.contrib.postgres.indexes import GistIndex
 from django.db import migrations, models
 
 
@@ -8,7 +9,7 @@ def deduplicate_agency_users(apps, schema_editor):
     AgencyProfile = apps.get_model('users', 'AgencyProfile')
     
     for agency in AgencyProfile.objects.all():
-        users = CustomUser.objects.filter(agency=agency).order_by('created_at')
+        users = CustomUser.objects.filter(agency=agency).order_by('date_joined')
         if users.count() > 1:
             first_user = users.first()
             CustomUser.objects.filter(agency=agency).exclude(pk=first_user.pk).update(agency=None)
@@ -60,6 +61,6 @@ class Migration(migrations.Migration):
         # Add GistIndex to coverage_polygon
         migrations.AddIndex(
             model_name='agencyprofile',
-            index=django.contrib.postgres.indexes.GistIndex(fields=['coverage_polygon'], name='users_agenc_coverag_bb79fd_gist'),
+            index=GistIndex(fields=['coverage_polygon'], name='users_agenc_coverag_bb79fd_gist'),
         ),
     ]

@@ -63,7 +63,6 @@ class TestAgencyOnboarding:
         agency.refresh_from_db()
         assert agency.status == AgencyStatus.VERIFIED
         
-        # Test signal handled profile creation for other AgencyAdmins
     def test_non_admin_cannot_approve(self, api_client):
         # Create an agency
         agency = AgencyProfile.objects.create(
