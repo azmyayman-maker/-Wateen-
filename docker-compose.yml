@@ -1,0 +1,143 @@
+services:
+  db:
+    image: postgis/postgis:16-3.4
+    container_name: wateen_db
+    hostname: db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-wateen_db}
+      DB_USER: ${POSTGRES_USER:-wateen_admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-wateen_secure_password_123}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - wateen_postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+    networks:
+      - wateen_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d wateen_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: wateen_redis
+    hostname: redis
+    command: redis-server --appendonly yes --requirepass ""
+    volumes:
+      - wateen_redis_data:/data
+    networks:
+      - wateen_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: wateen_web
+    hostname: web
+    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    environment:
+      DEBUG: "False"
+      SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
+      ALLOWED_HOSTS: localhost,127.0.0.1,nginx
+      DATABASE_URL: postgresql://${POSTGRES_USER:-wateen_admin}:${POSTGRES_PASSWORD:-wateen_secure_password_123}@db:5432/${POSTGRES_DB:-wateen_db}
+      REDIS_URL: redis://redis:6379/0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: ${POSTGRES_USER:-wateen_admin}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-wateen_secure_password_123}
+      DB_NAME: ${POSTGRES_DB:-wateen_db}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    volumes:
+      - .:/app
+      - wateen_media_volume:/app/media
+    networks:
+      - wateen_network
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wateen_frontend
+    hostname: frontend
+    environment:
+      NODE_ENV: production
+      REACT_APP_API_URL: http://localhost:8000
+    volumes:
+      - ./frontend:/app:ro
+    networks:
+      - wateen_network
+    depends_on:
+      - web
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:1.25-alpine
+    container_name: wateen_nginx
+    hostname: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - wateen_media_volume:/app/media:ro
+    networks:
+      - wateen_network
+    depends_on:
+      - web
+      - frontend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+volumes:
+  wateen_postgres_data:
+    driver: local
+  wateen_redis_data:
+    driver: local
+  wateen_media_volume:
+    driver: local
+
+networks:
+  wateen_network:
+    driver: bridge

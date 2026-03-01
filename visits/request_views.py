@@ -8,7 +8,7 @@ from django.contrib.gis.geos import Point
 
 from visits.models import Visit, ServiceType, VisitStatus
 from users.models import AgencyProfile, AgencyStatus
-from .serializers import VisitSerializer
+from .serializers import VisitResponseSerializer
 from .services.dispatch import DispatchEngine
 
 class VisitRequestSchema(AutoSchema):
@@ -50,7 +50,7 @@ class VisitRequestView(generics.CreateAPIView):
     whose coverage polygon includes the patient's location.
     """
     queryset = Visit.objects.all()
-    serializer_class = VisitSerializer
+    serializer_class = VisitResponseSerializer
     permission_classes = [IsAuthenticated]
     schema = VisitRequestSchema()
     

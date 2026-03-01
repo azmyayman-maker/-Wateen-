@@ -35,6 +35,16 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    """
+    User registration serializer with role escalation prevention.
+    
+    FR-005: Limits self-registration to PATIENT and AGENCY_ADMIN only.
+    FR-006: Rejects SUPERADMIN and NURSE roles with Arabic validation errors.
+    """
+    
+    # Roles allowed for self-registration (FR-005)
+    SELF_REGISTRATION_ROLES = {UserRole.PATIENT, UserRole.AGENCY_ADMIN}
+    
     password = serializers.CharField(
         write_only=True,
         required=True,
@@ -72,6 +82,23 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             'last_name_ar': {'required': False}
         }
     
+    def validate_role(self, value):
+        """
+        Validate role field to prevent privilege escalation (FR-005, FR-006).
+        
+        Only PATIENT and AGENCY_ADMIN roles can be self-registered.
+        SUPERADMIN and NURSE must be created via CLI or agency invitation flow.
+        """
+        if value == UserRole.SUPERADMIN:
+            raise serializers.ValidationError(
+                _('لا يمكن التسجيل كمدير نظام. يتم إنشاء مديري النظام عبر سطر الأوامر فقط.')
+            )
+        if value == UserRole.NURSE:
+            raise serializers.ValidationError(
+                _('لا يمكن التسجيل كممرض/ة. يتم إضافة الممرضين عبر دعوة الوكالة فقط.')
+            )
+        return value
+    
     def validate_national_id(self, value: str) -> str:
         validate_egyptian_national_id(value)
         return value
@@ -103,6 +130,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
+    """
+    User profile serializer with role as read-only.
+    
+    FR-007: role is read-only to prevent role changes via profile update.
+    This is intentional for RBAC security - role changes require admin intervention.
+    """
     full_name = serializers.CharField(source='get_full_name', read_only=True)
     
     class Meta:
@@ -112,7 +145,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             'national_id',
             'phone_number',
             'email',
-            'role',
+            'role',  # FR-007: Read-only to prevent privilege escalation
             'first_name_ar',
             'last_name_ar',
             'full_name',
@@ -123,7 +156,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         read_only_fields = [
             'id',
             'national_id',
-            'role',
+            'role',  # FR-007: Intentionally read-only
             'is_active',
             'date_joined',
             'updated_at'

@@ -28,27 +28,59 @@ class IsSuperAdmin(BasePermission):
 
 
 class IsAgencyAdmin(BasePermission):
-    """Allow access only to AGENCY_ADMIN users."""
+    """
+    Allow access only to AGENCY_ADMIN users with a verified agency.
+    
+    FR-001: Grants access ONLY to authenticated users with role=AGENCY_ADMIN
+    AND a verified AgencyProfile (status=VERIFIED).
+    FR-002: Handles missing AgencyProfile gracefully without raising 500 errors.
+    """
 
-    message = 'يجب أن يكون لديك صلاحيات مدير الوكالة'
+    message = 'يجب أن يكون لديك صلاحيات مدير وكالة موثقة'
 
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.is_agency_admin
-        )
+        # Check basic authentication
+        if not (request.user and request.user.is_authenticated):
+            return False
+        
+        # Check user has AGENCY_ADMIN role
+        if not request.user.is_agency_admin:
+            return False
+        
+        # Check agency exists and is verified (FR-001, FR-002)
+        agency = getattr(request.user, 'agency', None)
+        if agency is None:
+            return False
+        
+        return agency.status == 'verified'
 
 
 class IsAgencyAdminOrSuperAdmin(BasePermission):
-    """Allow access to AGENCY_ADMIN or SUPERADMIN users."""
+    """
+    Allow access to AGENCY_ADMIN with verified agency OR SUPERADMIN users.
+    
+    SUPERADMIN bypasses the agency check.
+    """
 
     message = 'يجب أن يكون لديك صلاحيات مدير وكالة أو مدير النظام'
 
     def has_permission(self, request, view):
         if not (request.user and request.user.is_authenticated):
             return False
-        return request.user.is_agency_admin or request.user.is_superadmin
+        
+        # SUPERADMIN bypasses agency check
+        if request.user.is_superadmin:
+            return True
+        
+        # AGENCY_ADMIN must have verified agency
+        if not request.user.is_agency_admin:
+            return False
+        
+        agency = getattr(request.user, 'agency', None)
+        if agency is None:
+            return False
+        
+        return agency.status == 'verified'
 
 
 class IsNurseOrAbove(BasePermission):
