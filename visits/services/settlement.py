@@ -23,10 +23,10 @@ class SettlementService:
         
         transaction = Transaction(
             visit=visit,
-            total_amount=total,
-            status=TransactionStatus.PENDING,
+            amount_paid=total,
+            status=TransactionStatus.ESCROWED,
         )
-        transaction.calculate_split()
+        # Payout is auto-calculated on save
         transaction.save()
         return transaction
 
@@ -35,7 +35,7 @@ class SettlementService:
         """Marks a transaction as escrowed after payment intent creation."""
         try:
             transaction = visit.transaction
-            transaction.stripe_payment_intent_id = payment_intent_id
+            transaction.paymob_order_id = payment_intent_id
             transaction.status = TransactionStatus.ESCROWED
             transaction.save()
         except Exception as e:
@@ -70,7 +70,7 @@ class SettlementService:
                 from users.models import AgencyProfile
 
                 AgencyProfile.objects.filter(pk=agency.pk).update(
-                    wallet_balance=F("wallet_balance") + transaction.agency_amount
+                    wallet_balance=F("wallet_balance") + transaction.agency_payout
                 )
                 agency.refresh_from_db()
 

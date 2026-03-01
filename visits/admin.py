@@ -1,17 +1,73 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import EstimateLog, PricingFactor, ServiceType, Visit
+from .models import EstimateLog, PricingFactor, ServiceType, Transaction, Visit
 
 
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
-    list_display = ("id", "patient", "nurse", "status", "service_type", "created_at")
-    list_filter = ("status", "service_type")
+    list_display = (
+        "id",
+        "patient",
+        "agency",
+        "nurse",
+        "status",
+        "service_type",
+        "created_at",
+    )
+    list_filter = ("status", "service_type", "agency")
     search_fields = ("patient__user__national_id", "nurse__user__national_id")
-    readonly_fields = ("id", "created_at", "updated_at")
-    raw_id_fields = ("patient", "nurse")
+    readonly_fields = (
+        "id",
+        "created_at",
+        "updated_at",
+        "base_price",
+        "time_multiplier",
+        "distance_km",
+        "distance_rate",
+        "ai_surge_coefficient",
+        "final_price",
+    )
+    raw_id_fields = ("patient", "nurse", "agency")
     ordering = ("-created_at",)
+
+    fieldsets = (
+        (
+            None,
+            {
+                "fields": (
+                    "patient",
+                    "agency",
+                    "nurse",
+                    "status",
+                    "service_type",
+                    "location",
+                )
+            },
+        ),
+        (
+            _("Pricing"),
+            {
+                "fields": (
+                    "base_price",
+                    "distance_fee",
+                    "distance_km",
+                    "distance_rate",
+                    "time_multiplier",
+                    "ai_surge_coefficient",
+                    "final_price",
+                ),
+                "classes": ("collapse",),
+            },
+        ),
+        (
+            _("Metadata"),
+            {
+                "fields": ("id", "reroute_attempts", "created_at", "updated_at"),
+                "classes": ("collapse",),
+            },
+        ),
+    )
 
 
 @admin.register(ServiceType)
@@ -77,3 +133,48 @@ class EstimateLogAdmin(admin.ModelAdmin):
 
     def has_delete_permission(self, request, obj=None):
         return False
+
+
+@admin.register(Transaction)
+class TransactionAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "visit",
+        "agency",
+        "amount_paid",
+        "wateen_take_rate",
+        "agency_payout",
+        "status",
+        "created_at",
+    )
+    list_filter = ("status", "agency")
+    search_fields = ("visit__id", "agency__manager_name")
+    readonly_fields = (
+        "id",
+        "amount_paid",
+        "wateen_take_rate",
+        "agency_payout",
+        "created_at",
+        "updated_at",
+    )
+    ordering = ("-created_at",)
+
+    fieldsets = (
+        (None, {"fields": ("visit", "agency", "status")}),
+        (
+            _("Financial"),
+            {"fields": ("amount_paid", "wateen_take_rate", "agency_payout")},
+        ),
+        (
+            _("Paymob"),
+            {"fields": ("paymob_order_id", "paymob_transaction_id")},
+        ),
+        (
+            _("Settlement"),
+            {"fields": ("settled_at",)},
+        ),
+        (
+            _("Metadata"),
+            {"fields": ("id", "created_at", "updated_at"), "classes": ("collapse",)},
+        ),
+    )

@@ -150,15 +150,15 @@ class Visit(models.Model):
     )
     agency = models.ForeignKey(
         "users.AgencyProfile",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         related_name="visits",
         verbose_name=_("الشركة/الوكالة المنفذة"),
-        null=True,  # Allow null temporarily for initial migration of existing P2P visits
+        null=True,
         blank=True,
     )
     nurse = models.ForeignKey(
         "users.NurseProfile",
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         blank=True,
         related_name="visits",
@@ -201,6 +201,24 @@ class Visit(models.Model):
         null=True,
         blank=True,
         help_text=_("رسوم المسافة المحسوبة"),
+    )
+    distance_km = models.DecimalField(
+        _("المسافة بالكيلومتر"),
+        max_digits=6,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=_("المسافة بالكيلومتر"),
+    )
+    distance_rate = models.DecimalField(
+        _("سعر الكيلومتر"),
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+        help_text=_("سعر الكيلومتر"),
     )
     time_multiplier = models.DecimalField(
         _("معامل الوقت"),
@@ -245,8 +263,43 @@ class Visit(models.Model):
         db_table = "visits_visit"
         ordering = ["-created_at"]
 
+    IMMUTABLE_PRICING_FIELDS = (
+        "base_price",
+        "distance_fee",
+        "distance_km",
+        "distance_rate",
+        "time_multiplier",
+        "ai_surge_coefficient",
+        "final_price",
+    )
+
     def __str__(self) -> str:
         return f"Visit({str(self.id)[:8]}—{self.status})"
+
+    def save(self, *args, **kwargs) -> None:
+        update_fields = kwargs.get("update_fields", None)
+        pricing_fields_touched = (
+            update_fields is not None
+            and set(update_fields) & set(self.IMMUTABLE_PRICING_FIELDS)
+        )
+        if self.pk is not None and (
+            update_fields is None
+            or not {"status", "updated_at"}.issubset(update_fields)
+            or pricing_fields_touched
+        ):
+            try:
+                old_instance = Visit.objects.get(pk=self.pk)
+                for field_name in self.IMMUTABLE_PRICING_FIELDS:
+                    old_value = getattr(old_instance, field_name)
+                    new_value = getattr(self, field_name)
+                    if old_value != new_value:
+                        raise ValidationError(
+                            _("لا يمكن تعديل حقل السعر بعد إنشاء الزيارة."),
+                            code="immutable_pricing",
+                        )
+            except Visit.DoesNotExist:
+                pass
+        super().save(*args, **kwargs)
 
     def transition_to(self, new_status: str) -> None:
         """
@@ -334,11 +387,9 @@ class EstimateLog(models.Model):
 
 
 class TransactionStatus(models.TextChoices):
-    PENDING = "PENDING", _("قيد المعالجة")
     ESCROWED = "ESCROWED", _("في الضمان")
     SETTLED = "SETTLED", _("تمت التسوية")
     REFUNDED = "REFUNDED", _("تم الاسترجاع")
-    FAILED = "FAILED", _("فشلت")
 
 
 class Transaction(models.Model):
@@ -354,63 +405,85 @@ class Transaction(models.Model):
     )
     visit = models.OneToOneField(
         Visit,
-        on_delete=models.CASCADE,
+        on_delete=models.PROTECT,
         related_name="transaction",
         verbose_name=_("الزيارة"),
     )
-    stripe_payment_intent_id = models.CharField(
-        _("معرف الدفع في سترايب"),
+    agency = models.ForeignKey(
+        "users.AgencyProfile",
+        on_delete=models.PROTECT,
+        related_name="transactions",
+        verbose_name=_("الوكالة"),
+    )
+    paymob_order_id = models.CharField(
+        _("معرف الطلب في Paymob"),
         max_length=255,
         blank=True,
         null=True,
     )
-    total_amount = models.DecimalField(
-        _("إجمالي المبلغ"),
+    paymob_transaction_id = models.CharField(
+        _("معرف المعاملة في Paymob"),
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    amount_paid = models.DecimalField(
+        _("المبلغ المدفوع"),
         max_digits=10,
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.00"))],
     )
-    take_rate_percent = models.DecimalField(
+    wateen_take_rate = models.DecimalField(
         _("نسبة المنصة"),
         max_digits=5,
         decimal_places=2,
-        default=Decimal("15.00"),  # Default 15%
-        validators=[MinValueValidator(Decimal("0.00")), MaxValueValidator(Decimal("100.00"))],
+        default=Decimal("15.00"),
+        validators=[
+            MinValueValidator(Decimal("0.00")),
+            MaxValueValidator(Decimal("100.00")),
+        ],
     )
-    take_rate_amount = models.DecimalField(
-        _("مبلغ المنصة"),
-        max_digits=10,
-        decimal_places=2,
-        validators=[MinValueValidator(Decimal("0.00"))],
-    )
-    agency_amount = models.DecimalField(
+    agency_payout = models.DecimalField(
         _("مبلغ الوكالة"),
         max_digits=10,
         decimal_places=2,
+        editable=False,
+        null=True,
+        blank=True,
         validators=[MinValueValidator(Decimal("0.00"))],
     )
     status = models.CharField(
         _("الحالة"),
         max_length=20,
         choices=TransactionStatus.choices,
-        default=TransactionStatus.PENDING,
+        default=TransactionStatus.ESCROWED,
+    )
+    settled_at = models.DateTimeField(
+        _("تاريخ التسوية"),
+        null=True,
+        blank=True,
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def clean(self):
-        super().clean()
-        if self.total_amount is not None and self.take_rate_percent is not None:
-            expected_take_rate = (self.total_amount * self.take_rate_percent) / Decimal("100")
-            if self.take_rate_amount is not None and self.take_rate_amount != expected_take_rate:
-                raise ValidationError({"take_rate_amount": _("مبلغ المنصة يجب أن يساوي إجمالي المبلغ مضروباً في نسبة المنصة مقسومة على 100.")})
-            if self.take_rate_amount is not None and self.agency_amount is not None:
-                expected_agency_amount = self.total_amount - self.take_rate_amount
-                if self.agency_amount != expected_agency_amount:
-                    raise ValidationError({"agency_amount": _("مبلغ الوكالة يجب أن يساوي إجمالي المبلغ ناقص مبلغ المنصة.")})
+    def save(self, *args, **kwargs) -> None:
+        from django.utils import timezone
 
-    def save(self, *args, **kwargs):
-        self.full_clean()
+        if self.amount_paid is not None:
+            self.agency_payout = self.amount_paid * (
+                Decimal("1") - self.wateen_take_rate / Decimal("100")
+            )
+        if self.status == TransactionStatus.SETTLED and not self.settled_at:
+            self.settled_at = timezone.now()
+
+        update_fields = kwargs.get("update_fields")
+        if update_fields is not None:
+            update_fields_set = set(update_fields)
+            update_fields_set.add("agency_payout")
+            if self.settled_at is not None:
+                update_fields_set.add("settled_at")
+            kwargs["update_fields"] = list(update_fields_set)
+
         super().save(*args, **kwargs)
 
     class Meta:
@@ -418,10 +491,25 @@ class Transaction(models.Model):
         verbose_name_plural = _("العمليات المالية")
         db_table = "visits_transaction"
 
+
+class TransactionLegacyBackup(models.Model):
+    """
+    Backup table to safely store legacy financial columns before their removal
+    from the main Transaction table. Preserves historical data integrity.
+    """
+    transaction = models.OneToOneField(
+        Transaction, on_delete=models.CASCADE, related_name="legacy_backup"
+    )
+    agency_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    take_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    take_rate_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "visits_transaction_legacy_backup"
+
+
     def __str__(self):
         return f"Transaction({self.id}) - {self.status}"
-
-    def calculate_split(self):
-        """Calculates the split between platform and agency."""
-        self.take_rate_amount = (self.total_amount * self.take_rate_percent) / Decimal("100")
-        self.agency_amount = self.total_amount - self.take_rate_amount
