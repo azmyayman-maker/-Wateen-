@@ -7,7 +7,7 @@ BEGIN
   IF NOT EXISTS (
     SELECT FROM pg_roles WHERE rolname = 'wateen_admin'
   ) THEN
-    CREATE ROLE wateen_admin WITH LOGIN PASSWORD 'wateen_secure_password_123' SUPERUSER;
+    CREATE ROLE wateen_admin WITH LOGIN PASSWORD :'wateen_password';
     ALTER ROLE wateen_admin CREATEDB;
     ALTER ROLE wateen_admin CREATEROLE;
   END IF;

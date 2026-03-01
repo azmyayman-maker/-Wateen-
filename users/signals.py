@@ -20,5 +20,3 @@ def create_user_profile(sender, instance, created, **_kwargs):
     """
     if instance.role == UserRole.PATIENT:
         PatientProfile.objects.get_or_create(user=instance)
-    elif instance.role == UserRole.NURSE:
-        NurseProfile.objects.get_or_create(user=instance)

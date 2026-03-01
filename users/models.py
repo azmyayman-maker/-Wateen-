@@ -379,12 +379,7 @@ class NurseProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="nurses",
         verbose_name=_("الشركة/الوكالة التابع لها"),
-        # TODO: [Phase 1.5] Data migration required before removing null=True
-        # 1. Create a default agency OR assign existing nurses to agencies
-        # 2. Run: python manage.py shell < scripts/assign_nurses_to_agencies.py
-        # 3. Then remove null=True, blank=True from this field
-        null=True,
-        blank=True,
+        # Agency assignment is now fully strictly enforced at the database level.
     )
     national_id_document = models.CharField(
         _("رقم الهوية المهنية"),
