@@ -4,8 +4,25 @@ import django.contrib.gis.db.models.fields
 import django.db.models.deletion
 import users.models
 import uuid
+from decimal import Decimal
 from django.db import migrations, models
 
+
+def backfill_nurse_agency(apps, schema_editor):
+    NurseProfile = apps.get_model('users', 'NurseProfile')
+    AgencyProfile = apps.get_model('users', 'AgencyProfile')
+    
+    if NurseProfile.objects.filter(agency__isnull=True).exists():
+        default_agency, _ = AgencyProfile.objects.get_or_create(
+            commercial_registry='DEFAULT000',
+            defaults={
+                'manager_name': 'Default Migration Agency',
+                'moh_license_number': 'DEFAULT000',
+                'tax_id': 'DEFAULT000',
+                'status': 'verified',
+            }
+        )
+        NurseProfile.objects.filter(agency__isnull=True).update(agency=default_agency)
 
 class Migration(migrations.Migration):
 
@@ -24,10 +41,10 @@ class Migration(migrations.Migration):
                 ('tax_id', models.CharField(max_length=100, unique=True, verbose_name='البطاقة الضريبية')),
                 ('status', models.CharField(choices=[('pending', 'قيد المراجعة'), ('verified', 'موثق'), ('suspended', 'موقوف'), ('rejected', 'مرفوض')], default='pending', max_length=20, verbose_name='الحالة')),
                 ('coverage_polygon', django.contrib.gis.db.models.fields.PolygonField(blank=True, null=True, srid=4326, verbose_name='نطاق التغطية')),
-                ('rating', models.DecimalField(decimal_places=2, default=5.0, max_digits=3, verbose_name='التقييم')),
+                ('rating', models.DecimalField(decimal_places=2, default=Decimal('5.00'), max_digits=3, verbose_name='التقييم')),
                 ('network_capacity', models.PositiveIntegerField(default=0, verbose_name='سعة الشبكة (عدد الممرضين)')),
                 ('dispatch_mode', models.CharField(choices=[('AUTO', 'آلي'), ('MANUAL', 'يدوي')], default='AUTO', max_length=10, verbose_name='آلية التوزيع')),
-                ('wallet_balance', models.DecimalField(decimal_places=2, default=0.0, max_digits=12, verbose_name='رصيد المحفظة')),
+                ('wallet_balance', models.DecimalField(decimal_places=2, default=Decimal('0.00'), max_digits=12, verbose_name='رصيد المحفظة')),
                 ('stripe_account_id', models.CharField(blank=True, help_text='Stripe Connect Account ID for payouts', max_length=100, null=True, verbose_name='معرف حساب سترايب')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')),
                 ('updated_at', models.DateTimeField(auto_now=True, verbose_name='تاريخ التحديث')),
@@ -45,6 +62,12 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(blank=True, help_text='الشركة التابع لها المستخدم (للمديرين)', null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='admin_users', to='users.agencyprofile', verbose_name='الشركة/الوكالة'),
         ),
         migrations.AddField(
+            model_name='nurseprofile',
+            name='agency',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='nurses', to='users.agencyprofile', verbose_name='الشركة/الوكالة التابع لها'),
+        ),
+        migrations.RunPython(backfill_nurse_agency, reverse_code=migrations.RunPython.noop),
+        migrations.AlterField(
             model_name='nurseprofile',
             name='agency',
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='nurses', to='users.agencyprofile', verbose_name='الشركة/الوكالة التابع لها'),
