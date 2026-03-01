@@ -1,13 +1,13 @@
-# Implementation Plan: [FEATURE]
+# Implementation Plan: Nurse Invitation Flow
 
-**Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
-**Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
+**Branch**: `009-nurse-invitation` | **Date**: 2026-03-01 | **Spec**: `/specs/009-nurse-invitation/spec.md`
+**Input**: Feature specification from `/specs/009-nurse-invitation/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
+**Note**: This template was filled via `/speckit.plan`. See `.specify/templates/plan-template.md` for reference.
 
 ## Summary
 
-[Extract from feature spec: primary requirement + technical approach from research]
+Implementing the cryptographic Nurse Invitation Flow and secure serializers against cross-agency hijacking (IDOR), tying nurses tightly to verified agencies.
 
 ## Technical Context
 
@@ -31,7 +31,7 @@
 
 _GATE: Passed_
 
-[Gates determined based on constitution file]
+Aligns with IDOR protection constraints and PostGIS architecture.
 
 ## Project Structure
 

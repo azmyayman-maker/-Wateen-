@@ -4,7 +4,7 @@
 
 ### 1. Invite Nurse
 
-**URL**: `POST /api/v1/agencies/invite-nurse/`
+**URL**: `POST /api/v1/agency/invite-nurse/`
 **Auth**: `IsAuthenticated`, `IsAgencyAdmin`
 
 **Request Payload**:
@@ -37,7 +37,7 @@
   "password": "SecurePassword123",
   "email": "nurse@example.com",
   "national_id": "29001011234567",
-  "syndicate_id": "SYN-12345",
+  "syndicate_number": "SYN-12345",
   "full_name": "Fatima Ahmed"
 }
 ```

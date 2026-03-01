@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)),
                 ('phone', models.CharField(max_length=20, verbose_name='الهاتف')),
-                ('token', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, unique=True)),
+                ('token', models.UUIDField(default=uuid.uuid4, editable=False, unique=True)),
                 ('status', models.CharField(choices=[('PENDING', 'قيد الانتظار'), ('ACCEPTED', 'مقبول'), ('EXPIRED', 'منتهي الصلاحية')], default='PENDING', max_length=15, verbose_name='الحالة')),
                 ('expires_at', models.DateTimeField(verbose_name='تاريخ الانتهاء')),
                 ('created_at', models.DateTimeField(auto_now_add=True, verbose_name='تاريخ الإنشاء')),

@@ -394,6 +394,7 @@ class NurseProfile(models.Model):
         max_length=50,
         blank=True,
         default="",
+        unique=True,
     )
     syndicate_expiry = models.DateField(
         _("انتهاء عضوية النقابة"),
@@ -435,13 +436,15 @@ class NurseProfile(models.Model):
         verbose_name = _("ملف الممرض/ة")
         verbose_name_plural = _("ملفات الممرضين")
         db_table = "users_nurse_profile"
-        # TODO: [Phase 1.5] Add database constraint after data migration
         # constraints = [
         #     CheckConstraint(
         #         check=~Q(agency__isnull=True),
         #         name='nurse_must_belong_to_agency'
         #     ),
         # ]
+        indexes = [
+            GistIndex(fields=["last_location"]),
+        ]
 
     def __str__(self) -> str:
         return f"NurseProfile({self.user.national_id})"
@@ -485,7 +488,7 @@ class NurseInvitation(models.Model):
         verbose_name=_("الوكالة"),
     )
     phone = models.CharField(_("الهاتف"), max_length=20)
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     status = models.CharField(
         _("الحالة"),
         max_length=15,

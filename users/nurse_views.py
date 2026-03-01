@@ -49,61 +49,45 @@ class InviteNurseView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class AcceptNurseInvitationView(APIView):
-    """
-    Endpoint for a prospective nurse to consume an invitation token,
-    create their account, and securely bind to the agency.
-    """
-    permission_classes = [AllowAny]
-
-    @transaction.atomic
-    def post(self, request: HttpRequest) -> HttpResponse:
-        token_str = request.data.get("token")
-        password = request.data.get("password")
-        
-        phone_number = request.data.get("phone", "")
-        email = request.data.get("email", "")
-        national_id = request.data.get("national_id", "")
-        syndicate_number = request.data.get("syndicate_number", "")
-        full_name = request.data.get("full_name", "")
-
-        if not token_str or not password or not national_id or not phone_number or not syndicate_number:
-            return Response(
-                {"detail": "token, password, national_id, syndicate_number and phone are required."}, 
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
+class NurseInvitationService:
+    @staticmethod
+    def accept_invitation(token_str, password, phone_number, email, national_id, syndicate_number, first_name, last_name):
         try:
             token_uuid = uuid.UUID(token_str)
         except ValueError:
-            return Response({"detail": "Invalid token format."}, status=status.HTTP_400_BAD_REQUEST)
+            raise DjangoValidationError("Invalid token format.", code="invalid_format")
 
-        # 1. Fetch and validate the invitation
-        try:
-            invitation = NurseInvitation.objects.select_for_update().get(
-                token=token_uuid, 
-                status=InvitationStatus.PENDING
-            )
-        except NurseInvitation.DoesNotExist:
-            return Response({"detail": "Invalid or already consumed invitation token."}, status=status.HTTP_400_BAD_REQUEST)
+        # Initial check without lock to handle expiry without rolling back
+        invitation = NurseInvitation.objects.filter(
+            token=token_uuid,
+            status=InvitationStatus.PENDING
+        ).first()
+
+        if not invitation:
+            raise DjangoValidationError("Invalid or already consumed invitation token.", code="invalid_token")
 
         if not invitation.is_valid:
+            # We can save this safely now since we are not in an atomic block that will rollback
             invitation.status = InvitationStatus.EXPIRED
-            invitation.save()
-            return Response({"detail": "Invitation has expired."}, status=status.HTTP_400_BAD_REQUEST)
+            invitation.save(update_fields=["status"])
+            raise DjangoValidationError("Invitation has expired.", code="expired_token")
 
-        # 2. Validate password
-        try:
+        # Now enter the atomic transaction for creation and locking
+        with transaction.atomic():
+            # Re-fetch with lock to prevent race conditions
+            invitation = NurseInvitation.objects.select_for_update().filter(
+                token=token_uuid,
+                status=InvitationStatus.PENDING
+            ).first()
+
+            if not invitation:
+                raise DjangoValidationError("Invalid or already consumed invitation token.", code="invalid_token")
+
+            # Strict validation: Ensure phone matches invitation
+            if invitation.phone != phone_number:
+                raise DjangoValidationError("Phone number does not match the invitation.", code="phone_mismatch")
+
             validate_password(password)
-        except DjangoValidationError as e:
-            return Response({"detail": list(e.messages)}, status=status.HTTP_400_BAD_REQUEST)
-
-        # 3. Create CustomUser & NurseProfile atomically
-        try:
-            # Split full name into first and last roughly
-            name_parts = full_name.split(" ", 1)
-            first_name = name_parts[0] if name_parts else ""
-            last_name = name_parts[1] if len(name_parts) > 1 else ""
 
             user = CustomUser.objects.create_user(
                 national_id=national_id,
@@ -121,15 +105,66 @@ class AcceptNurseInvitationView(APIView):
                 syndicate_number=syndicate_number
             )
 
-            # Mark invitation as accepted
             invitation.status = InvitationStatus.ACCEPTED
-            invitation.save()
+            invitation.save(update_fields=["status"])
 
+            return user, invitation.agency
+
+
+class AcceptNurseInvitationView(APIView):
+    """
+    Endpoint for a prospective nurse to consume an invitation token,
+    create their account, and securely bind to the agency.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request: HttpRequest) -> HttpResponse:
+        token_str = request.data.get("token")
+        password = request.data.get("password")
+        
+        phone_number = request.data.get("phone", "")
+        email = request.data.get("email", "")
+        national_id = request.data.get("national_id", "")
+        syndicate_number = request.data.get("syndicate_number", "")
+        full_name = request.data.get("full_name", "")
+
+        if not token_str or not password or not national_id or not phone_number or not syndicate_number:
+            return Response(
+                {"detail": "token, password, national_id, syndicate_number and phone are required."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        name_parts = full_name.split(" ", 1)
+        first_name = name_parts[0] if name_parts else ""
+        last_name = name_parts[1] if len(name_parts) > 1 else ""
+
+        try:
+            user, agency = NurseInvitationService.accept_invitation(
+                token_str=token_str,
+                password=password,
+                phone_number=phone_number,
+                email=email,
+                national_id=national_id,
+                syndicate_number=syndicate_number,
+                first_name=first_name,
+                last_name=last_name
+            )
+        except DjangoValidationError as e:
+            if hasattr(e, "code"):
+                if e.code == "invalid_token":
+                    return Response({"detail": e.message}, status=status.HTTP_404_NOT_FOUND)
+                elif e.code == "expired_token":
+                    return Response({"detail": e.message}, status=status.HTTP_410_GONE)
+            
+            messages = e.messages if hasattr(e, "messages") else [str(e)]
+            return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
         except IntegrityError as e:
-            transaction.set_rollback(True)
-            return Response({"detail": "A user with this national_id or phone already exists.", "error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.exception("Failed to register nurse: IntegrityError")
+            return Response(
+                {"detail": "A user with this national_id or phone already exists."}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
         except Exception as e:
-            transaction.set_rollback(True)
             logger.exception("Failed to register nurse")
             return Response({"detail": "Failed to register nurse"}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -137,7 +172,7 @@ class AcceptNurseInvitationView(APIView):
             {
                 "message": "Nurse registration successful",
                 "user_id": str(user.id),
-                "agency_id": str(invitation.agency.id)
+                "agency_id": str(agency.id)
             },
             status=status.HTTP_201_CREATED
         )

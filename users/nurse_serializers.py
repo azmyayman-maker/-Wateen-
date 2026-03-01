@@ -26,7 +26,7 @@ class NurseProfileSerializer(serializers.ModelSerializer):
             "syndicate_number"
         ]
 
-    def validate_agency(self, value: AgencyProfile):
+    def validate_agency(self, value: AgencyProfile) -> AgencyProfile:
         request = self.context.get("request")
         if not request or not hasattr(request, "user"):
             raise serializers.ValidationError(_("Request context is missing."))

@@ -10,7 +10,8 @@ Represents a MoH-Licensed nurse securely bound to an agency. Modifying existing 
 
 - `user`: `OneToOneField(CustomUser, on_delete=CASCADE, primary_key=True)` (Provides names via `first_name_ar` and `last_name_ar`)
 - `agency`: `ForeignKey(AgencyProfile, null=False, blank=False, on_delete=CASCADE)` - **Constraint Enforced**
-- `national_id_document`: `FileField(...)`
+- `full_name`: `CharField(max_length=255)` (Implemented as first_name_ar and last_name_ar on CustomUser)
+- `national_id`: `CharField(max_length=14, unique=True)`
 - `syndicate_number`: `CharField(max_length=50, unique=True)`
 - `syndicate_expiry`: `DateField(...)`
 - `is_available`: `BooleanField(default=False)`

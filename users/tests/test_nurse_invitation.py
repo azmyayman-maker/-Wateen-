@@ -1,6 +1,5 @@
 import uuid
 from datetime import timedelta
-from unittest.mock import patch
 import pytest
 from django.urls import reverse
 from django.utils import timezone
@@ -171,13 +170,13 @@ class TestNurseAcceptanceFlow:
             "full_name": "Fatima Ahmed"
         }
         response = api_client.post(url, data, secure=True)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_410_GONE
         assert "expired" in response.data["detail"].lower()
         
         valid_invitation.refresh_from_db()
         assert valid_invitation.status == InvitationStatus.EXPIRED
 
-    def test_accept_invitation_idor_atomic_rollback(self, api_client, valid_invitation):
+    def test_accept_invitation_duplicate_national_id_atomic_rollback(self, api_client, valid_invitation):
         """
         To test atomic rollback, we will attempt to create a nurse with an already existing national_id.
         The user creation might succeed (if we caught the DB error for user), or fail.
@@ -225,5 +224,5 @@ class TestNurseAcceptanceFlow:
             "full_name": "Fatima Ahmed"
         }
         response = api_client.post(url, data, secure=True)
-        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert response.status_code == status.HTTP_404_NOT_FOUND
         assert "Invalid or already consumed" in response.data["detail"]
