@@ -1,5 +1,4 @@
 import sys
-import os
 from pathlib import Path
 
 # Add project root to sys.path
@@ -12,10 +11,9 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from users.models import UserRole, PatientProfile, NurseProfile
+from users.models import UserRole
 from visits.models import ServiceType, Visit, VisitStatus
 from decimal import Decimal
-from django.utils import timezone
 from django.contrib.gis.geos import Point
 from django.conf import settings
 
@@ -40,6 +38,7 @@ def patient_user(db):
 
 @pytest.fixture
 def nurse_user(db):
+    from users.models import AgencyProfile, NurseProfile
     user = User.objects.create_user(
         national_id="29001010100001",
         phone_number="01000000001",
@@ -48,7 +47,17 @@ def nurse_user(db):
         first_name_ar="Test",
         last_name_ar="Nurse"
     )
-    # Profile created by signal
+    # The signal skips nurse profile creation, so we explicitly create it with an agency
+    agency = AgencyProfile.objects.create(
+        manager_name="Test Agency",
+        commercial_registry="CR-1234",
+        moh_license_number="MOH-1234"
+    )
+    NurseProfile.objects.create(
+        user=user,
+        agency=agency,
+        is_available=True
+    )
     return user
 
 @pytest.fixture

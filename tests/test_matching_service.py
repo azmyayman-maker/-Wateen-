@@ -5,10 +5,10 @@ geospatial operations without requiring a running Redis server.
 """
 
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 import fakeredis
 import redis
-from visits.services.matching import GeoMatchingService, GEO_KEY
+from visits.services.matching import GeoMatchingService
 
 
 @pytest.fixture

@@ -10,7 +10,6 @@ This module tests the structure, validity, and consistency of:
 
 import pytest
 import json
-import os
 import re
 from pathlib import Path
 

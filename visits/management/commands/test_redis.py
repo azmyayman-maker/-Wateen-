@@ -9,16 +9,19 @@ Usage:
     python manage.py test_redis
 """
 
-from django.core.management.base import BaseCommand
-from django.core.cache import cache
-from django.conf import settings
 import os
+from typing import Any
+
+from django.core.cache import cache
+from django.core.management.base import BaseCommand
+
+
 
 
 class Command(BaseCommand):
     help = 'Test Redis Cloud connectivity for cache and channel layers'
 
-    def handle(self, *args, **options):
+    def handle(self, *args: Any, **options: Any) -> None:
         self.stdout.write("Testing Redis Cloud connectivity...")
         
         # Get Redis URL (masked for security)
@@ -101,7 +104,7 @@ class Command(BaseCommand):
             
             if received != test_message:
                 self.stdout.write(
-                    self.style.ERROR(f"Channel Layer: FAILED - Message mismatch")
+                    self.style.ERROR("Channel Layer: FAILED - Message mismatch")
                 )
                 return False
             

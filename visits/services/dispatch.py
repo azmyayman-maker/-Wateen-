@@ -1,10 +1,9 @@
 import logging
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
-from django.utils.translation import gettext_lazy as _
 
-from users.models import DispatchMode, NurseProfile, UserRole, VerificationStatus
-from visits.models import Visit, VisitStatus
+from users.models import DispatchMode, NurseProfile, VerificationStatus
+from visits.models import Visit
 from .matching import GeoMatchingService
 
 logger = logging.getLogger(__name__)

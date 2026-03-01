@@ -1,5 +1,4 @@
 import libcst as cst
-from typing import Type
 
 class ReturnTypeHintTransformer(cst.CSTTransformer):
     def leave_FunctionDef(self, original_node: cst.FunctionDef, updated_node: cst.FunctionDef) -> cst.FunctionDef:

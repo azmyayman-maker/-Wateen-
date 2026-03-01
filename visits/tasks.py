@@ -1,7 +1,6 @@
 import logging
 from celery import shared_task
-from django.utils import timezone
-from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
+from visits.models import Visit, VisitStatus, TransactionStatus
 from users.models import AgencyProfile, AgencyStatus
 from .services.dispatch import DispatchEngine
 

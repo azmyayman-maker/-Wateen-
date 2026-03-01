@@ -5,7 +5,6 @@ Contains EstimateView for price estimates and MockPaymentWebhookView for testing
 """
 
 import logging
-from decimal import Decimal
 
 from django.utils import timezone
 import dataclasses
@@ -17,9 +16,7 @@ from rest_framework.views import APIView
 from visits.models import ServiceType
 from visits.serializers import (
     EstimateRequestSerializer,
-    EstimateResponseSerializer,
     MockPaymentRequestSerializer,
-    MockPaymentResponseSerializer,
 )
 from visits.services.pricing import RuleBasedPricingStrategy
 from visits.utils import find_nearest_available_nurse

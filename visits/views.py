@@ -5,16 +5,13 @@ from rest_framework.views import APIView
 from django.utils.translation import gettext_lazy as _
 from django.db import transaction
 
-from users.models import UserRole, PatientProfile, NurseProfile
+from users.models import UserRole, NurseProfile
 from .models import Visit, VisitStatus
 from .serializers import (
-    VisitRequestSerializer,
-    VisitResponseSerializer,
     NurseToggleSerializer,
     NurseRespondSerializer,
     NursePendingVisitSerializer,
 )
-from .services import create_visit_request, broadcast_visit_request
 
 import logging
 

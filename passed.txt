@@ -1,0 +1,379 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+django: version: 5.0.2, settings: config.settings (from env)
+rootdir: /app
+configfile: pytest.ini
+plugins: Faker-40.5.1, django-4.12.0
+collecting ... collected 15 items
+
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_creation_without_agency_raises_validation_error FAILED [  6%]
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_save_without_agency_raises_integrity_error FAILED [ 13%]
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_valid_nurse_creation_succeeds FAILED [ 20%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_invalid_polygon_raises_exception PASSED [ 26%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_self_intersecting_polygon_rejected PASSED [ 33%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_valid_polygon_creation_succeeds PASSED [ 40%]
+users/tests/test_migrations.py::TestMigrationSafety::test_no_unapplied_migrations PASSED [ 46%]
+users/tests/test_migrations.py::TestMigrationSafety::test_no_missing_migrations PASSED [ 53%]
+users/tests/test_migrations.py::TestMigrationSafety::test_migration_plan_loads_without_conflicts PASSED [ 60%]
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_nurse_cannot_access_agency_admin_endpoint ERROR [ 66%]
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_patient_cannot_access_manual_dispatch PASSED [ 73%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_superadmin_permission PASSED [ 80%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_agency_admin_permission PASSED [ 86%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_nurse_or_above_permission PASSED [ 93%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_owner_or_admin_permission PASSED [100%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestCrossRoleBreach.test_nurse_cannot_access_agency_admin_endpoint _
+
+    @pytest.fixture
+    def nurse():
+>       return NurseProfileFactory()
+               ^^^^^^^^^^^^^^^^^^^^^
+
+visits/tests/conftest.py:102: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:43: in __call__
+    return cls.create(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:539: in create
+    return cls._generate(enums.CREATE_STRATEGY, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:122: in _generate
+    return super()._generate(strategy, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:468: in _generate
+    return step.build()
+           ^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:270: in build
+    step.resolve(pre)
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:211: in resolve
+    self.attributes[field_name] = getattr(self.stub, field_name)
+                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:356: in __getattr__
+    value = value.evaluate_pre(
+/home/wateen/.local/lib/python3.11/site-packages/factory/declarations.py:67: in evaluate_pre
+    return self.evaluate(instance, step, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/declarations.py:457: in evaluate
+    return step.recurse(subfactory, extra, force_sequence=force_sequence)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:228: in recurse
+    return builder.build(parent_step=self, force_sequence=force_sequence)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:274: in build
+    instance = self.factory_meta.instantiate(
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:320: in instantiate
+    return self.factory._create(model, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:175: in _create
+    return manager.create(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/manager.py:87: in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/query.py:679: in create
+    obj.save(force_insert=True, using=self.db)
+/usr/local/lib/python3.11/site-packages/django/contrib/auth/base_user.py:78: in save
+    super().save(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:822: in save
+    self.save_base(
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:924: in save_base
+    post_save.send(
+/usr/local/lib/python3.11/site-packages/django/dispatch/dispatcher.py:189: in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sender = <class 'users.models.CustomUser'>
+instance = <CustomUser: 29001011200003>, created = True
+_kwargs = {'raw': False, 'signal': <django.db.models.signals.ModelSignal object at 0x7a6a84ecb050>, 'update_fields': None, 'using': 'default'}
+ValidationError = <class 'django.core.exceptions.ValidationError'>
+
+    @receiver(post_save, sender=CustomUser)
+    @transaction.atomic
+    def create_user_profile(sender: type[CustomUser], instance: CustomUser, created: bool, **_kwargs: Any) -> None:
+        """
+        Automatically create the appropriate profile based on user's role.
+        - PATIENT role -> PatientProfile
+        - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
+    
+        Uses get_or_create to be idempotent:
+        - Safe for new user creation
+        - Safe for role changes on existing users
+        - Won't overwrite existing profile data
+        """
+        if instance.role == UserRole.PATIENT:
+            PatientProfile.objects.get_or_create(user=instance)
+    
+        elif instance.role == UserRole.NURSE:
+            # A nurse must be created with an agency assigned initially, handled elsewhere,
+            # but the empty profile can be created here.
+            if not instance.agency:
+                from django.core.exceptions import ValidationError
+>               raise ValidationError("Nurses must be attached to an AgencyProfile.")
+E               django.core.exceptions.ValidationError: ['Nurses must be attached to an AgencyProfile.']
+
+users/signals.py:30: ValidationError
+=================================== FAILURES ===================================
+_ TestNurseAgencyFKIntegrity.test_nurse_creation_without_agency_raises_validation_error _
+
+self = <users.tests.test_b2b2c_integrity.TestNurseAgencyFKIntegrity object at 0x7a6a4ca2c190>
+
+    def test_nurse_creation_without_agency_raises_validation_error(self):
+        """
+        NurseProfile.save() calls full_clean() so a ValidationError is expected when agency is None.
+        """
+        from visits.tests.conftest import CustomUserFactory
+>       user = CustomUserFactory(role='NURSE')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+users/tests/test_b2b2c_integrity.py:23: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:43: in __call__
+    return cls.create(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:539: in create
+    return cls._generate(enums.CREATE_STRATEGY, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:122: in _generate
+    return super()._generate(strategy, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:468: in _generate
+    return step.build()
+           ^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:274: in build
+    instance = self.factory_meta.instantiate(
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:320: in instantiate
+    return self.factory._create(model, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:175: in _create
+    return manager.create(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/manager.py:87: in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/query.py:679: in create
+    obj.save(force_insert=True, using=self.db)
+/usr/local/lib/python3.11/site-packages/django/contrib/auth/base_user.py:78: in save
+    super().save(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:822: in save
+    self.save_base(
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:924: in save_base
+    post_save.send(
+/usr/local/lib/python3.11/site-packages/django/dispatch/dispatcher.py:189: in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sender = <class 'users.models.CustomUser'>
+instance = <CustomUser: 29001011200000>, created = True
+_kwargs = {'raw': False, 'signal': <django.db.models.signals.ModelSignal object at 0x7a6a84ecb050>, 'update_fields': None, 'using': 'default'}
+ValidationError = <class 'django.core.exceptions.ValidationError'>
+
+    @receiver(post_save, sender=CustomUser)
+    @transaction.atomic
+    def create_user_profile(sender: type[CustomUser], instance: CustomUser, created: bool, **_kwargs: Any) -> None:
+        """
+        Automatically create the appropriate profile based on user's role.
+        - PATIENT role -> PatientProfile
+        - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
+    
+        Uses get_or_create to be idempotent:
+        - Safe for new user creation
+        - Safe for role changes on existing users
+        - Won't overwrite existing profile data
+        """
+        if instance.role == UserRole.PATIENT:
+            PatientProfile.objects.get_or_create(user=instance)
+    
+        elif instance.role == UserRole.NURSE:
+            # A nurse must be created with an agency assigned initially, handled elsewhere,
+            # but the empty profile can be created here.
+            if not instance.agency:
+                from django.core.exceptions import ValidationError
+>               raise ValidationError("Nurses must be attached to an AgencyProfile.")
+E               django.core.exceptions.ValidationError: ['Nurses must be attached to an AgencyProfile.']
+
+users/signals.py:30: ValidationError
+---------------------------- Captured stderr setup -----------------------------
+Creating test database for alias 'default'...
+_ TestNurseAgencyFKIntegrity.test_nurse_save_without_agency_raises_integrity_error _
+
+self = <users.tests.test_b2b2c_integrity.TestNurseAgencyFKIntegrity object at 0x7a6a4ca2cf10>
+
+    def test_nurse_save_without_agency_raises_integrity_error(self):
+        """
+        Bypassing model-level cleaning (e.g., via bulk_create) should fail at the DB level
+        because agency_id is NOT NULL.
+        """
+        from visits.tests.conftest import CustomUserFactory
+>       user = CustomUserFactory(role='NURSE')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+users/tests/test_b2b2c_integrity.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:43: in __call__
+    return cls.create(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:539: in create
+    return cls._generate(enums.CREATE_STRATEGY, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:122: in _generate
+    return super()._generate(strategy, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:468: in _generate
+    return step.build()
+           ^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:274: in build
+    instance = self.factory_meta.instantiate(
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:320: in instantiate
+    return self.factory._create(model, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:175: in _create
+    return manager.create(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/manager.py:87: in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/query.py:679: in create
+    obj.save(force_insert=True, using=self.db)
+/usr/local/lib/python3.11/site-packages/django/contrib/auth/base_user.py:78: in save
+    super().save(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:822: in save
+    self.save_base(
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:924: in save_base
+    post_save.send(
+/usr/local/lib/python3.11/site-packages/django/dispatch/dispatcher.py:189: in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sender = <class 'users.models.CustomUser'>
+instance = <CustomUser: 29001011200001>, created = True
+_kwargs = {'raw': False, 'signal': <django.db.models.signals.ModelSignal object at 0x7a6a84ecb050>, 'update_fields': None, 'using': 'default'}
+ValidationError = <class 'django.core.exceptions.ValidationError'>
+
+    @receiver(post_save, sender=CustomUser)
+    @transaction.atomic
+    def create_user_profile(sender: type[CustomUser], instance: CustomUser, created: bool, **_kwargs: Any) -> None:
+        """
+        Automatically create the appropriate profile based on user's role.
+        - PATIENT role -> PatientProfile
+        - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
+    
+        Uses get_or_create to be idempotent:
+        - Safe for new user creation
+        - Safe for role changes on existing users
+        - Won't overwrite existing profile data
+        """
+        if instance.role == UserRole.PATIENT:
+            PatientProfile.objects.get_or_create(user=instance)
+    
+        elif instance.role == UserRole.NURSE:
+            # A nurse must be created with an agency assigned initially, handled elsewhere,
+            # but the empty profile can be created here.
+            if not instance.agency:
+                from django.core.exceptions import ValidationError
+>               raise ValidationError("Nurses must be attached to an AgencyProfile.")
+E               django.core.exceptions.ValidationError: ['Nurses must be attached to an AgencyProfile.']
+
+users/signals.py:30: ValidationError
+________ TestNurseAgencyFKIntegrity.test_valid_nurse_creation_succeeds _________
+
+self = <users.tests.test_b2b2c_integrity.TestNurseAgencyFKIntegrity object at 0x7a6a4ca2d790>
+
+    def test_valid_nurse_creation_succeeds(self):
+        """
+        A valid nurse with an agency should save successfully.
+        """
+        from visits.tests.conftest import CustomUserFactory, AgencyProfileFactory
+>       user = CustomUserFactory(role='NURSE')
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+users/tests/test_b2b2c_integrity.py:53: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:43: in __call__
+    return cls.create(**kwargs)
+           ^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:539: in create
+    return cls._generate(enums.CREATE_STRATEGY, kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:122: in _generate
+    return super()._generate(strategy, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:468: in _generate
+    return step.build()
+           ^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/builder.py:274: in build
+    instance = self.factory_meta.instantiate(
+/home/wateen/.local/lib/python3.11/site-packages/factory/base.py:320: in instantiate
+    return self.factory._create(model, *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/home/wateen/.local/lib/python3.11/site-packages/factory/django.py:175: in _create
+    return manager.create(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/manager.py:87: in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/site-packages/django/db/models/query.py:679: in create
+    obj.save(force_insert=True, using=self.db)
+/usr/local/lib/python3.11/site-packages/django/contrib/auth/base_user.py:78: in save
+    super().save(*args, **kwargs)
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:822: in save
+    self.save_base(
+/usr/local/lib/python3.11/site-packages/django/db/models/base.py:924: in save_base
+    post_save.send(
+/usr/local/lib/python3.11/site-packages/django/dispatch/dispatcher.py:189: in send
+    response = receiver(signal=self, sender=sender, **named)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.11/contextlib.py:81: in inner
+    return func(*args, **kwds)
+           ^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+sender = <class 'users.models.CustomUser'>
+instance = <CustomUser: 29001011200002>, created = True
+_kwargs = {'raw': False, 'signal': <django.db.models.signals.ModelSignal object at 0x7a6a84ecb050>, 'update_fields': None, 'using': 'default'}
+ValidationError = <class 'django.core.exceptions.ValidationError'>
+
+    @receiver(post_save, sender=CustomUser)
+    @transaction.atomic
+    def create_user_profile(sender: type[CustomUser], instance: CustomUser, created: bool, **_kwargs: Any) -> None:
+        """
+        Automatically create the appropriate profile based on user's role.
+        - PATIENT role -> PatientProfile
+        - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
+    
+        Uses get_or_create to be idempotent:
+        - Safe for new user creation
+        - Safe for role changes on existing users
+        - Won't overwrite existing profile data
+        """
+        if instance.role == UserRole.PATIENT:
+            PatientProfile.objects.get_or_create(user=instance)
+    
+        elif instance.role == UserRole.NURSE:
+            # A nurse must be created with an agency assigned initially, handled elsewhere,
+            # but the empty profile can be created here.
+            if not instance.agency:
+                from django.core.exceptions import ValidationError
+>               raise ValidationError("Nurses must be attached to an AgencyProfile.")
+E               django.core.exceptions.ValidationError: ['Nurses must be attached to an AgencyProfile.']
+
+users/signals.py:30: ValidationError
+=========================== short test summary info ============================
+FAILED users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_creation_without_agency_raises_validation_error
+FAILED users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_save_without_agency_raises_integrity_error
+FAILED users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_valid_nurse_creation_succeeds
+ERROR visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_nurse_cannot_access_agency_admin_endpoint
+==================== 3 failed, 11 passed, 1 error in 4.23s =====================

@@ -11,10 +11,8 @@ from users.models import (
     NurseProfile,
     VerificationStatus,
 )
-from visits.models import ServiceType, PricingFactor, Visit, VisitStatus, EstimateLog
+from visits.models import ServiceType, PricingFactor, Visit, VisitStatus
 from visits.services.pricing import RuleBasedPricingStrategy
-from visits.services.matching import GeoMatchingService
-from datetime import timedelta
 
 # --- Fixtures ---
 
@@ -305,8 +303,8 @@ class TestIntegrationFlow:
 
         # 3. Match
         visit.nurse = nurse_user.nurse_profile
-        visit.transition_to(VisitStatus.MATCHED)
-        assert visit.status == VisitStatus.MATCHED
+        visit.transition_to(VisitStatus.PENDING_NURSE)
+        assert visit.status == VisitStatus.PENDING_NURSE
 
         # 4. Accept
         visit.transition_to(VisitStatus.ACCEPTED)

@@ -11,7 +11,7 @@ except ImportError:
     print("Installing playwright...")
     subprocess.check_call([sys.executable, "-m", "pip", "install", "playwright"])
     subprocess.check_call([sys.executable, "-m", "playwright", "install", "chromium"])
-    from playwright.async_api import async_playwright
+    from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeoutError
 
 import uuid
 
@@ -60,8 +60,8 @@ async def patient_flow(context, patient_phone, patient_password):
     # This highly depends on the UI, assuming there is a "Request Visit" button
     print(f"[{patient_phone}] Requesting Visit...")
     try:
-        await page.get_by_role("button", name="طلب زيارة").click()
-    except Exception as e:
+        await page.get_by_role("button", name="طلب زيارة").click(timeout=5000)
+    except PlaywrightTimeoutError:
         print(f"[{patient_phone}] Could not find Request button natively, attempting via API...")
         # Fallback to pure API if UI button is not found for testing stability
         pass

@@ -2,7 +2,6 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
-from django.utils.translation import gettext_lazy as _
 
 from visits.models import Visit, VisitStatus
 from users.models import NurseProfile

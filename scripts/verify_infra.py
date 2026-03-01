@@ -17,7 +17,7 @@ import django
 django.setup()
 
 from typing import Any, Tuple
-from scripts.verification.config import VerificationConfig, get_config
+from scripts.verification.config import get_config
 from scripts.verification.models import (
     InfrastructureTestReport,
     VerificationStatus,

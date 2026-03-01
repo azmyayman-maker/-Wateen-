@@ -158,13 +158,13 @@ class AcceptNurseInvitationView(APIView):
             
             messages = e.messages if hasattr(e, "messages") else [str(e)]
             return Response({"detail": messages}, status=status.HTTP_400_BAD_REQUEST)
-        except IntegrityError as e:
+        except IntegrityError:
             logger.exception("Failed to register nurse: IntegrityError")
             return Response(
                 {"detail": "A user with this national_id or phone already exists."}, 
                 status=status.HTTP_400_BAD_REQUEST
             )
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to register nurse")
             return Response({"detail": "Failed to register nurse"}, status=status.HTTP_400_BAD_REQUEST)
 

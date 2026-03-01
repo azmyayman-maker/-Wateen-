@@ -1,6 +1,5 @@
 import os
 import django
-import uuid
 from decimal import Decimal
 from django.contrib.gis.geos import Point
 
@@ -9,8 +8,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
 from users.models import CustomUser, AgencyProfile, PatientProfile, NurseProfile, AgencyStatus, UserRole
-from visits.models import Visit, VisitStatus, ServiceType, Transaction, TransactionStatus
-from visits.services.dispatch import DispatchEngine
+from visits.models import Visit, VisitStatus, ServiceType, TransactionStatus
 from visits.services.settlement import SettlementService
 
 def run_simulation():

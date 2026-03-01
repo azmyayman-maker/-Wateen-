@@ -3,7 +3,7 @@ from django.db import transaction
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 
-from .models import CustomUser, UserRole, PatientProfile, NurseProfile
+from .models import CustomUser, UserRole, PatientProfile
 
 
 @receiver(post_save, sender=CustomUser)
@@ -12,7 +12,7 @@ def create_user_profile(sender: type[CustomUser], instance: CustomUser, created:
     """
     Automatically create the appropriate profile based on user's role.
     - PATIENT role -> PatientProfile
-    - NURSE role -> NurseProfile
+    - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
 
     Uses get_or_create to be idempotent:
     - Safe for new user creation
@@ -25,7 +25,11 @@ def create_user_profile(sender: type[CustomUser], instance: CustomUser, created:
     elif instance.role == UserRole.NURSE:
         # A nurse must be created with an agency assigned initially, handled elsewhere, 
         # but the empty profile can be created here.
-        pass
+        if not getattr(instance, 'agency', None):
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Nurses must be attached to an AgencyProfile.")
+        from users.models import NurseProfile
+        NurseProfile.objects.get_or_create(user=instance, defaults={'agency': instance.agency})
 
     elif instance.role == UserRole.AGENCY_ADMIN:
         # The ticket dictates: `if created and instance.role == 'AGENCY_ADMIN':` -> automatically create an empty `AgencyProfile` 

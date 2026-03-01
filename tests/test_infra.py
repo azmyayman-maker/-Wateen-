@@ -5,14 +5,10 @@ Tests for PostgreSQL/PostGIS and Redis connectivity and functionality.
 Supports both console and JSON output modes.
 """
 
-import json
-import os
-import tempfile
 import pytest
 from django.db import connection
 from django.core.cache import cache
 from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 
 
 

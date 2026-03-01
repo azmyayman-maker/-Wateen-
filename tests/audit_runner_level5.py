@@ -1,10 +1,9 @@
 
 import sys
-import os
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
@@ -51,7 +50,7 @@ sys.modules['visits.models'] = MagicMock()
 
 
 # Import the code under test
-from visits.services.pricing import RuleBasedPricingStrategy, PriceBreakdown
+from visits.services.pricing import RuleBasedPricingStrategy
 from visits.services.matching import GeoMatchingService
 
 class TestLevel5Audit(unittest.TestCase):
@@ -175,7 +174,8 @@ class TestLevel5Audit(unittest.TestCase):
         strategy.get_factor = MagicMock(side_effect=factor_side_effect)
         
         # 0 distance
-        breakdown = strategy.calculate_price(Decimal("100"), Decimal("0"))
+        request_time = datetime(2026, 1, 1, 12, 0, tzinfo=ZoneInfo("UTC"))
+        breakdown = strategy.calculate_price(Decimal("100"), Decimal("0"), request_time=request_time)
         
         self.assertEqual(breakdown.distance_fee, Decimal("0.00"))
         self.assertEqual(breakdown.final_price, Decimal("100.00"))

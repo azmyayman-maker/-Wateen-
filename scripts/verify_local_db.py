@@ -29,7 +29,7 @@ from users.models import PatientProfile, UserRole
 
 from typing import cast
 from scripts.verification.base import BaseVerifier
-from scripts.verification.config import VerificationConfig, get_config
+from scripts.verification.config import get_config
 from scripts.verification.models import (
     DatabaseVerificationResult,
     VerificationStatus,
@@ -91,6 +91,7 @@ class DatabaseVerifier(BaseVerifier):
                 logger.info("CRUD: Read verification passed")
 
             # Update verification
+            # Bypassing the state machine intentionally to verify raw DB update capabilities
             visit.status = VisitStatus.COMPLETED
             visit.save()
             updated_visit = Visit.objects.get(id=visit.id)

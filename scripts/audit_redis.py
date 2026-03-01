@@ -74,7 +74,7 @@ def check_redis_channels():
         print(f"    Target: {sanitize_redis_url(redis_url)}")
         r = redis.from_url(redis_url)
         r.ping()
-        print(f"[PASS] Redis Channel Layer: Connection verified.")
+        print("[PASS] Redis Channel Layer: Connection verified.")
 
     except Exception as e:
         print(f"[FAIL] Redis Channel Layer Connection Error: {e}")
@@ -98,7 +98,7 @@ def test_graceful_degradation_config():
 
 
 if __name__ == "__main__":
-    print(f"Starting Redis Audit (Bypassing GDAL)...")
+    print("Starting Redis Audit (Bypassing GDAL)...")
     check_redis_cache()
     check_redis_channels()
     test_graceful_degradation_config()

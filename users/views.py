@@ -11,7 +11,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-from .models import CustomUser, UserRole, NurseDocument, DocumentType, NurseProfile
+from .models import CustomUser, UserRole, NurseDocument, NurseProfile
 from .serializers import (
     UserRegistrationSerializer,
     UserProfileSerializer,

@@ -1,6 +1,5 @@
 import stripe
 from django.conf import settings
-from decimal import Decimal
 from .logging import logger
 
 stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", None)

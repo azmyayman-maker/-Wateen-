@@ -9,7 +9,6 @@ from .models import (
     NurseDocument,
     NurseProfile,
     PatientProfile,
-    UserRole,
 )
 
 
