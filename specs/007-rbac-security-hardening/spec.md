@@ -70,13 +70,19 @@ A user registering via the public API can only select the PATIENT or AGENCY_ADMI
 - What happens if a NURSE user tries to update their role to AGENCY_ADMIN via profile update? → The role field is read-only in UserProfileSerializer — change is silently ignored.
 - How does the reverse migration handle users who were originally NURSE (not DOCTOR)? → The reverse maps NURSE → DOCTOR. This is documented as lossy for original NURSE users.
 
+## Clarifications
+
+### Session 2026-03-01
+
+- Q: To ensure `IsAgencyAdmin` meets the performance target (SC-002) without a measurable latency impact from querying the `AgencyProfile` on every request, how should we optimize the verification check? → A: Option B - Cache the agency verification status in Redis with a TTL and explicit invalidation.
+
 ## Requirements _(mandatory)_
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide an `IsAgencyAdmin` DRF permission class that grants access ONLY to authenticated users with role=AGENCY_ADMIN AND a verified AgencyProfile (status=VERIFIED).
-- **FR-002**: The `IsAgencyAdmin` permission MUST handle the case where the AgencyProfile does not exist (via `hasattr` or exception handling) without raising a 500 error.
-- **FR-003**: System MUST provide a reversible Django data migration that maps ADMIN → SUPERADMIN and DOCTOR → NURSE using `apps.get_model()` (not direct model imports).
+- **FR-001**: System MUST provide an `IsAgencyAdmin` DRF permission class that grants access ONLY to authenticated users with role=AGENCY_ADMIN AND a verified AgencyProfile (status=VERIFIED). The verification status MUST be cached in Redis to minimize database queries, with explicit cache invalidation when the profile status changes.
+- **FR-002**: The `IsAgencyAdmin` permission MUST handle the case where the AgencyProfile does not exist (via `hasattr` or exception handling) without raising a 500 error, logging a cache miss/failure gracefully.
+- **FR-003**: System MUST provide a reversible Django data migration that maps ADMIN → SUPERADMIN and DOCTOR → NURSE using `apps.get_model()` (not direct model imports). As part of this migration, the system MUST invalidate all outstanding JWT refresh tokens using SimpleJWT's blacklist app to force re-authentication.
 - **FR-004**: The reverse migration function MUST restore SUPERADMIN → ADMIN and NURSE → DOCTOR.
 - **FR-005**: System MUST validate the `role` field during user registration to allow ONLY PATIENT and AGENCY_ADMIN as self-registration roles.
 - **FR-006**: System MUST reject registration attempts with role=SUPERADMIN or role=NURSE, returning a descriptive validation error.
@@ -95,7 +101,7 @@ A user registering via the public API can only select the PATIENT or AGENCY_ADMI
 ### Measurable Outcomes
 
 - **SC-001**: 100% of unauthorized role registration attempts (SUPERADMIN, NURSE) are rejected at the serializer layer — zero privilege escalation paths exist.
-- **SC-002**: Agency-protected endpoints return 403 within the same response time as other authenticated endpoints (no measurable latency impact from the defensive AgencyProfile check).
-- **SC-003**: The data migration runs forward and backward without data loss on all existing user records.
+- **SC-002**: Agency-protected endpoints return 403 within the same response time as other authenticated endpoints (no measurable latency impact from the defensive AgencyProfile check), utilizing Redis caching for the status lookup.
+- **SC-003**: The data migration runs forward and backward without data loss on all existing user records, and successfully blacklists all existing refresh tokens in the `OutstandingToken` table.
 - **SC-004**: All existing permission-gated views continue to function correctly after the migration — no regressions.
 - **SC-005**: The IsAgencyAdmin permission handles the missing-AgencyProfile edge case gracefully (no 500 errors) in 100% of scenarios.

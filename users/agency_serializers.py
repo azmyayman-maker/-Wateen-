@@ -1,7 +1,64 @@
-from rest_framework import serializers
-from .models import AgencyProfile, CustomUser, UserRole
-from django.db import transaction
 from django.contrib.auth.hashers import make_password
+from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.db import transaction
+from django.utils.translation import gettext_lazy as _
+
+from rest_framework import serializers
+from rest_framework_gis.serializers import GeoFeatureModelSerializer
+
+from .models import AgencyProfile, CustomUser, UserRole
+
+class AgencyProfileSerializer(GeoFeatureModelSerializer):
+    """
+    Serializer for AgencyProfile with GeoFeatureModel serialization.
+    """
+    class Meta:
+        model = AgencyProfile
+        geo_field = 'coverage_polygon'
+        fields = [
+            'id',
+            'manager_name',
+            'commercial_registry',
+            'moh_license_number',
+            'tax_id',
+            'coverage_polygon',
+            'status',
+            'rating',
+            'dispatch_mode',
+            'wallet_balance',
+        ]
+        read_only_fields = ['id', 'status', 'rating', 'wallet_balance']
+
+    def validate_coverage_polygon(self, value: Polygon | MultiPolygon | None) -> Polygon | MultiPolygon | None:
+        """
+        Enforce spatial requirements for the coverage_polygon geometry.
+        """
+        if value is None:
+            return value
+
+        # Only accept Polygon or MultiPolygon
+        if not isinstance(value, (Polygon, MultiPolygon)):
+            raise serializers.ValidationError(_("The geometry must be a valid Polygon."))
+
+        # Extract the polygon (handle MultiPolygon by taking the first one for validation purposes)
+        # Assuming the requirement is just one unified closed area
+        polygons = [value] if isinstance(value, Polygon) else value
+
+        for poly in polygons:
+            # GEOS instances validate automatically in Django, but we enforce the specific ring requirements
+            if poly.empty:
+                raise serializers.ValidationError(_("The polygon cannot be empty."))
+
+            # 2. The polygon is closed (linear ring)
+            # 3. The polygon has at least 3 distinct vertices (4 coordinates including the closing point)
+            exterior_ring = poly.exterior_ring
+            if not exterior_ring.is_closed:
+                raise serializers.ValidationError(_("The polygon must be closed (linear ring)."))
+
+            if len(exterior_ring.coords) < 4:
+                raise serializers.ValidationError(_("The polygon must have at least 3 distinct vertices."))
+
+        return value
 
 class AgencyRegistrationSerializer(serializers.ModelSerializer):
     """

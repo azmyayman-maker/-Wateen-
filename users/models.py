@@ -119,13 +119,15 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         help_text=_("دور المستخدم في النظام"),
     )
 
-    # B2B2C: Link users (especially AGENCY_ADMIN) to their agency
-    agency = models.ForeignKey(
+    # B2B2C: Link users (especially AGENCY_ADMIN) to their agency. 
+    # The ticket specifies AgencyProfile maps 1:1 to a CustomUser with the role AGENCY_ADMIN.
+    # However, since one agency could theoretically have multiple admins, we follow the ticket strictly:
+    agency = models.OneToOneField(
         "AgencyProfile",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="admin_users",
+        related_name="admin_user",
         verbose_name=_("الشركة/الوكالة"),
         help_text=_("الشركة التابع لها المستخدم (للمديرين)"),
     )
@@ -258,11 +260,9 @@ class AgencyProfile(models.Model):
         null=True,
         blank=True,
     )
-    rating = models.DecimalField(
+    rating = models.FloatField(
         _("التقييم"),
-        max_digits=3,
-        decimal_places=2,
-        default=5.00,
+        default=0.0,
     )
     network_capacity = models.PositiveIntegerField(
         _("سعة الشبكة (عدد الممرضين)"),
@@ -272,7 +272,7 @@ class AgencyProfile(models.Model):
         _("آلية التوزيع"),
         max_length=10,
         choices=DispatchMode.choices,
-        default=DispatchMode.AUTO,
+        default=DispatchMode.MANUAL,
     )
     wallet_balance = models.DecimalField(
         _("رصيد المحفظة"),
@@ -297,6 +297,7 @@ class AgencyProfile(models.Model):
         indexes = [
             models.Index(fields=["status"]),
             models.Index(fields=["rating"]),
+            gis_models.GistIndex(fields=["coverage_polygon"]),
         ]
 
     def __str__(self) -> str:
