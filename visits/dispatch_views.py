@@ -1,6 +1,7 @@
 from rest_framework import generics, status
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
+from django.db import transaction
 from django.utils.translation import gettext_lazy as _
 
 from visits.models import Visit, VisitStatus
@@ -25,8 +26,8 @@ class ManualDispatchView(generics.GenericAPIView):
         
         # Object-level check: Agency admin can only dispatch for their own agency
         if not user.is_superadmin:
-            # For agency admins, verify they belong to this agency
-            if hasattr(user, 'agency') and str(user.agency.id) != str(agency_id):
+            user_agency = getattr(user, 'agency', None)
+            if not user_agency or str(user_agency.id) != str(agency_id):
                 return Response(
                     {"detail": "You can only dispatch visits for your own agency."},
                     status=status.HTTP_403_FORBIDDEN
@@ -39,22 +40,32 @@ class ManualDispatchView(generics.GenericAPIView):
             return Response({"detail": "visit_id and nurse_id are required."}, status=400)
 
         try:
-            visit = Visit.objects.get(id=visit_id, agency_id=agency_id)
-            nurse = NurseProfile.objects.get(id=nurse_id, agency_id=agency_id)
+            with transaction.atomic():
+                visit = Visit.objects.select_for_update().get(
+                    id=visit_id, agency_id=agency_id
+                )
+                nurse = NurseProfile.objects.select_for_update().get(
+                    id=nurse_id, agency_id=agency_id
+                )
+
+                if visit.status != VisitStatus.PENDING_AGENCY:
+                    return Response(
+                        {"detail": f"Visit is not in a dispatchable state ({visit.status})."},
+                        status=409,
+                    )
+
+                if not nurse.is_available:
+                    return Response(
+                        {"detail": "Nurse is currently offline or busy."},
+                        status=400,
+                    )
+
+                # Assign and transition atomically
+                visit.nurse = nurse
+                visit.save(update_fields=['nurse'])
+                visit.transition_to(VisitStatus.PENDING_NURSE)
         except (Visit.DoesNotExist, NurseProfile.DoesNotExist):
             return Response({"detail": "Visit or Nurse not found in this agency."}, status=404)
-
-        if visit.status != VisitStatus.PENDING_AGENCY:
-            return Response({"detail": f"Visit is not in a dispatchable state ({visit.status})."}, status=409)
-
-        if not nurse.is_available:
-            return Response({"detail": "Nurse is currently offline or busy."}, status=400)
-
-        # Assign and notify
-        visit.nurse = nurse
-        visit.save(update_fields=['nurse'])
-        # Transition to PENDING_NURSE - waiting for nurse to accept the assignment
-        visit.transition_to(VisitStatus.PENDING_NURSE)
         
         # Broadcast to nurse
         from channels.layers import get_channel_layer

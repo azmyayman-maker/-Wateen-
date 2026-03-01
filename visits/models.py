@@ -118,7 +118,11 @@ class VisitStatus(models.TextChoices):
 
 # Explicit allowed transitions map — the single source of truth for the state machine.
 ALLOWED_TRANSITIONS = {
-    VisitStatus.PENDING_AGENCY: [VisitStatus.PENDING_NURSE, VisitStatus.ACCEPTED, VisitStatus.CANCELLED],
+    VisitStatus.PENDING_AGENCY: [
+        VisitStatus.PENDING_NURSE,
+        VisitStatus.ACCEPTED,
+        VisitStatus.CANCELLED,
+    ],
     VisitStatus.PENDING_NURSE: [VisitStatus.ACCEPTED, VisitStatus.CANCELLED],
     VisitStatus.ACCEPTED: [VisitStatus.EN_ROUTE, VisitStatus.CANCELLED],
     VisitStatus.EN_ROUTE: [VisitStatus.IN_PROGRESS, VisitStatus.CANCELLED],
@@ -228,6 +232,11 @@ class Visit(models.Model):
         _("تاريخ التحديث"),
         auto_now=True,
     )
+    reroute_attempts = models.PositiveIntegerField(
+        _("محاولات إعادة التوجيه"),
+        default=0,
+        help_text=_("عدد محاولات إعادة توجيه الزيارة إلى وكالات أخرى"),
+    )
 
     class Meta:
         verbose_name = _("زيارة")
@@ -324,11 +333,11 @@ class EstimateLog(models.Model):
 
 
 class TransactionStatus(models.TextChoices):
-    PENDING = 'PENDING', _('قيد المعالجة')
-    ESCROWED = 'ESCROWED', _('في الضمان')
-    SETTLED = 'SETTLED', _('تمت التسوية')
-    REFUNDED = 'REFUNDED', _('تم الاسترجاع')
-    FAILED = 'FAILED', _('فشلت')
+    PENDING = "PENDING", _("قيد المعالجة")
+    ESCROWED = "ESCROWED", _("في الضمان")
+    SETTLED = "SETTLED", _("تمت التسوية")
+    REFUNDED = "REFUNDED", _("تم الاسترجاع")
+    FAILED = "FAILED", _("فشلت")
 
 
 class Transaction(models.Model):
@@ -336,6 +345,7 @@ class Transaction(models.Model):
     T027: Represents a financial transaction associated with a visit.
     Handles the split between the platform (take rate) and the agency.
     """
+
     id = models.UUIDField(
         primary_key=True,
         default=uuid.uuid4,
@@ -344,38 +354,38 @@ class Transaction(models.Model):
     visit = models.OneToOneField(
         Visit,
         on_delete=models.CASCADE,
-        related_name='transaction',
-        verbose_name=_('الزيارة'),
+        related_name="transaction",
+        verbose_name=_("الزيارة"),
     )
     stripe_payment_intent_id = models.CharField(
-        _('معرف الدفع في سترايب'),
+        _("معرف الدفع في سترايب"),
         max_length=255,
         blank=True,
         null=True,
     )
     total_amount = models.DecimalField(
-        _('إجمالي المبلغ'),
+        _("إجمالي المبلغ"),
         max_digits=10,
         decimal_places=2,
     )
     take_rate_percent = models.DecimalField(
-        _('نسبة المنصة'),
+        _("نسبة المنصة"),
         max_digits=5,
         decimal_places=2,
-        default=Decimal('15.00'), # Default 15%
+        default=Decimal("15.00"),  # Default 15%
     )
     take_rate_amount = models.DecimalField(
-        _('مبلع المنصة'),
+        _("مبلع المنصة"),
         max_digits=10,
         decimal_places=2,
     )
     agency_amount = models.DecimalField(
-        _('مبلغ الوكالة'),
+        _("مبلغ الوكالة"),
         max_digits=10,
         decimal_places=2,
     )
     status = models.CharField(
-        _('الحالة'),
+        _("الحالة"),
         max_length=20,
         choices=TransactionStatus.choices,
         default=TransactionStatus.PENDING,
@@ -384,9 +394,9 @@ class Transaction(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = _('عملية مالية')
-        verbose_name_plural = _('العمليات المالية')
-        db_table = 'visits_transaction'
+        verbose_name = _("عملية مالية")
+        verbose_name_plural = _("العمليات المالية")
+        db_table = "visits_transaction"
 
     def __str__(self):
         return f"Transaction({self.id}) - {self.status}"

@@ -8,7 +8,7 @@ from django.contrib.gis.geos import Point
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from users.models import CustomUser, AgencyProfile, PatientProfile, NurseProfile, AgencyStatus
+from users.models import CustomUser, AgencyProfile, PatientProfile, NurseProfile, AgencyStatus, UserRole
 from visits.models import Visit, VisitStatus, ServiceType, Transaction, TransactionStatus
 from visits.services.dispatch import DispatchEngine
 from visits.services.settlement import SettlementService
@@ -18,21 +18,52 @@ def run_simulation():
     
     # 1. Setup Test Data
     print("--- 1. Setting up Test Data ---")
-    patient_user, _ = CustomUser.objects.get_or_create(username="sim_patient", role="PATIENT")
+    patient_user, _ = CustomUser.objects.get_or_create(
+        national_id="29901011230001",
+        defaults={
+            "phone_number": "01099900001",
+            "role": UserRole.PATIENT,
+        }
+    )
     patient, _ = PatientProfile.objects.get_or_create(user=patient_user)
     
-    agency_user, _ = CustomUser.objects.get_or_create(username="sim_agency", role="AGENCY")
+    # AgencyProfile has no 'user' FK — create it directly, then link the admin user
     agency, _ = AgencyProfile.objects.get_or_create(
-        user=agency_user, 
-        manager_name="Simulation Agency",
-        status=AgencyStatus.VERIFIED,
-        stripe_account_id="acct_sim_123"
+        commercial_registry="SIM-CR-001",
+        defaults={
+            "manager_name": "Simulation Agency",
+            "moh_license_number": "SIM-MOH-001",
+            "tax_id": "SIM-TAX-001",
+            "status": AgencyStatus.VERIFIED,
+            "stripe_account_id": "acct_sim_123",
+        }
     )
     
-    nurse_user, _ = CustomUser.objects.get_or_create(username="sim_nurse", role="NURSE")
-    nurse, _ = NurseProfile.objects.get_or_create(user=nurse_user, agency=agency, is_available=True)
+    agency_user, _ = CustomUser.objects.get_or_create(
+        national_id="29901011230002",
+        defaults={
+            "phone_number": "01099900002",
+            "role": UserRole.AGENCY_ADMIN,
+            "agency": agency,
+        }
+    )
     
-    service, _ = ServiceType.objects.get_or_create(name="E2E Test Service", base_price=100.00)
+    nurse_user, _ = CustomUser.objects.get_or_create(
+        national_id="29901011230003",
+        defaults={
+            "phone_number": "01099900003",
+            "role": UserRole.NURSE,
+        }
+    )
+    nurse, _ = NurseProfile.objects.get_or_create(
+        user=nurse_user,
+        defaults={"agency": agency, "is_available": True}
+    )
+    
+    service, _ = ServiceType.objects.get_or_create(
+        name="E2E Test Service",
+        defaults={"base_price": Decimal("100.00")}
+    )
     
     # 2. Patient Request
     print("--- 2. Patient Requesting Visit ---")
@@ -55,7 +86,7 @@ def run_simulation():
     print("--- 3. Agency Manual Dispatching to Nurse ---")
     visit.nurse = nurse
     visit.transition_to(VisitStatus.PENDING_NURSE)
-    print(f"Visit assigned to Nurse: {nurse.user.username}")
+    print(f"Visit assigned to Nurse: {nurse_user.national_id}")
     
     # 4. Nurse Acceptance
     print("--- 4. Nurse Accepting Visit ---")

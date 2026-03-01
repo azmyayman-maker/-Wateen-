@@ -2,6 +2,7 @@ from django.utils import timezone
 from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
 from .logging import logger
 
+
 class SettlementService:
     """
     T029: Logic to handle transaction settlements after visit completion.
@@ -10,10 +11,20 @@ class SettlementService:
     @staticmethod
     def create_transaction_for_visit(visit):
         """Initializes a transaction for a new visit."""
+        from decimal import Decimal
+        
+        total = visit.final_price
+        if total is None:
+            raise ValueError(
+                f"Cannot create transaction for visit {visit.id}: "
+                f"final_price is None. Ensure pricing is calculated first."
+            )
+        total = Decimal(str(total))
+        
         transaction = Transaction(
             visit=visit,
-            total_amount=visit.final_price,
-            status=TransactionStatus.PENDING
+            total_amount=total,
+            status=TransactionStatus.PENDING,
         )
         transaction.calculate_split()
         transaction.save()
@@ -45,19 +56,26 @@ class SettlementService:
             if transaction.status == TransactionStatus.SETTLED:
                 return True
 
-            # In a real Stripe Connect Destination Charge setup, 
-            # funds are already split and will be settled to the agency's 
+            # In a real Stripe Connect Destination Charge setup,
+            # funds are already split and will be settled to the agency's
             # connected account pending the capture/delay settings.
-            
+
             transaction.status = TransactionStatus.SETTLED
             transaction.save()
-            
-            # Update Agency internal wallet for accounting
+
+            # Update Agency internal wallet for accounting (atomic update using F())
             agency = visit.agency
-            agency.wallet_balance += transaction.agency_amount
-            agency.save(update_fields=['wallet_balance'])
-            
-            logger.info(f"Settled transaction for visit {visit.id}. Agency wallet updated.")
+            if agency is not None:
+                from django.db.models import F
+
+                Agency.objects.filter(pk=agency.pk).update(
+                    wallet_balance=F("wallet_balance") + transaction.agency_amount
+                )
+                agency.refresh_from_db()
+
+            logger.info(
+                f"Settled transaction for visit {visit.id}. Agency wallet updated."
+            )
             return True
         except Exception as e:
             logger.error(f"Settlement failed for visit {visit.id}: {str(e)}")

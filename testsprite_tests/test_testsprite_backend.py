@@ -172,7 +172,7 @@ class TestVisits:
         visit = Visit.objects.create(
             patient=patient_user.patient_profile,
             service_type=service_type,
-            status=VisitStatus.PENDING,
+            status=VisitStatus.PENDING_AGENCY,
             location=Point(31.2357, 30.0444)
         )
         

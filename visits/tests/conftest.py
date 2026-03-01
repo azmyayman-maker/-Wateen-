@@ -69,7 +69,7 @@ class VisitFactory(factory.django.DjangoModelFactory):
     patient = factory.SubFactory(PatientProfileFactory)
     nurse = factory.SubFactory(NurseProfileFactory)
     service_type = factory.SubFactory(ServiceTypeFactory)
-    status = VisitStatus.PENDING
+    status = VisitStatus.PENDING_AGENCY
     location = Point(31.2357, 30.0444, srid=4326)
 
 @pytest.fixture
@@ -94,7 +94,7 @@ def visit(patient, nurse, service_type):
         patient=patient,
         nurse=nurse,
         service_type=service_type,
-        status=VisitStatus.PENDING,
+        status=VisitStatus.PENDING_AGENCY,
         final_price='150.00'
     )
 

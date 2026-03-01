@@ -35,8 +35,6 @@ django-redis==6.0.0
 
 # Celery for background tasks
 celery[redis]==5.3.6
-django-celery-beat==2.6.0
-django-celery-results==2.5.1
 
 # -----------------------------------------------------------------------------
 # Real-time / WebSocket

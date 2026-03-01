@@ -1,11 +1,17 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APIClient
 from .models import AgencyProfile, AgencyStatus, CustomUser
+
+@pytest.fixture
+def api_client():
+    """Provide DRF APIClient instead of Django's default test client."""
+    return APIClient()
 
 @pytest.mark.django_db
 class TestAgencyOnboarding:
-    def test_agency_registration(self, client):
+    def test_agency_registration(self, api_client):
         url = reverse('users:agency_register')
         data = {
             'manager_name': 'Test Manager',
@@ -16,7 +22,7 @@ class TestAgencyOnboarding:
             'admin_phone_number': '01001234567',
             'admin_password': 'SecurePassword123!'
         }
-        response = client.post(url, data, format='json')
+        response = api_client.post(url, data, format='json')
         assert response.status_code == status.HTTP_201_CREATED
         
         # Verify agency creation
@@ -28,7 +34,7 @@ class TestAgencyOnboarding:
         user = CustomUser.objects.get(national_id='29001011234567')
         assert user.role == 'AGENCY_ADMIN'
         
-    def test_superadmin_agency_approval(self, client):
+    def test_superadmin_agency_approval(self, api_client):
         # Create an agency
         agency = AgencyProfile.objects.create(
             manager_name='Test Manager',
@@ -44,17 +50,17 @@ class TestAgencyOnboarding:
             phone_number='01101234567',
             password='Password123!',
         )
-        client.force_authenticate(user=superuser)
+        api_client.force_authenticate(user=superuser)
         
         # Approve the agency
         url = reverse('users:agency_approve', kwargs={'pk': str(agency.id)})
-        response = client.patch(url, {'status': AgencyStatus.VERIFIED}, format='json')
+        response = api_client.patch(url, {'status': AgencyStatus.VERIFIED}, format='json')
         
         assert response.status_code == status.HTTP_200_OK
         agency.refresh_from_db()
         assert agency.status == AgencyStatus.VERIFIED
         
-    def test_non_admin_cannot_approve(self, client):
+    def test_non_admin_cannot_approve(self, api_client):
         # Create an agency
         agency = AgencyProfile.objects.create(
             manager_name='Test Manager',
@@ -69,10 +75,10 @@ class TestAgencyOnboarding:
             phone_number='01201234567',
             password='Password123!',
         )
-        client.force_authenticate(user=user)
+        api_client.force_authenticate(user=user)
         
         url = reverse('users:agency_approve', kwargs={'pk': str(agency.id)})
-        response = client.patch(url, {'status': AgencyStatus.VERIFIED}, format='json')
+        response = api_client.patch(url, {'status': AgencyStatus.VERIFIED}, format='json')
         
         assert response.status_code == status.HTTP_403_FORBIDDEN
         agency.refresh_from_db()

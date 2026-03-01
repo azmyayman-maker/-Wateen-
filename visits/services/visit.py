@@ -42,7 +42,7 @@ def create_visit_request(
 
     visit = Visit.objects.create(
         patient=patient_profile,
-        status=VisitStatus.PENDING,
+        status=VisitStatus.PENDING_AGENCY,
         location=location,
         service_type=service_type,
     )

@@ -1,9 +1,15 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
+from rest_framework.test import APIClient
 from django.contrib.gis.geos import Polygon
 
 from users.models import AgencyProfile, CustomUser, UserRole
+
+@pytest.fixture
+def api_client():
+    """Provide DRF APIClient instead of Django's default test client."""
+    return APIClient()
 
 @pytest.mark.django_db
 class TestAgencyCoverageValidation:
@@ -25,9 +31,9 @@ class TestAgencyCoverageValidation:
         )
         return agency, user
 
-    def test_valid_polygon_upload(self, client, setup_agency):
+    def test_valid_polygon_upload(self, api_client, setup_agency):
         agency, user = setup_agency
-        client.force_authenticate(user=user)
+        api_client.force_authenticate(user=user)
         
         valid_geojson = {
             "type": "Polygon",
@@ -43,16 +49,16 @@ class TestAgencyCoverageValidation:
         }
         
         url = reverse('users:agency_coverage', kwargs={'pk': str(agency.id)})
-        response = client.post(url, {'coverage_polygon': valid_geojson}, format='json')
+        response = api_client.post(url, {'coverage_polygon': valid_geojson}, format='json')
         
         assert response.status_code == status.HTTP_200_OK
         agency.refresh_from_db()
         assert agency.coverage_polygon is not None
         assert isinstance(agency.coverage_polygon, Polygon)
 
-    def test_invalid_geometry_upload(self, client, setup_agency):
+    def test_invalid_geometry_upload(self, api_client, setup_agency):
         agency, user = setup_agency
-        client.force_authenticate(user=user)
+        api_client.force_authenticate(user=user)
         
         # Point is invalid, we only accept Polygon/MultiPolygon
         invalid_geojson = {
@@ -61,14 +67,14 @@ class TestAgencyCoverageValidation:
         }
         
         url = reverse('users:agency_coverage', kwargs={'pk': str(agency.id)})
-        response = client.post(url, {'coverage_polygon': invalid_geojson}, format='json')
+        response = api_client.post(url, {'coverage_polygon': invalid_geojson}, format='json')
         
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Geometry must be a Polygon" in str(response.data)
 
-    def test_malformed_geojson(self, client, setup_agency):
+    def test_malformed_geojson(self, api_client, setup_agency):
         agency, user = setup_agency
-        client.force_authenticate(user=user)
+        api_client.force_authenticate(user=user)
         
         # Malformed geojson (missing necessary closing brackets/coordinates)
         malformed_geojson = {
@@ -77,7 +83,8 @@ class TestAgencyCoverageValidation:
         }
         
         url = reverse('users:agency_coverage', kwargs={'pk': str(agency.id)})
-        response = client.post(url, {'coverage_polygon': malformed_geojson}, format='json')
+        response = api_client.post(url, {'coverage_polygon': malformed_geojson}, format='json')
         
         assert response.status_code == status.HTTP_400_BAD_REQUEST
         assert "Invalid GeoJSON format" in str(response.data)
+

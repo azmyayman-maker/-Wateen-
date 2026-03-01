@@ -27,15 +27,14 @@ class TestVisitStatusTransitions(TestCase):
         self.patient = PatientProfile.objects.get(user=self.user)
         self.visit = Visit.objects.create(
             patient=self.patient,
-            status=VisitStatus.PENDING,
+            status=VisitStatus.PENDING_AGENCY,
             location=Point(31.2357, 30.0444, srid=4326),
-            service_type='general_nursing',
         )
 
-    def test_valid_transition_pending_to_matched(self):
-        self.visit.transition_to(VisitStatus.MATCHED)
+    def test_valid_transition_pending_to_pending_nurse(self):
+        self.visit.transition_to(VisitStatus.PENDING_NURSE)
         self.visit.refresh_from_db()
-        self.assertEqual(self.visit.status, VisitStatus.MATCHED)
+        self.assertEqual(self.visit.status, VisitStatus.PENDING_NURSE)
 
     def test_valid_transition_pending_to_cancelled(self):
         self.visit.transition_to(VisitStatus.CANCELLED)
@@ -45,10 +44,9 @@ class TestVisitStatusTransitions(TestCase):
     def test_valid_full_happy_path(self):
         """Test the complete happy-path lifecycle."""
         transitions = [
-            VisitStatus.MATCHED,
+            VisitStatus.PENDING_NURSE,
             VisitStatus.ACCEPTED,
-            VisitStatus.ON_WAY,
-            VisitStatus.ARRIVED,
+            VisitStatus.EN_ROUTE,
             VisitStatus.IN_PROGRESS,
             VisitStatus.COMPLETED,
         ]
@@ -70,13 +68,13 @@ class TestVisitStatusTransitions(TestCase):
         self.visit.status = VisitStatus.COMPLETED
         self.visit.save()
         with self.assertRaises(ValidationError):
-            self.visit.transition_to(VisitStatus.PENDING)
+            self.visit.transition_to(VisitStatus.PENDING_AGENCY)
 
     def test_invalid_transition_from_cancelled(self):
         self.visit.status = VisitStatus.CANCELLED
         self.visit.save()
         with self.assertRaises(ValidationError):
-            self.visit.transition_to(VisitStatus.PENDING)
+            self.visit.transition_to(VisitStatus.PENDING_AGENCY)
 
     def test_invalid_status_value(self):
         with self.assertRaises(ValidationError) as ctx:
@@ -108,7 +106,7 @@ class TestCreateVisitRequestService(TestCase):
             longitude=31.2357,
             service_type='general_nursing',
         )
-        self.assertEqual(visit.status, VisitStatus.PENDING)
+        self.assertEqual(visit.status, VisitStatus.PENDING_AGENCY)
         self.assertEqual(visit.patient, self.patient)
         self.assertIsNone(visit.nurse)
         self.assertAlmostEqual(visit.location.y, 30.0444, places=4)
@@ -184,7 +182,7 @@ class TestVisitRequestAPI(TestCase):
             'service_type': 'general_nursing',
         }, format='json')
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
-        self.assertEqual(response.data['status'], 'PENDING')
+        self.assertEqual(response.data['status'], 'pending_agency')
         self.assertAlmostEqual(response.data['latitude'], 30.0444, places=4)
         self.assertAlmostEqual(response.data['longitude'], 31.2357, places=4)
         self.assertIn('id', response.data)
@@ -235,14 +233,14 @@ class TestVisitModel(TestCase):
             patient=self.patient,
             location=Point(31.2357, 30.0444, srid=4326),
         )
-        self.assertIn('PENDING', str(visit))
+        self.assertIn('pending_agency', str(visit))
 
     def test_visit_default_status(self):
         visit = Visit.objects.create(
             patient=self.patient,
             location=Point(31.2357, 30.0444, srid=4326),
         )
-        self.assertEqual(visit.status, VisitStatus.PENDING)
+        self.assertEqual(visit.status, VisitStatus.PENDING_AGENCY)
 
     def test_visit_uuid_pk(self):
         visit = Visit.objects.create(

@@ -1,27 +1,75 @@
 'use client';
 
-import React, { useEffect, useState, useRef } from 'react';
-import Map, { Source, Layer, Marker, Popup, NavigationControl } from 'react-map-gl';
-import 'mapbox-gl/dist/mapbox-gl.css';
-import { UserCircle2, Clock, MapPin, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { UserCircle2, Clock, AlertCircle } from 'lucide-react';
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN;
+interface CoverageData {
+  type: string;
+  features: Array<{
+    type: string;
+    geometry: {
+      type: string;
+      coordinates: number[][][];
+    };
+  }>;
+}
+
+interface Nurse {
+  id: string | number;
+  name: string;
+  lat: number;
+  lng: number;
+  status: 'available' | 'busy';
+}
+
+interface Visit {
+  id: string;
+  type: string;
+  lat: number;
+  lng: number;
+  status: string;
+}
 
 interface DispatchMapProps {
   agencyId: string;
 }
 
-export default function DispatchMap({ agencyId }: DispatchMapProps) {
-  const [viewState, setViewState] = useState({
-    longitude: 31.2357,
-    latitude: 30.0444,
-    zoom: 11
+// Custom marker icons
+const createNurseIcon = (status: 'available' | 'busy') => {
+  const colorClass = status === 'available' ? 'border-emerald-500 text-emerald-400' : 'border-amber-500 text-amber-400';
+  return L.divIcon({
+    className: 'custom-nurse-marker',
+    html: `<div class="p-1 rounded-full border-2 bg-slate-900 shadow-lg transition-transform hover:scale-125 cursor-pointer ${colorClass}">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+        <path fill-rule="evenodd" d="M7.502 6h7.128A3.75 3.75 0 0118 9.75v9.75a3 3 0 003 3h.75v.572a1 1 0 01-.482.876l-3.599 1.24a.75.75 0 01-.636-.636V18.5h.75a.75.75 0 00.75-.75v-6.75a.75.75 0 00-.75-.75H14.5V9.75a3 3 0 00-3-3h-3.998z" clip-rule="evenodd" />
+      </svg>
+    </div>`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 32],
   });
-  
-  const [coverageData, setCoverageData] = useState<any>(null);
-  const [nurses, setNurses] = useState<any[]>([]);
-  const [visits, setVisits] = useState<any[]>([]);
-  const [selectedVisit, setSelectedVisit] = useState<any>(null);
+};
+
+const visitIcon = L.divIcon({
+  className: 'custom-visit-marker',
+  html: `<div class="relative p-2 bg-blue-600 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.6)] cursor-pointer animate-bounce">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5 text-white">
+      <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 6a.75.75 0 00-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 000-1.5h-3.75V6z" clip-rule="evenodd" />
+    </svg>
+  </div>`,
+  iconSize: [36, 36],
+  iconAnchor: [18, 36],
+});
+
+export default function DispatchMap({ agencyId }: DispatchMapProps) {
+  const [coverageData, setCoverageData] = useState<CoverageData | null>(null);
+  const [nurses, setNurses] = useState<Nurse[]>([]);
+  const [visits, setVisits] = useState<Visit[]>([]);
+  const [selectedVisit, setSelectedVisit] = useState<Visit | null>(null);
+
+  const center: [number, number] = [30.0444, 31.2357];
 
   // Fetch initial state
   useEffect(() => {
@@ -46,70 +94,44 @@ export default function DispatchMap({ agencyId }: DispatchMapProps) {
 
   return (
     <div className="w-full h-full relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl">
-      <Map
-        {...viewState}
-        onMove={(evt: any) => setViewState(evt.viewState)}
-        style={{ width: '100%', height: '100%' }}
-        mapStyle="mapbox://styles/mapbox/dark-v11"
-        mapboxAccessToken={MAPBOX_TOKEN}
+      <MapContainer
+        center={center}
+        zoom={11}
+        scrollWheelZoom={true}
+        className="w-full h-full z-0"
+        attributionControl={true}
       >
-        <NavigationControl position="top-right" />
-
-        {/* Coverage Polygon Layer */}
-        {coverageData && (
-          <Source id="coverage" type="geojson" data={coverageData}>
-            <Layer
-              id="coverage-fill"
-              type="fill"
-              paint={{
-                'fill-color': '#4f46e5',
-                'fill-opacity': 0.15
-              }}
-            />
-            <Layer
-              id="coverage-outline"
-              type="line"
-              paint={{
-                'line-color': '#6366f1',
-                'line-width': 2,
-                'line-dasharray': [2, 1]
-              }}
-            />
-          </Source>
-        )}
+        <TileLayer
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        />
 
         {/* Nurse Markers */}
         {nurses.map(n => (
-          <Marker key={n.id} latitude={n.lat} longitude={n.lng} anchor="bottom">
-            <div className={`p-1 rounded-full border-2 bg-slate-900 shadow-lg transition-transform hover:scale-125 cursor-pointer ${
-              n.status === 'available' ? 'border-emerald-500' : 'border-amber-500'
-            }`}>
-              <UserCircle2 className={`w-6 h-6 ${n.status === 'available' ? 'text-emerald-400' : 'text-amber-400'}`} />
-            </div>
-          </Marker>
+          <Marker 
+            key={n.id} 
+            position={[n.lat, n.lng]} 
+            icon={createNurseIcon(n.status)}
+          />
         ))}
 
         {/* Visit Markers (Pending) */}
         {visits.map(v => (
-          <Marker key={v.id} latitude={v.lat} longitude={v.lng} anchor="bottom" onClick={(e: any) => {
-            e.originalEvent.stopPropagation();
-            setSelectedVisit(v);
-          }}>
-            <div className="relative p-2 bg-blue-600 rounded-xl shadow-[0_0_20px_rgba(37,99,235,0.6)] cursor-pointer animate-bounce">
-              <Clock className="w-5 h-5 text-white" />
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full border-2 border-white animate-ping" />
-            </div>
-          </Marker>
+          <Marker 
+            key={v.id} 
+            position={[v.lat, v.lng]} 
+            icon={visitIcon}
+            eventHandlers={{
+              click: () => setSelectedVisit(v),
+            }}
+          />
         ))}
 
         {/* Selected Visit Popup */}
         {selectedVisit && (
           <Popup
-            latitude={selectedVisit.lat}
-            longitude={selectedVisit.lng}
-            anchor="top"
+            position={[selectedVisit.lat, selectedVisit.lng]}
             onClose={() => setSelectedVisit(null)}
-            className="z-50"
           >
             <div className="p-3 min-w-[200px] bg-slate-900 text-white rounded-lg border border-white/10 shadow-2xl">
               <div className="flex items-center gap-2 mb-2">
@@ -123,7 +145,7 @@ export default function DispatchMap({ agencyId }: DispatchMapProps) {
             </div>
           </Popup>
         )}
-      </Map>
+      </MapContainer>
 
       {/* Floating Info Overlays */}
       <div className="absolute bottom-6 left-6 p-4 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-white/10 shadow-2xl flex items-center gap-5">

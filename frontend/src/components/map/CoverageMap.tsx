@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import Map, { NavigationControl } from 'react-map-gl';
 import DrawControl from './DrawControl';
 import 'mapbox-gl/dist/mapbox-gl.css';
@@ -14,6 +14,20 @@ interface CoverageMapProps {
 
 export default function CoverageMap({ initialPolygon, onCoverageChange, isSaving = false }: CoverageMapProps) {
   const [features, setFeatures] = useState<any>({});
+  
+  // Initialize features from initialPolygon prop
+  useEffect(() => {
+    if (initialPolygon && Object.keys(features).length === 0) {
+      const initialFeature = {
+        id: 'initial-coverage',
+        type: 'Feature',
+        geometry: initialPolygon,
+        properties: {}
+      };
+      setFeatures({ 'initial-coverage': initialFeature });
+      onCoverageChange(initialPolygon);
+    }
+  }, [initialPolygon, features, onCoverageChange]);
   
   // Default to Cairo, Egypt
   const [viewState, setViewState] = useState({
@@ -46,19 +60,34 @@ export default function CoverageMap({ initialPolygon, onCoverageChange, isSaving
       }
       return newFeatures;
     });
-    // If they delete everything, pass null
-    onCoverageChange(null);
+    // Only clear coverage if all features are deleted
+    setFeatures((currFeatures: any) => {
+      const remainingFeatures = Object.keys(currFeatures);
+      if (remainingFeatures.length === 0) {
+        onCoverageChange(null);
+      } else {
+        const lastFeature = currFeatures[remainingFeatures[remainingFeatures.length - 1]];
+        if (lastFeature) {
+          onCoverageChange(lastFeature.geometry);
+        }
+      }
+      return currFeatures;
+    });
   }, [onCoverageChange]);
 
   return (
     <div className="w-full h-full relative rounded-xl overflow-hidden shadow-lg border border-neutral-700">
-      {/* We use the public MAPBOX token. Real apps should secure this. */}
-      {/* For MVP we might hardcode or use NEXT_PUBLIC_MAPBOX_TOKEN if available */}
+      {/* Validate Mapbox token exists at runtime */}
+      {!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-red-900/90 text-white p-4">
+          <p className="text-center">Mapbox token is missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN environment variable.</p>
+        </div>
+      )}
       <Map
         {...viewState}
         onMove={evt => setViewState(evt.viewState)}
         mapStyle="mapbox://styles/mapbox/dark-v11"
-        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "pk.eyJ1IjoiYWxpYXNnZXIxMjMiLCJhIjoiY2tyNzhlN2FzMHBveTJwczNtaTI4MTE2YSJ9.WJ2o5X5P4-aYF9z9U8tYwQ"}
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
       >
         <NavigationControl position="top-left" />
         

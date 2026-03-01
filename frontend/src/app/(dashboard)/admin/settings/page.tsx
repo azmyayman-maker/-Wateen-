@@ -3,14 +3,25 @@
 import React, { useState } from 'react';
 import CoverageMap from '@/components/map/CoverageMap';
 import { Save, Map } from 'lucide-react';
+import { getCookie } from '@/lib/api/cookies';
+import { authAPI } from '@/lib/api/auth';
 
 export default function AgencySettingsPage() {
   const [coveragePolygon, setCoveragePolygon] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [message, setMessage] = useState({ text: '', type: '' });
 
-  // In a real app we'd fetch the existing polygon on mount
-  const agencyId = 'mock-agency-uuid';
+  // Get agencyId from authenticated user's JWT token
+  const getAgencyId = () => {
+    const accessToken = getCookie('access_token');
+    if (!accessToken) return null;
+    const userInfo = authAPI.getUserFromToken(accessToken);
+    // For agency admins, we need the agency ID from the user profile
+    // This is a placeholder - in production would fetch from user profile API
+    return userInfo?.id || null;
+  };
+
+  const agencyId = getAgencyId();
 
   const handleCoverageChange = (polygon: any) => {
     setCoveragePolygon(polygon);
@@ -22,16 +33,22 @@ export default function AgencySettingsPage() {
         return;
     }
 
+    if (!agencyId) {
+        setMessage({ text: 'غير مصرح لك بالوصول', type: 'error' });
+        return;
+    }
+
     setIsSaving(true);
     setMessage({ text: '', type: '' });
 
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || '/api/v1';
+      const accessToken = getCookie('access_token');
       const response = await fetch(`${apiUrl}/agency/${agencyId}/coverage/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${token}` 
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         },
         body: JSON.stringify({ coverage_polygon: coveragePolygon }),
       });

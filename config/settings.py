@@ -32,11 +32,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config(
     "SECRET_KEY",
-    default="django-insecure-dev-only-key-do-not-use-in-production" if config("DEBUG", default=False, cast=bool) else None
+    default="django-insecure-dev-only-key-do-not-use-in-production"
+    if config("DEBUG", default=False, cast=bool)
+    else None,
 )
 
 if not SECRET_KEY:
-    raise ImproperlyConfigured("SECRET_KEY environment variable is required in production")
+    raise ImproperlyConfigured(
+        "SECRET_KEY environment variable is required in production"
+    )
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config("DEBUG", default=False, cast=bool)
@@ -343,8 +347,15 @@ if not DEBUG:
 # =============================================================================
 # Celery Configuration
 # =============================================================================
-CELERY_BROKER_URL = config("REDIS_URL", default="redis://localhost:6379/1")
-CELERY_RESULT_BACKEND = CELERY_BROKER_URL
+_redis_url = config("REDIS_URL", default=None)
+
+if DEBUG or _redis_url is None:
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+else:
+    CELERY_BROKER_URL = _redis_url
+    CELERY_RESULT_BACKEND = _redis_url
+
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

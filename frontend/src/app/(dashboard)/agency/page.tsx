@@ -65,7 +65,11 @@ export default function AgencyDashboard() {
               {isRTL ? 'نظام البث نشط' : 'Dispatch System Active'}
             </span>
           </div>
-          <button className="p-2.5 rounded-xl bg-slate-900 border border-white/5 hover:border-white/20 transition-all text-slate-400 hover:text-white">
+          <button 
+            className="p-2.5 rounded-xl bg-slate-900 border border-white/5 hover:border-white/20 transition-all text-slate-400 hover:text-white"
+            aria-label="Open settings"
+            title="Open settings"
+          >
             <Settings className="w-5 h-5" />
           </button>
         </div>

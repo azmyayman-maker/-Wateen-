@@ -10,17 +10,23 @@ type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
 };
 
 export default function DrawControl(props: DrawControlProps) {
+  const drawOptions = {
+    displayControlsDefault: props.displayControlsDefault,
+    controls: props.controls,
+    defaultMode: props.defaultMode,
+  };
+  
   useControl<MapboxDraw>(
-    () => new MapboxDraw(props),
+    () => new MapboxDraw(drawOptions),
     ({ map }) => {
-      map.on('draw.create', props.onCreate!);
-      map.on('draw.update', props.onUpdate!);
-      map.on('draw.delete', props.onDelete!);
+      if (props.onCreate) map.on('draw.create', props.onCreate);
+      if (props.onUpdate) map.on('draw.update', props.onUpdate);
+      if (props.onDelete) map.on('draw.delete', props.onDelete);
     },
     ({ map }) => {
-      map.off('draw.create', props.onCreate!);
-      map.off('draw.update', props.onUpdate!);
-      map.off('draw.delete', props.onDelete!);
+      if (props.onCreate) map.off('draw.create', props.onCreate);
+      if (props.onUpdate) map.off('draw.update', props.onUpdate);
+      if (props.onDelete) map.off('draw.delete', props.onDelete);
     },
     {
       position: props.position

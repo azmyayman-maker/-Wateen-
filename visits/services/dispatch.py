@@ -85,14 +85,22 @@ class DispatchEngine:
 
         for nurse in final_nurses:
             group_name = f"nurse_{nurse.id}"
-            async_to_sync(self.channel_layer.group_send)(
-                group_name,
-                {
-                    "type": "visit.request",
-                    "data": data["data"]
-                }
-            )
-            logger.debug("Broadcasted visit %s to nurse %s", visit.id, nurse.id)
+            try:
+                async_to_sync(self.channel_layer.group_send)(
+                    group_name,
+                    {
+                        "type": "visit.request",
+                        "data": data["data"]
+                    }
+                )
+                logger.debug("Broadcasted visit %s to nurse %s", visit.id, nurse.id)
+            except Exception as e:
+                # Log but don't fail the dispatch if WebSocket fails
+                logger.error(
+                    "Failed to broadcast visit %s to nurse %s via WebSocket: %s",
+                    visit.id, nurse.id, str(e)
+                )
+                continue  # Continue with other nurses
 
         # 4. Also notify agency admin that auto-dispatch is in progress
         self._notify_agency_admin(visit, "auto_dispatch_started")
@@ -111,14 +119,21 @@ class DispatchEngine:
         from visits.serializers import VisitResponseSerializer
         
         group_name = f"agency_{agency.id}"
-        async_to_sync(self.channel_layer.group_send)(
-            group_name,
-            {
-                "type": "visit.new",
-                "data": {
-                    "alert_type": alert_type,
-                    "visit": VisitResponseSerializer(visit).data
+        try:
+            async_to_sync(self.channel_layer.group_send)(
+                group_name,
+                {
+                    "type": "visit.new",
+                    "data": {
+                        "alert_type": alert_type,
+                        "visit": VisitResponseSerializer(visit).data
+                    }
                 }
-            }
-        )
-        logger.debug("Notified agency %s admin of visit %s (%s)", agency.id, visit.id, alert_type)
+            )
+            logger.debug("Notified agency %s admin of visit %s (%s)", agency.id, visit.id, alert_type)
+        except Exception as e:
+            # Log but don't fail the dispatch if WebSocket fails
+            logger.error(
+                "Failed to notify agency %s admin of visit %s (%s): %s",
+                agency.id, visit.id, alert_type, str(e)
+            )

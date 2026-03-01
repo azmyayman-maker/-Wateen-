@@ -27,12 +27,11 @@ Because this pivots the schema from P2P to B2B2C, you must run migrations to ins
    docker-compose up -d db redis
    ```
 
-2. **Run Migrations:**
+ 2. **Run Migrations:**
 
-   ```bash
-   docker-compose run --rm backend python manage.py makemigrations
-   docker-compose run --rm backend python manage.py migrate
-   ```
+    ```bash
+    docker-compose run --rm backend python manage.py migrate
+    ```
 
 3. **Seed Data (Optional but recommended):**
    Run the idempotency script to port legacy nurses to the "Wateen Internal Agency".

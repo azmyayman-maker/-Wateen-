@@ -5,6 +5,7 @@ from django.contrib.gis.geos import GEOSGeometry
 
 from .models import AgencyProfile
 from .agency_serializers import AgencyRegistrationSerializer
+from .permissions import IsAgencyAdminOrSuperAdmin
 
 class AgencyCoverageUpdateView(generics.UpdateAPIView):
     """
@@ -14,17 +15,22 @@ class AgencyCoverageUpdateView(generics.UpdateAPIView):
     """
     queryset = AgencyProfile.objects.all()
     # In reality we'd have a specific serializer, but we can do a simple custom method
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAgencyAdminOrSuperAdmin]
     
     def update(self, request, *args, **kwargs):
         # RBAC Check: Ensure the user belongs to the agency or is superadmin
         user = request.user
         agency_id = self.kwargs.get('pk')
         
-        # SuperAdmins can bypass, otherwise check token agency scope
-        # if not user.is_superuser:
-        #    if str(user.nurse_profile.agency_id) != str(agency_id):
-        #       return Response({"detail": "Forbidden."}, status=403)
+        # SuperAdmins can update any agency's coverage
+        if not user.is_superadmin:
+            # Agency admins can only update their own agency
+            user_agency = getattr(user, 'agency', None)
+            if not user_agency or str(user_agency.id) != str(agency_id):
+                return Response(
+                    {"detail": "Forbidden. You can only update your own agency's coverage."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
                
         agency = self.get_object()
         

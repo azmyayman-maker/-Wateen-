@@ -78,7 +78,7 @@ class DatabaseVerifier(BaseVerifier):
 
             location = Point(31.2357, 30.0444)
             visit = Visit.objects.create(
-                patient=profile, location=location, status=VisitStatus.PENDING
+                patient=profile, location=location, status=VisitStatus.PENDING_AGENCY
             )
             logger.info(f"CRUD: Visit created with ID {visit.id}")
 

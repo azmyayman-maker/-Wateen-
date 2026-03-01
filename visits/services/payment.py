@@ -3,13 +3,14 @@ from django.conf import settings
 from decimal import Decimal
 from .logging import logger
 
-stripe.api_key = getattr(settings, 'STRIPE_SECRET_KEY', None)
+stripe.api_key = getattr(settings, "STRIPE_SECRET_KEY", None)
+
 
 class PaymentService:
     """
     T028: Handles Stripe Connect Destination Charges and Escrow logic.
     """
-    
+
     @staticmethod
     def create_payment_intent(visit, agency):
         """
@@ -25,7 +26,7 @@ class PaymentService:
             # Stripe amounts are in cents
             total_cents = int(visit.final_price * 100)
             take_rate_percent = 15
-            
+
             intent = stripe.PaymentIntent.create(
                 amount=total_cents,
                 currency="egp",
@@ -34,11 +35,12 @@ class PaymentService:
                     "destination": agency.stripe_account_id,
                 },
                 application_fee_amount=int(total_cents * (take_rate_percent / 100)),
+                idempotency_key=f"payment_intent_visit_{visit.id}",
                 metadata={
                     "visit_id": str(visit.id),
                     "agency_id": str(agency.id),
-                    "client_id": str(visit.patient_id)
-                }
+                    "client_id": str(visit.patient_id),
+                },
             )
             return intent
         except stripe.error.StripeError as e:
