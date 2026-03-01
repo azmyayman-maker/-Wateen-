@@ -1,6 +1,6 @@
 # Implementation Plan: Phase 1 QA, Security & Validation
 
-**Branch**: `011-phase1-qa-security` | **Date**: 2026-03-01 | **Spec**: [spec.md](file:///d:/projects/Wateen/specs/011-phase1-qa-security/spec.md)
+**Branch**: `011-phase1-qa-security` | **Date**: 2026-03-01 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/011-phase1-qa-security/spec.md`
 
 ## Summary

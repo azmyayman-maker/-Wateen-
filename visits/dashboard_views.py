@@ -1,39 +1,28 @@
-from rest_framework import generics
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from decimal import Decimal
+
 from django.db.models import Sum
 from django.db.models.functions import Coalesce
 from django.utils import timezone
-from decimal import Decimal
 
-from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
+from rest_framework import generics
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.request import Request
+
 from users.models import NurseProfile, AgencyProfile
+from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
 
 
-class AgencyDashboardOverviewView(generics.GenericAPIView):
-    """
-    GET /api/v1/agency/{agency_id}/dashboard/overview
-    Provides statistics and real-time counts for the agency dashboard.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        agency_id = self.kwargs.get("agency_id")
-
-        # Verify agency exists
-        try:
-            agency = AgencyProfile.objects.get(id=agency_id)
-        except AgencyProfile.DoesNotExist:
-            return Response({"detail": "Agency not found."}, status=404)
-
+class AgencyDashboardService:
+    @staticmethod
+    def get_overview_data(agency: AgencyProfile) -> dict:
         # 1. Real-time stats
         stats = {
             "pending_visits": Visit.objects.filter(
-                agency_id=agency_id, status=VisitStatus.PENDING_AGENCY
+                agency=agency, status=VisitStatus.PENDING_AGENCY
             ).count(),
             "active_visits": Visit.objects.filter(
-                agency_id=agency_id,
+                agency=agency,
                 status__in=[
                     VisitStatus.PENDING_NURSE,
                     VisitStatus.ACCEPTED,
@@ -42,20 +31,20 @@ class AgencyDashboardOverviewView(generics.GenericAPIView):
                 ],
             ).count(),
             "completed_today": Visit.objects.filter(
-                agency_id=agency_id,
+                agency=agency,
                 status=VisitStatus.COMPLETED,
                 updated_at__date=timezone.now().date(),
             ).count(),
             "online_nurses": NurseProfile.objects.filter(
-                agency_id=agency_id, is_available=True
+                agency=agency, is_available=True
             ).count(),
-            "total_nurses": NurseProfile.objects.filter(agency_id=agency_id).count(),
+            "total_nurses": NurseProfile.objects.filter(agency=agency).count(),
         }
 
         # 2. Financial summary (computed from actual transactions)
         today = timezone.now().date()
         today_transactions = Transaction.objects.filter(
-            visit__agency_id=agency_id,
+            visit__agency=agency,
             status=TransactionStatus.SETTLED,
             created_at__date=today,
         ).aggregate(total=Coalesce(Sum("agency_payout"), Decimal("0")))
@@ -72,12 +61,32 @@ class AgencyDashboardOverviewView(generics.GenericAPIView):
             "has_coverage": agency.coverage_polygon is not None,
         }
 
-        return Response(
-            {
-                "agency_name": agency.manager_name,
-                "stats": stats,
-                "financials": financials,
-                "settings": settings,
-                "timestamp": timezone.now(),
-            }
-        )
+        return {
+            "agency_name": agency.manager_name,
+            "stats": stats,
+            "financials": financials,
+            "settings": settings,
+            "timestamp": timezone.now(),
+        }
+
+
+class AgencyDashboardOverviewView(generics.GenericAPIView):
+    """
+    GET /api/v1/agency/{agency_id}/dashboard/overview
+    Provides statistics and real-time counts for the agency dashboard.
+    """
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request: Request, *args, **kwargs) -> Response:
+        agency_id = self.kwargs.get("agency_id")
+
+        # Verify agency exists
+        try:
+            agency = AgencyProfile.objects.get(id=agency_id)
+        except AgencyProfile.DoesNotExist:
+            return Response({"detail": "Agency not found."}, status=404)
+
+        data = AgencyDashboardService.get_overview_data(agency)
+
+        return Response(data)

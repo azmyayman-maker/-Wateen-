@@ -19,6 +19,8 @@ class TestCrossRoleBreach:
         api_client.force_authenticate(user=nurse.user)
         
         url = reverse("users:invite_nurse")
+        if not url.endswith('/'):
+            url += '/'
         data = {
             "national_id": "29001011234567",
             "phone_number": "+201012345678",
@@ -26,10 +28,10 @@ class TestCrossRoleBreach:
             "last_name_ar": "User"
         }
         
-        response = api_client.post(url, data)
+        response = api_client.post(url, data, secure=True)
         
         assert response.status_code == status.HTTP_403_FORBIDDEN
-        assert "permission" in str(response.data).lower()
+        assert response.data.get('detail').code == 'permission_denied'
 
     def test_patient_cannot_access_manual_dispatch(self, api_client, patient, sample_agency, sample_visit):
         """
@@ -39,13 +41,16 @@ class TestCrossRoleBreach:
         api_client.force_authenticate(user=patient.user)
         
         url = reverse("visits:agency_dispatch_manual", kwargs={"agency_id": sample_agency.id})
+        if not url.endswith('/'):
+            url += '/'
         data = {
             "visit_id": str(sample_visit.id),
             "nurse_id": "00000000-0000-0000-0000-000000000000"
         }
         
-        response = api_client.post(url, data)
+        response = api_client.post(url, data, secure=True)
         assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.data.get('detail').code == 'permission_denied'
 
 
     # test_patient_cannot_patch_visit_price removed because visit-detail endpoint

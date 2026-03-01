@@ -9,9 +9,20 @@ Usage:
     python manage.py test_redis
 """
 
-from django.core.management.base import BaseCommand
-from django.core.cache import cache
+import logging
 import os
+import time
+
+from django.conf import settings
+from django.core.cache import cache
+from django.core.management.base import BaseCommand
+from django.db import connection
+
+import redis
+
+from users.models import AgencyProfile, NurseProfile
+from visits.models import Visit
+from visits.services.redis_geo import SpatialService
 
 
 class Command(BaseCommand):

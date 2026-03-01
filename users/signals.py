@@ -12,7 +12,7 @@ def create_user_profile(sender: type[CustomUser], instance: CustomUser, created:
     """
     Automatically create the appropriate profile based on user's role.
     - PATIENT role -> PatientProfile
-    - NURSE role -> NurseProfile
+    - NURSE role -> Does not auto-create profile here (requires strict agency assignment elsewhere).
 
     Uses get_or_create to be idempotent:
     - Safe for new user creation

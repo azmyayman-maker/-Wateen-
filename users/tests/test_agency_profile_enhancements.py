@@ -1,6 +1,8 @@
-import pytest
 from django.contrib.gis.geos import Polygon, Point
 from rest_framework.exceptions import ValidationError
+
+import pytest
+
 from users.models import AgencyProfile, CustomUser, UserRole, DispatchMode, AgencyStatus
 from users.agency_serializers import AgencyProfileSerializer
 
@@ -118,13 +120,12 @@ class TestAgencyProfileEnhancements:
 
     def test_serializer_validate_coverage_polygon_not_closed(self):
         """Validate that an open/unclosed LineString mapped as polygon raises validation."""
-        # Arrange: Cannot instantiate unclosed polygon easily, but testing string coercion if possible
-        # Alternatively we test minimal vertex enforcement
-        
-        # A GEOS LinearRing must be closed by definition, so we construct a polygon with exactly 4 points 
-        # (triangle) which is valid. An unclosed ring will raise GEOSException anyway before hitting DRF validation,
-        # but we ensure the validation logic catches edge manipulation.
         serializer = AgencyProfileSerializer()
         
-        # Passing None should be valid because null=True
+        # Test valid fallback: Passing None should be valid because null=True
         assert serializer.validate_coverage_polygon(None) is None
+        
+        # Unclosed WKT
+        unclosed_wkt = "POLYGON ((0.0 0.0, 10.0 0.0, 10.0 10.0, 0.0 10.0))"
+        with pytest.raises(ValidationError):
+            serializer.validate_coverage_polygon(unclosed_wkt)

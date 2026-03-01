@@ -91,6 +91,7 @@ class DatabaseVerifier(BaseVerifier):
                 logger.info("CRUD: Read verification passed")
 
             # Update verification
+            # Bypassing the state machine intentionally to verify raw DB update capabilities
             visit.status = VisitStatus.COMPLETED
             visit.save()
             updated_visit = Visit.objects.get(id=visit.id)

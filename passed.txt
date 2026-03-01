@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform linux -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python
+cachedir: .pytest_cache
+django: version: 5.0.2, settings: config.settings (from env)
+rootdir: /app
+configfile: pytest.ini
+plugins: Faker-40.5.1, django-4.12.0
+collecting ... collected 15 items
+
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_creation_without_agency_raises_integrity_error PASSED [  6%]
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_nurse_save_without_agency_raises_validation_error PASSED [ 13%]
+users/tests/test_b2b2c_integrity.py::TestNurseAgencyFKIntegrity::test_valid_nurse_creation_succeeds PASSED [ 20%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_invalid_polygon_raises_exception PASSED [ 26%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_self_intersecting_polygon_rejected PASSED [ 33%]
+users/tests/test_b2b2c_integrity.py::TestGeospatialIntegrity::test_valid_polygon_creation_succeeds PASSED [ 40%]
+users/tests/test_migrations.py::TestMigrationSafety::test_no_unapplied_migrations PASSED [ 46%]
+users/tests/test_migrations.py::TestMigrationSafety::test_no_missing_migrations PASSED [ 53%]
+users/tests/test_migrations.py::TestMigrationSafety::test_migration_plan_loads_without_conflicts PASSED [ 60%]
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_nurse_cannot_access_agency_admin_endpoint PASSED [ 66%]
+visits/tests/test_security_rbac.py::TestCrossRoleBreach::test_patient_cannot_access_manual_dispatch PASSED [ 73%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_superadmin_permission PASSED [ 80%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_agency_admin_permission PASSED [ 86%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_nurse_or_above_permission PASSED [ 93%]
+users/tests/test_permissions.py::TestPermissionClasses::test_is_owner_or_admin_permission PASSED [100%]
+
+=============================== warnings summary ===============================
+../home/wateen/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:1428
+  /home/wateen/.local/lib/python3.11/site-packages/_pytest/config/__init__.py:1428: PytestConfigWarning: Unknown config option: asyncio_mode
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+======================== 15 passed, 1 warning in 3.09s =========================

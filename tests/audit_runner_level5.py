@@ -174,7 +174,7 @@ class TestLevel5Audit(unittest.TestCase):
         strategy.get_factor = MagicMock(side_effect=factor_side_effect)
         
         # 0 distance
-        breakdown = strategy.calculate_price(Decimal("100"), Decimal("0"))
+        breakdown = strategy.calculate_price(Decimal("100"), Decimal("0"), request_time=timezone.now().replace(hour=12))
         
         self.assertEqual(breakdown.distance_fee, Decimal("0.00"))
         self.assertEqual(breakdown.final_price, Decimal("100.00"))

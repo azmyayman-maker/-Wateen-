@@ -38,6 +38,7 @@ def patient_user(db):
 
 @pytest.fixture
 def nurse_user(db):
+    from users.models import AgencyProfile, NurseProfile
     user = User.objects.create_user(
         national_id="29001010100001",
         phone_number="01000000001",
@@ -46,7 +47,17 @@ def nurse_user(db):
         first_name_ar="Test",
         last_name_ar="Nurse"
     )
-    # Profile created by signal
+    # The signal skips nurse profile creation, so we explicitly create it with an agency
+    agency = AgencyProfile.objects.create(
+        manager_name="Test Agency",
+        commercial_registry="CR-1234",
+        moh_license_number="MOH-1234"
+    )
+    NurseProfile.objects.create(
+        user=user,
+        agency=agency,
+        is_available=True
+    )
     return user
 
 @pytest.fixture

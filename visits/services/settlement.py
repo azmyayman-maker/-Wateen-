@@ -1,4 +1,6 @@
-from visits.models import VisitStatus, Transaction, TransactionStatus
+from typing import Optional
+
+from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
 from .logging import logger
 
 
@@ -8,7 +10,7 @@ class SettlementService:
     """
 
     @staticmethod
-    def create_transaction_for_visit(visit):
+    def create_transaction_for_visit(visit: Visit) -> Transaction:
         """Initializes a transaction for a new visit."""
         from decimal import Decimal
         
@@ -22,6 +24,7 @@ class SettlementService:
         
         transaction = Transaction(
             visit=visit,
+            agency=visit.agency,
             amount_paid=total,
             status=TransactionStatus.ESCROWED,
         )
@@ -30,7 +33,7 @@ class SettlementService:
         return transaction
 
     @staticmethod
-    def mark_escrowed(visit, payment_intent_id):
+    def mark_escrowed(visit: Visit, payment_intent_id: str) -> None:
         """Marks a transaction as escrowed after payment intent creation."""
         try:
             transaction = visit.transaction
@@ -41,7 +44,7 @@ class SettlementService:
             logger.error(f"Error marking escrow for visit {visit.id}: {str(e)}")
 
     @staticmethod
-    def settle_visit(visit):
+    def settle_visit(visit: Visit) -> bool:
         """
         Calculates final settlement once visit is COMPLETED.
         Updates wallet balances if necessary or verifies Stripe status.
