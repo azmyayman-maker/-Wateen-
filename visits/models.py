@@ -208,6 +208,7 @@ class Visit(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
         help_text=_("المسافة بالكيلومتر"),
     )
     distance_rate = models.DecimalField(
@@ -216,6 +217,7 @@ class Visit(models.Model):
         decimal_places=2,
         null=True,
         blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
         help_text=_("سعر الكيلومتر"),
     )
     time_multiplier = models.DecimalField(
@@ -276,9 +278,14 @@ class Visit(models.Model):
 
     def save(self, *args, **kwargs):
         update_fields = kwargs.get("update_fields", None)
+        pricing_fields_touched = (
+            update_fields is not None
+            and set(update_fields) & set(self.IMMUTABLE_PRICING_FIELDS)
+        )
         if self.pk is not None and (
             update_fields is None
             or not {"status", "updated_at"}.issubset(update_fields)
+            or pricing_fields_touched
         ):
             try:
                 old_instance = Visit.objects.get(pk=self.pk)

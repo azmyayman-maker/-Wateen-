@@ -212,6 +212,13 @@ class TestImmutablePricingSnapshot:
         }
         assert set(Visit.IMMUTABLE_PRICING_FIELDS) == expected
 
+    def test_pricing_bypass_via_update_fields_blocked(self, visit):
+        """Smuggling a pricing field alongside status+updated_at is caught."""
+        visit.final_price = Decimal("999.99")
+        with pytest.raises(ValidationError) as exc_info:
+            visit.save(update_fields=["status", "updated_at", "final_price"])
+        assert exc_info.value.code == "immutable_pricing"
+
 
 # ============================================================================
 # US3: Transaction / Escrow Ledger
