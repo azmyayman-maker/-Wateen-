@@ -5,8 +5,8 @@ Based on the technical context extraction from `spec.md`, the following areas re
 ## 1. Map Provider Decision (Mapbox vs Leaflet)
 
 **Context**: The B2B SaaS Dashboard needs an interactive map widget for drawing the `coverage_polygon` (User Story 2).
-**Decision**: **Mapbox GL JS** (via `react-map-gl`).
-**Rationale**: Wateen emphasizes a premium, 3D aesthetic (as seen in recent features like the 3D Services Grid). Mapbox provides superior vector rendering, custom styling capabilities for a premium dark mode, and excellent drawing tools (`mapbox-gl-draw`) for geometric polygons. Leaflet, while open-source, lacks the high-end polish out-of-the-box.
+**Decision**: **Leaflet / OpenStreetMap** (via `react-leaflet` and `DispatchMap`).
+**Rationale**: Wateen emphasizes a fully open-source stack avoiding vendor lock-in and API costs. While Mapbox was initially considered for vector rendering, the current implementation leverages Leaflet and OpenStreetMap successfully in the `DispatchMap` and coverage mapping interfaces, providing a robust solution without ongoing licensing fees.
 **Alternatives considered**: React-Leaflet (rejected due to less premium default rendering), Google Maps JS API (rejected due to complex pricing and less customizable base maps).
 
 ## 2. Testing Frameworks

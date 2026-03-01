@@ -459,7 +459,7 @@ class NurseProfile(models.Model):
         super().clean()
         if not self.agency_id:
             raise ValidationError(
-                {"agency": _("الممرض/ة يجب أن تكون تابعة для агентства.")}
+                {"agency": _("الممرض/ة يجب أن تكون تابعة للوكالة.")}
             )
 
     def save(self, *args, **kwargs):

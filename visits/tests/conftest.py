@@ -33,7 +33,7 @@ class NurseProfileFactory(factory.django.DjangoModelFactory):
         django_get_or_create = ('user',)
 
     user = factory.SubFactory(CustomUserFactory, role=UserRole.NURSE)
-    agency = factory.SubFactory('AgencyProfileFactory')
+    agency = factory.SubFactory(f"{__name__}.AgencyProfileFactory")
     is_available = True
     last_location = Point(31.2357, 30.0444, srid=4326) # Cairo
 

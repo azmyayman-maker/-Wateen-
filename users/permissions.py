@@ -78,6 +78,10 @@ class IsOwnerOrAdmin(BasePermission):
     message = 'ليس لديك صلاحية الوصول لهذا المورد'
 
     def has_object_permission(self, request, view, obj):
+        if not getattr(request, 'user', None) or not getattr(request.user, 'is_authenticated', False):
+            return False
+            
+        # 1. Superadmins can touch anything
         if request.user.is_superadmin:
             return True
         # If the object IS a user, compare directly

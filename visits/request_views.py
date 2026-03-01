@@ -117,7 +117,7 @@ class VisitRequestView(generics.CreateAPIView):
         
         # Schedule timeout re-routing task (5 minutes)
         from .tasks import re_route_visit
-        re_route_visit.apply_async((visit.id,), countdown=300)
+        re_route_visit.apply_async((str(visit.id),), countdown=300)
         
         # Initialize Transaction (T027)
         from .services.settlement import SettlementService

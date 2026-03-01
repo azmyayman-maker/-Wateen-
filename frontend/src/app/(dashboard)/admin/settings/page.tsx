@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import CoverageMap from '@/components/map/CoverageMap';
 import { Save, Map } from 'lucide-react';
 import { getCookie } from '@/lib/api/cookies';
@@ -16,16 +16,16 @@ export default function AgencySettingsPage() {
     const accessToken = getCookie('access_token');
     if (!accessToken) return null;
     const userInfo = authAPI.getUserFromToken(accessToken);
-    // For agency admins, we need the agency ID from the user profile
-    // This is a placeholder - in production would fetch from user profile API
-    return userInfo?.id || null;
+    // For agency admins, we need the agency ID from the user profile or token
+    // The backend provides agency_id in the JWT claims
+    return userInfo?.agencyId || null;
   };
 
   const agencyId = getAgencyId();
 
-  const handleCoverageChange = (polygon: any) => {
+  const handleCoverageChange = useCallback((polygon: any) => {
     setCoveragePolygon(polygon);
-  };
+  }, [setCoveragePolygon]);
 
   const saveCoverage = async () => {
     if (!coveragePolygon) {

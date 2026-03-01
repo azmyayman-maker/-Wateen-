@@ -39,7 +39,7 @@ def run_simulation():
         }
     )
     
-    agency_user, _ = CustomUser.objects.get_or_create(
+    _agency_user, _ = CustomUser.objects.get_or_create(
         national_id="29901011230002",
         defaults={
             "phone_number": "01099900002",

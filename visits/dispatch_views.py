@@ -45,7 +45,7 @@ class ManualDispatchView(generics.GenericAPIView):
                     id=visit_id, agency_id=agency_id
                 )
                 nurse = NurseProfile.objects.select_for_update().get(
-                    id=nurse_id, agency_id=agency_id
+                    user_id=nurse_id, agency_id=agency_id
                 )
 
                 if visit.status != VisitStatus.PENDING_AGENCY:
@@ -73,7 +73,7 @@ class ManualDispatchView(generics.GenericAPIView):
         channel_layer = get_channel_layer()
         
         async_to_sync(channel_layer.group_send)(
-            f"nurse_{nurse.id}",
+            f"nurse_{nurse.user_id}",
             {
                 "type": "visit.request",
                 "data": {

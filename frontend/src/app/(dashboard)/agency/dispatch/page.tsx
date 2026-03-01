@@ -156,7 +156,8 @@ export default function AgencyDispatchPage() {
                         <button 
                           disabled={isDispatching}
                           onClick={() => handleDispatch(nurse)}
-                          className="p-2 rounded-lg bg-blue-500 text-white opacity-0 group-hover:opacity-100 transition-all hover:scale-110 active:scale-90"
+                          aria-label="Dispatch nurse"
+                          className="p-2 rounded-lg bg-blue-500 text-white opacity-100 md:opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-all hover:scale-110 active:scale-90"
                         >
                           <ChevronRight className="w-4 h-4" />
                         </button>

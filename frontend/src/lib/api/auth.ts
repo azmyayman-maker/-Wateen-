@@ -149,7 +149,7 @@ export const authAPI = {
   /**
    * Extracts user info from JWT token payload.
    */
-  getUserFromToken: (token: string): { id: string; role: 'patient' | 'nurse' | 'admin' } | null => {
+  getUserFromToken: (token: string): { id: string; role: 'patient' | 'nurse' | 'admin'; agencyId?: string } | null => {
     const payload = decodeJWTPayload(token);
     if (!payload) return null;
     
@@ -157,7 +157,8 @@ export const authAPI = {
     const id = payload.user_id || payload.sub || '';
     const roleRaw = (payload.role || 'patient').toLowerCase();
     const role = (['patient', 'nurse', 'admin'].includes(roleRaw) ? roleRaw : 'patient') as 'patient' | 'nurse' | 'admin';
+    const agencyId = payload.agency_id || payload.agencyId || undefined;
     
-    return { id: String(id), role };
+    return { id: String(id), role, agencyId: agencyId ? String(agencyId) : undefined };
   },
 };

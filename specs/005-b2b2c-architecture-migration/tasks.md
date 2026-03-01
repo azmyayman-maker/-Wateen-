@@ -105,7 +105,7 @@ description: "Task list template for feature implementation"
 
 ## Phase 7: User Story 5 - Escrow and Financial Settlement (Priority: P2)
 
-**Goal**: Hold patient payment in escrow, deduuct take rate, credit agency wallet via Stripe Connect.
+**Goal**: Hold patient payment in escrow, deduct take rate, credit agency wallet via Stripe Connect.
 
 **Independent Test**: Complete a visit and verify Escrow funds are split precisely via Stripe Destination Charges.
 

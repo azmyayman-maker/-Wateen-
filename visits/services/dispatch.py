@@ -58,10 +58,14 @@ class DispatchEngine:
 
         # 2. Optionally filter by proximity using GeoMatchingService
         # For Tier 2 B2B2C, we broadcast to ALL agency nurses in the area.
-        # We'll use the patient's location.
-        lat, lng = visit.location.y, visit.location.x
-        
-        # We can limit to a reasonable radius (e.g. 15km) even if they are in the agency polygon
+        if not visit.location:
+            logger.warning("Visit %s has no location set. Skipping geo-filtering.", visit.id)
+            candidate_ids = eligible_nurses.values_list('id', flat=True)
+        else:
+            # We'll use the patient's location.
+            lat, lng = visit.location.y, visit.location.x
+            
+            # We can limit to a reasonable radius (e.g. 15km) even if they are in the agency polygon
         candidates = self.geo_service.find_candidates(lat, lng, radius_km=15.0)
         candidate_ids = [c['nurse_id'] for c in candidates]
         

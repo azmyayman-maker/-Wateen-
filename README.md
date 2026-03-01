@@ -87,7 +87,7 @@ No Mapbox. No Google Maps. No licensing fees. Ever.
 | Framework | **Next.js 14** (App Router)                    |
 | Language  | **TypeScript 5.x**                             |
 | Styling   | **Tailwind CSS 3.4**                           |
-| Animation | **Framer Motion 12**                           |
+| Animation | **Framer Motion 11.0.0**                       |
 | Maps      | **react-leaflet 4**, **Leaflet Geoman**        |
 | Icons     | **Lucide React**                               |
 | RTL       | Native Arabic support with `next/font` (Cairo) |
@@ -164,7 +164,7 @@ graph TD
 Wateen implements a **Safety Blackbox** system for every visit — an encrypted, immutable audit log that captures:
 
 - **Audio metadata**: Call start/end timestamps, duration, parties involved (no actual audio storage to protect privacy)
-- **Geospatial轨迹**: Nurse route from dispatch to patient location
+- **Geospatial Trajectory**: Nurse route from dispatch to patient location
 - **Visit state transitions**: Every status change with millisecond timestamps
 - **Dispute resolution**: Tamper-proof evidence for MoH compliance audits
 

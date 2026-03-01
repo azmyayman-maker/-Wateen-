@@ -349,7 +349,11 @@ if not DEBUG:
 # =============================================================================
 _redis_url = config("REDIS_URL", default=None)
 
-if DEBUG or _redis_url is None:
+if DEBUG:
+    CELERY_BROKER_URL = "memory://"
+    CELERY_RESULT_BACKEND = "cache+memory://"
+    CELERY_TASK_ALWAYS_EAGER = True
+elif not _redis_url:
     CELERY_BROKER_URL = "memory://"
     CELERY_RESULT_BACKEND = "cache+memory://"
 else:

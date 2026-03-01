@@ -139,7 +139,12 @@ export default function DispatchMap({ agencyId }: DispatchMapProps) {
                 <h4 className="font-bold text-sm tracking-tight">{selectedVisit.type}</h4>
               </div>
               <p className="text-xs text-slate-400 mb-3">Status: {selectedVisit.status}</p>
-              <button className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-all">
+              <button 
+                onClick={() => {
+                  alert("Dispatching integration incoming. This will route to the dispatch API.");
+                  setSelectedVisit(null);
+                }}
+                className="w-full py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition-all">
                 Dispatch Nurse
               </button>
             </div>

@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from channels.db import database_sync_to_async
 from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.exceptions import TokenError
 import logging
 from typing import Tuple, Optional
 
@@ -22,7 +23,7 @@ def get_user_and_agency_from_token(token: str) -> Tuple[object, Optional[str]]:
         # Extract agency_id from token claims (set by CustomTokenObtainPairSerializer)
         agency_id = access_token.get('agency_id', None)
         return user, agency_id
-    except Exception as e:
+    except (TokenError, User.DoesNotExist) as e:
         logger.warning("WebSocket auth failed: %s", e)
         return AnonymousUser(), None
 

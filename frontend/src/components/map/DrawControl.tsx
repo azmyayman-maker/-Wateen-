@@ -10,7 +10,9 @@ type DrawControlProps = ConstructorParameters<typeof MapboxDraw>[0] & {
 };
 
 export default function DrawControl(props: DrawControlProps) {
+  const { position, onCreate, onUpdate, onDelete, ...restProps } = props;
   const drawOptions = {
+    ...restProps,
     displayControlsDefault: props.displayControlsDefault,
     controls: props.controls,
     defaultMode: props.defaultMode,

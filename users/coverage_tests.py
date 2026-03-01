@@ -1,8 +1,9 @@
 import pytest
 from django.urls import reverse
 from rest_framework import status
-from rest_framework.test import APIClient
-from django.contrib.gis.geos import Polygon
+from rest_framework.test import pytest
+import secrets
+from django.contrib.gis.geos import Polygon, Point
 
 from users.models import AgencyProfile, CustomUser, UserRole
 
@@ -26,7 +27,7 @@ class TestAgencyCoverageValidation:
         user = CustomUser.objects.create_user(
             national_id="29001011234568",
             phone_number="01001234568",
-            password="Password1234!",
+            password=secrets.token_urlsafe(16),
             role=UserRole.AGENCY_ADMIN
         )
         return agency, user

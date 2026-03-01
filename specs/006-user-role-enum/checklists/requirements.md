@@ -2,7 +2,7 @@
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
 **Created**: 2026-03-01
-**Feature**: [spec.md](file:///d:/projects/Wateen/specs/006-user-role-enum/spec.md)
+**Feature**: [spec.md](./spec.md)
 
 ## Content Quality
 

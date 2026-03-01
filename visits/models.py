@@ -375,7 +375,7 @@ class Transaction(models.Model):
         default=Decimal("15.00"),  # Default 15%
     )
     take_rate_amount = models.DecimalField(
-        _("مبلع المنصة"),
+        _("مبلغ المنصة"),
         max_digits=10,
         decimal_places=2,
     )

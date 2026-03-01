@@ -2,7 +2,7 @@
 
 **Feature**: 006-user-role-enum
 **Generated**: 2026-03-01
-**Source**: [spec.md](file:///d:/projects/Wateen/specs/006-user-role-enum/spec.md) · [plan.md](file:///d:/projects/Wateen/specs/006-user-role-enum/plan.md) · [data-model.md](file:///d:/projects/Wateen/specs/006-user-role-enum/data-model.md)
+**Source**: [spec.md](./spec.md) · [plan.md](./plan.md) · [data-model.md](./data-model.md)
 
 ---
 

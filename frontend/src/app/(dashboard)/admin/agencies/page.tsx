@@ -73,6 +73,18 @@ export default function AgencyReviewQueue() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-red-500">
+        <XCircle className="w-12 h-12 mb-4" />
+        <p className="text-lg font-bold">{error}</p>
+        <button onClick={fetchAgencies} className="mt-4 px-4 py-2 bg-red-500/10 hover:bg-red-500/20 rounded-lg border border-red-500/20 transition-colors">
+            إعادة المحاولة
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6" dir="rtl">
       <div>
@@ -156,6 +168,9 @@ export default function AgencyReviewQueue() {
                     )}
                     {agency.status === 'rejected' && (
                       <span className="bg-red-500/10 text-red-500 text-xs font-medium px-2.5 py-1 rounded-full border border-red-500/20">مرفوض</span>
+                    )}
+                    {agency.status === 'suspended' && (
+                      <span className="bg-gray-500/10 text-gray-500 text-xs font-medium px-2.5 py-1 rounded-full border border-gray-500/20">موقوف</span>
                     )}
                   </td>
                   <td className="px-6 py-4">

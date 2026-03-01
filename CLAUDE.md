@@ -11,7 +11,7 @@
 4. Visit status changes ONLY via `transition_to()` — follow `ALLOWED_TRANSITIONS`
 5. All money uses `Decimal`, never `float`
 6. Arabic-first, RTL mandatory
-7. OSM stack only — no Google Maps, no Mapbox
+7. OSM stack preferred; Mapbox allowed for frontend map components
 8. Follow the WBS phases sequentially (see `docs/AGILE_BACKLOG_WBS.md`)
 
 ## Key References

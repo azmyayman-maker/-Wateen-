@@ -82,8 +82,8 @@ Allows an Admin to manually override or assign a nurse to a pending visit.
 ```json
 {
   "status": "success",
-  "message": "Nurse effectively dispatched.",
-  "visit_status": "accepted"
+  "detail": "Nurse effectively dispatched.",
+  "visit_status": "PENDING_NURSE"
 }
 ```
 

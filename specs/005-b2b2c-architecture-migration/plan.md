@@ -13,7 +13,7 @@ The goal of this migration is to transition the Wateen platform from a Peer-to-P
 
 **Language/Version**: Python 3.11+, TypeScript  
 **Primary Dependencies**: Django, Next.js, PostGIS, Celery, Redis, Django Channels, Stripe, Mapbox GL JS  
-**Storage**: PostgreSQL (with PostGIS extentions)  
+**Storage**: PostgreSQL (with PostGIS extensions)  
 **Testing**: Pytest (backend), Locust (load testing WS), Jest/React Testing Library (frontend)  
 **Target Platform**: Linux Server (Dockerized), Web Browser (PWA)  
 **Project Type**: Multi-tenant Web App & Backend API  
@@ -55,7 +55,8 @@ backend/ (Django)
 │   ├── financials/
 │   │   ├── models.py (TRANSACTION)
 │   │   ├── tasks.py (Celery escrow settlements)
-└── docker-compose.yml
+
+*Note: docker-compose orchestration was refactored outside of the backend module.*
 
 frontend/ (Next.js)
 ├── src/

@@ -67,8 +67,9 @@ class SettlementService:
             agency = visit.agency
             if agency is not None:
                 from django.db.models import F
+                from users.models import AgencyProfile
 
-                Agency.objects.filter(pk=agency.pk).update(
+                AgencyProfile.objects.filter(pk=agency.pk).update(
                     wallet_balance=F("wallet_balance") + transaction.agency_amount
                 )
                 agency.refresh_from_db()

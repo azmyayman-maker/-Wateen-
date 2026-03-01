@@ -216,7 +216,7 @@ In high-risk scenarios or upon patient/nurse distress signal, the system begins 
 
 ## 🔧 9. NON-FUNCTIONAL REQUIREMENTS (NFRs)
 
-### 8.1 Performance
+### 9.1 Performance
 
 - **Concurrency:** Support 10k+ active visits simultaneously.
 - **Latency:** API response < 300ms.
@@ -364,7 +364,7 @@ In the event of a medical emergency or physical threat:
 
 ## 📜 15. COMPLIANCE & REGULATORY MATRIX (EGYPT MOH)
 
-### 15.1 Legal Entitites
+### 15.1 Legal Entities
 
 All agencies must be verified against the Egyptian General Authority for Investment (GAFI) registry.
 
@@ -509,7 +509,7 @@ Where:
 
 ---
 
-## 🛠️ 21. MAINTENANCE, OPERATIONS & SUPPORT (SOPS)
+## 🛠️ 22. MAINTENANCE, OPERATIONS & SUPPORT (SOPS)
 
 ### 22.1 Technical Maintenance
 

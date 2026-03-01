@@ -57,9 +57,9 @@
 
 ```diff
      @property
-     def is_admin_user(self) -> bool:
--        return self.role == UserRole.ADMIN or self.is_superuser
-+        return self.role == UserRole.SUPERADMIN or self.is_superuser
+    def is_admin_user(self):
+        # Was previously used internally. Now requires superadmin or superuser.
+        return self.role == UserRole.SUPERADMIN or self.is_superuser
 ```
 
 ---
@@ -69,8 +69,9 @@
 ### Step 2.1 — Create `0004_refactor_userrole_enum.py`
 
 - `RunPython`: `ADMIN` → `SUPERADMIN`, `DOCTOR` → `NURSE`
-- `AlterField`: Update `role` field choices to new enum
-- Reverse: `SUPERADMIN` → `ADMIN` (DOCTOR reverse is lossy — acceptable)
+- **`CustomUser` Migration**:
+  - `RunPython`: `ADMIN` → `SUPERADMIN`, `DOCTOR` → `NURSE`
+  - Reverse: `SUPERADMIN` → `ADMIN` (DOCTOR reverse is lossy — acceptable)
 
 ---
 
