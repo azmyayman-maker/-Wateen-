@@ -10,7 +10,8 @@ from .views import (
     CustomTokenRefreshView,
     KYCUploadView,
 )
-
+from .agency_views import AgencyRegisterView, AgencyApprovalView
+from .coverage_views import AgencyCoverageUpdateView
 
 app_name = 'users'
 
@@ -24,4 +25,9 @@ urlpatterns = [
     path('profile/', ProfileView.as_view(), name='profile'),
     # KYC document upload for nurse verification
     path('kyc/upload/', KYCUploadView.as_view(), name='kyc_upload'),
+    
+    # B2B Agency Onboarding
+    path('agency/register/', AgencyRegisterView.as_view(), name='agency_register'),
+    path('agency/<uuid:pk>/coverage/', AgencyCoverageUpdateView.as_view(), name='agency_coverage'),
+    path('admin/agencies/<uuid:pk>/approve/', AgencyApprovalView.as_view(), name='agency_approve'),
 ]

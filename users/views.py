@@ -21,6 +21,7 @@ from .serializers import (
     TokenRefreshResponseSerializer,
     KYCDocumentUploadSerializer,
     NurseDocumentSerializer,
+    CustomTokenObtainPairSerializer,
 )
 
 
@@ -99,6 +100,9 @@ class LogoutView(APIView):
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
+    # Set the serializer to our custom version that embeds agency_id
+    serializer_class = CustomTokenObtainPairSerializer
+
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         

@@ -10,6 +10,30 @@ from .validators import validate_egyptian_national_id, validate_phone_number
 User = get_user_model()
 
 
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    """
+    Custom JWT Serializer to embed B2B2C specific claims like role and agency_id.
+    """
+    @classmethod
+    def get_token(cls, user):
+        token = super().get_token(user)
+
+        # Add custom claims
+        token['role'] = user.role
+        
+        # Add agency context if available
+        # For nurses: check nurse_profile.agency_id
+        if hasattr(user, 'nurse_profile') and user.nurse_profile and user.nurse_profile.agency_id:
+            token['agency_id'] = str(user.nurse_profile.agency_id)
+        # For agency admins: check user.agency directly (added to CustomUser model)
+        elif hasattr(user, 'agency') and user.agency_id:
+            token['agency_id'] = str(user.agency_id)
+            
+        return token
+
+
 class UserRegistrationSerializer(serializers.ModelSerializer):
     password = serializers.CharField(
         write_only=True,

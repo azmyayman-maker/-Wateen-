@@ -21,49 +21,6 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class VisitRequestView(APIView):
-    """
-    POST /api/v1/visits/request/
-
-    Creates a new visit request for an authenticated patient.
-    """
-
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        # Check that the user is a patient
-        if request.user.role != UserRole.PATIENT:
-            return Response(
-                {"detail": _("فقط المرضى يمكنهم طلب زيارة.")},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        serializer = VisitRequestSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        # Get patient profile
-        try:
-            patient_profile = request.user.patient_profile
-        except PatientProfile.DoesNotExist:
-            return Response(
-                {"detail": _("لم يتم العثور على ملف المريض.")},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-
-        visit = create_visit_request(
-            patient_profile=patient_profile,
-            latitude=serializer.validated_data["latitude"],
-            longitude=serializer.validated_data["longitude"],
-            service_type=serializer.validated_data.get("service_type"),
-        )
-
-        response_serializer = VisitResponseSerializer(visit)
-
-        broadcast_visit_request(visit)
-
-        return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-
-
 # ─── Nurse-Side Views ─────────────────────────────────────────────────────────
 
 
@@ -162,12 +119,14 @@ class NursePendingVisitsView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        # Get pending visits — ordered by most recent first
+        # Get pending visits — B2B2C: nurses see PENDING_NURSE visits from their agency
         pending_visits = Visit.objects.filter(
-            status=VisitStatus.PENDING,
+            status=VisitStatus.PENDING_NURSE,
+            agency=nurse_profile.agency,  # Only show visits from nurse's agency
         ).select_related(
             "patient__user",
             "service_type",
+            "agency",
         ).order_by("-created_at")[:20]
 
         serializer = NursePendingVisitSerializer(pending_visits, many=True)
@@ -209,7 +168,8 @@ class NurseRespondVisitView(APIView):
             )
 
         if action == "accept":
-            if visit.status != VisitStatus.PENDING:
+            # B2B2C: Nurse can accept visits in PENDING_NURSE status
+            if visit.status != VisitStatus.PENDING_NURSE:
                 return Response(
                     {"detail": str(_("لا يمكن قبول هذه الزيارة — الحالة الحالية: {}")).format(visit.status)},
                     status=status.HTTP_409_CONFLICT,
@@ -230,16 +190,15 @@ class NurseRespondVisitView(APIView):
                 visit = Visit.objects.select_for_update().get(id=visit_id)
                 
                 # Re-check status after acquiring lock
-                if visit.status != VisitStatus.PENDING:
+                if visit.status != VisitStatus.PENDING_NURSE:
                     return Response(
                         {"detail": str(_("لا يمكن قبول هذه الزيارة — الحالة الحالية: {}")).format(visit.status)},
                         status=status.HTTP_409_CONFLICT,
                     )
                 
-                # Transition PENDING → MATCHED → ACCEPTED and assign nurse atomically
+                # B2B2C: Assign nurse and transition directly to ACCEPTED
                 visit.nurse = nurse_profile
                 visit.save(update_fields=["nurse"])
-                visit.transition_to(VisitStatus.MATCHED)
                 visit.transition_to(VisitStatus.ACCEPTED)
 
             # Broadcast acceptance to the patient (outside transaction)

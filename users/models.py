@@ -11,8 +11,8 @@ from .validators import validate_egyptian_national_id, validate_phone_number
 class UserRole(models.TextChoices):
     PATIENT = 'PATIENT', _('Patient')
     NURSE = 'NURSE', _('Nurse')
-    DOCTOR = 'DOCTOR', _('Doctor')
-    ADMIN = 'ADMIN', _('Admin')
+    AGENCY_ADMIN = 'AGENCY_ADMIN', _('Agency Admin')
+    SUPERADMIN = 'SUPERADMIN', _('Super Admin')
 
 
 class CustomUserManager(BaseUserManager['CustomUser']):
@@ -60,7 +60,7 @@ class CustomUserManager(BaseUserManager['CustomUser']):
         extra_fields.setdefault('is_active', True)
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
-        extra_fields.setdefault('role', UserRole.ADMIN)
+        extra_fields.setdefault('role', UserRole.SUPERADMIN)
         
         if extra_fields.get('is_staff') is not True:
             raise ValueError(_('Superuser must have is_staff=True.'))
@@ -109,10 +109,21 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     
     role = models.CharField(
         _('الدور'),
-        max_length=10,
+        max_length=15,
         choices=UserRole.choices,
         default=UserRole.PATIENT,
         help_text=_('دور المستخدم في النظام')
+    )
+    
+    # B2B2C: Link users (especially AGENCY_ADMIN) to their agency
+    agency = models.ForeignKey(
+        'AgencyProfile',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='admin_users',
+        verbose_name=_('الشركة/الوكالة'),
+        help_text=_('الشركة التابع لها المستخدم (للمديرين)')
     )
     
     first_name_ar = models.CharField(
@@ -172,10 +183,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.first_name_ar or self.national_id
     
     @property
-    def is_doctor(self) -> bool:
-        return self.role == UserRole.DOCTOR
-    
-    @property
     def is_nurse(self) -> bool:
         return self.role == UserRole.NURSE
     
@@ -184,8 +191,16 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         return self.role == UserRole.PATIENT
     
     @property
+    def is_agency_admin(self) -> bool:
+        return self.role == UserRole.AGENCY_ADMIN
+    
+    @property
+    def is_superadmin(self) -> bool:
+        return self.role == UserRole.SUPERADMIN
+    
+    @property
     def is_admin_user(self) -> bool:
-        return self.role == UserRole.ADMIN or self.is_superuser
+        return self.role == UserRole.SUPERADMIN or self.is_superuser
 
 
 class VerificationStatus(models.TextChoices):
@@ -197,6 +212,104 @@ class VerificationStatus(models.TextChoices):
 class GenderChoices(models.TextChoices):
     MALE = 'MALE', _('ذكر')
     FEMALE = 'FEMALE', _('أنثى')
+
+
+class AgencyStatus(models.TextChoices):
+    PENDING = 'pending', _('قيد المراجعة')
+    VERIFIED = 'verified', _('موثق')
+    SUSPENDED = 'suspended', _('موقوف')
+    REJECTED = 'rejected', _('مرفوض')
+
+
+class DispatchMode(models.TextChoices):
+    AUTO = 'AUTO', _('آلي')
+    MANUAL = 'MANUAL', _('يدوي')
+
+
+class AgencyProfile(models.Model):
+    """
+    B2B B2B2C Tenant Profile: Represents a verified agency.
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_('المعرّف'),
+    )
+    manager_name = models.CharField(
+        _('اسم المدير'),
+        max_length=255,
+    )
+    commercial_registry = models.CharField(
+        _('السجل التجاري'),
+        max_length=100,
+        unique=True,
+    )
+    moh_license_number = models.CharField(
+        _('رقم ترخيص وزارة الصحة'),
+        max_length=100,
+        unique=True,
+    )
+    tax_id = models.CharField(
+        _('البطاقة الضريبية'),
+        max_length=100,
+        unique=True,
+    )
+    status = models.CharField(
+        _('الحالة'),
+        max_length=20,
+        choices=AgencyStatus.choices,
+        default=AgencyStatus.PENDING,
+    )
+    coverage_polygon = gis_models.PolygonField(
+        _('نطاق التغطية'),
+        srid=4326,
+        null=True,
+        blank=True,
+    )
+    rating = models.DecimalField(
+        _('التقييم'),
+        max_digits=3,
+        decimal_places=2,
+        default=5.00,
+    )
+    network_capacity = models.PositiveIntegerField(
+        _('سعة الشبكة (عدد الممرضين)'),
+        default=0,
+    )
+    dispatch_mode = models.CharField(
+        _('آلية التوزيع'),
+        max_length=10,
+        choices=DispatchMode.choices,
+        default=DispatchMode.AUTO,
+    )
+    wallet_balance = models.DecimalField(
+        _('رصيد المحفظة'),
+        max_digits=12,
+        decimal_places=2,
+        default=0.00,
+    )
+    stripe_account_id = models.CharField(
+        _('معرف حساب سترايب'),
+        max_length=100,
+        blank=True,
+        null=True,
+        help_text=_('Stripe Connect Account ID for payouts'),
+    )
+    created_at = models.DateTimeField(_('تاريخ الإنشاء'), auto_now_add=True)
+    updated_at = models.DateTimeField(_('تاريخ التحديث'), auto_now=True)
+
+    class Meta:
+        verbose_name = _('ملف الشركة/الوكالة')
+        verbose_name_plural = _('ملفات الشركات/الوكالات')
+        db_table = 'users_agency_profile'
+        indexes = [
+            models.Index(fields=['status']),
+            models.Index(fields=['rating']),
+        ]
+
+    def __str__(self) -> str:
+        return f'AgencyProfile({self.manager_name})'
 
 
 class PatientProfile(models.Model):
@@ -269,6 +382,14 @@ class NurseProfile(models.Model):
         primary_key=True,
         related_name='nurse_profile',
         verbose_name=_('المستخدم'),
+    )
+    agency = models.ForeignKey(
+        'AgencyProfile',
+        on_delete=models.CASCADE,
+        related_name='nurses',
+        verbose_name=_('الشركة/الوكالة التابع لها'),
+        null=True,  # Initially true so migrations pass, then we will seed.
+        blank=True,
     )
     national_id_document = models.CharField(
         _('رقم الهوية المهنية'),

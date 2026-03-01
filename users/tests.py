@@ -184,7 +184,7 @@ class TestCustomUserManager(TestCase):
         self.assertTrue(user.is_active)
         self.assertTrue(user.is_staff)
         self.assertTrue(user.is_superuser)
-        self.assertEqual(user.role, 'ADMIN')
+        self.assertEqual(user.role, 'SUPERADMIN')
     
     def test_create_superuser_without_is_staff(self):
         with self.assertRaises(ValueError):
@@ -413,18 +413,18 @@ class TestUserProperties(TestCase):
             role='PATIENT'
         )
         
-        doctor = User.objects.create_user(
-            national_id='29901011234711',
-            phone_number='01012345694',
-            password='TestPass123!',
-            role='DOCTOR'
-        )
-        
         nurse = User.objects.create_user(
             national_id='29901011234712',
             phone_number='01012345695',
             password='TestPass123!',
             role='NURSE'
+        )
+        
+        agency_admin = User.objects.create_user(
+            national_id='29901011234711',
+            phone_number='01012345694',
+            password='TestPass123!',
+            role='AGENCY_ADMIN'
         )
         
         admin = User.objects.create_superuser(
@@ -433,15 +433,26 @@ class TestUserProperties(TestCase):
             password='AdminPass123!'
         )
         
+        # Patient checks
         self.assertTrue(patient.is_patient)
-        self.assertFalse(patient.is_doctor)
+        self.assertFalse(patient.is_nurse)
+        self.assertFalse(patient.is_agency_admin)
+        self.assertFalse(patient.is_superadmin)
         
-        self.assertTrue(doctor.is_doctor)
-        self.assertFalse(doctor.is_patient)
-        
+        # Nurse checks
         self.assertTrue(nurse.is_nurse)
+        self.assertFalse(nurse.is_patient)
         
+        # Agency Admin checks
+        self.assertTrue(agency_admin.is_agency_admin)
+        self.assertFalse(agency_admin.is_patient)
+        self.assertFalse(agency_admin.is_nurse)
+        self.assertFalse(agency_admin.is_superadmin)
+        
+        # SuperAdmin checks
         self.assertTrue(admin.is_admin_user)
+        self.assertTrue(admin.is_superadmin)
+        self.assertFalse(admin.is_patient)
     
     def test_get_full_name(self):
         user = User.objects.create_user(
@@ -938,13 +949,13 @@ class TestSignalEdgeCases(TestCase):
         profile_count = PatientProfile.objects.filter(user=user).count()
         self.assertEqual(profile_count, 1)
 
-    def test_no_profile_for_doctor_role(self):
-        """Test that DOCTOR role doesn't create any profile."""
+    def test_no_profile_for_superadmin_role(self):
+        """Test that SUPERADMIN role doesn't create any profile."""
         user = User.objects.create_user(
             national_id='29901011234841',
             phone_number='01012345841',
             password='TestPass123!',
-            role=UserRole.DOCTOR,
+            role=UserRole.SUPERADMIN,
         )
 
         patient_profile_exists = PatientProfile.objects.filter(user=user).exists()
@@ -953,12 +964,13 @@ class TestSignalEdgeCases(TestCase):
         self.assertFalse(patient_profile_exists)
         self.assertFalse(nurse_profile_exists)
 
-    def test_no_profile_for_admin_role(self):
-        """Test that ADMIN role doesn't create any profile."""
-        user = User.objects.create_superuser(
+    def test_no_profile_for_agency_admin_role(self):
+        """Test that AGENCY_ADMIN role doesn't create any profile."""
+        user = User.objects.create_user(
             national_id='29901011234842',
             phone_number='01012345842',
             password='TestPass123!',
+            role=UserRole.AGENCY_ADMIN,
         )
 
         patient_profile_exists = PatientProfile.objects.filter(user=user).exists()

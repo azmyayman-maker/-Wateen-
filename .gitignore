@@ -112,7 +112,7 @@ run_tests.bat
 run_tests.sh
 run_tests_manual.py
 verify_age.py
-.agent/
+.agents/
 .kilocode/
 .opencode/
 .specify/
@@ -124,3 +124,24 @@ package.json
 setup_fw.mjs
 test_output2.txt
 test_output3.txt
+.gitnexus
+.claude/
+# === Cleanup additions (auto-generated) ===
+# Prevent sensitive files from being committed
+payload*.json
+*.log
+*_output*.txt
+*_results*.txt
+desktop.ini
+nul
+firewall*.json
+act.json
+rule.json
+tools.json
+mcp_output.json
+mcp_tools.json
+mcp_client.mjs
+invoke_mcp.mjs
+setup_fw.mjs
+verification-report.json
+.specs/
