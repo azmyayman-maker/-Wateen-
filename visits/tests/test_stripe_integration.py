@@ -43,6 +43,10 @@ class TestStripeIntegration:
         sample_visit.agency = sample_agency
         sample_visit.save()
         
+        transaction = SettlementService.create_transaction_for_visit(sample_visit)
+        transaction.status = TransactionStatus.ESCROWED
+        transaction.save()
+        
         initial_balance = sample_agency.wallet_balance
         
         # Execute

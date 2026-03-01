@@ -414,8 +414,6 @@ class Transaction(models.Model):
         on_delete=models.PROTECT,
         related_name="transactions",
         verbose_name=_("الوكالة"),
-        null=True,
-        blank=True,
     )
     paymob_order_id = models.CharField(
         _("معرف الطلب في Paymob"),
@@ -433,8 +431,6 @@ class Transaction(models.Model):
         _("المبلغ المدفوع"),
         max_digits=10,
         decimal_places=2,
-        null=True,
-        blank=True,
         validators=[MinValueValidator(Decimal("0.00"))],
     )
     wateen_take_rate = models.DecimalField(
@@ -494,6 +490,26 @@ class Transaction(models.Model):
         verbose_name = _("عملية مالية")
         verbose_name_plural = _("العمليات المالية")
         db_table = "visits_transaction"
+
+
+class TransactionLegacyBackup(models.Model):
+    """
+    Backup table to safely store legacy financial columns before their removal
+    from the main Transaction table. Preserves historical data integrity.
+    """
+    transaction = models.OneToOneField(
+        Transaction, on_delete=models.CASCADE, related_name="legacy_backup"
+    )
+    agency_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    take_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
+    take_rate_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    stripe_payment_intent_id = models.CharField(max_length=255, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        db_table = "visits_transaction_legacy_backup"
+
 
     def __str__(self):
         return f"Transaction({self.id}) - {self.status}"
