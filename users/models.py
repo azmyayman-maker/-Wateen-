@@ -10,6 +10,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import uuid
+from typing import Any
 
 from .validators import validate_egyptian_national_id, validate_phone_number
 
@@ -730,7 +731,9 @@ class KYCAuditLog(models.Model):
     )
     agency = models.ForeignKey(
         AgencyProfile,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         related_name="kyc_audit_logs",
         verbose_name=_("الشركة/الوكالة"),
     )
@@ -741,10 +744,16 @@ class KYCAuditLog(models.Model):
         related_name="kyc_reviews",
         verbose_name=_("المراجع"),
     )
+    class ActionChoices(models.TextChoices):
+        APPROVE = "APPROVE", _("موافقة")
+        REJECT = "REJECT", _("رفض")
+        RESUBMIT = "RESUBMIT", _("إعادة تقديم")
+
     action = models.CharField(
         _("الإجراء"),
         max_length=50,
-        help_text=_("APPROVE or REJECT"),
+        choices=ActionChoices.choices,
+        help_text=_("APPROVE, REJECT, or RESUBMIT"),
     )
     notes = models.TextField(
         _("ملاحظات"),
@@ -783,7 +792,7 @@ class KYCAuditLog(models.Model):
             raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
         super().save(*args, **kwargs)
 
-    def delete(self, *args, **kwargs):
+    def delete(self, *args: Any, **kwargs: Any) -> None:
         from django.core.exceptions import PermissionDenied
         raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
 

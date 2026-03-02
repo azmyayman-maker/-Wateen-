@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.db import transaction
@@ -252,7 +253,7 @@ class KYCAuditLogSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = fields
 
-    def get_reviewer_name(self, obj) -> str:
+    def get_reviewer_name(self, obj: KYCAuditLog) -> str:
         if obj.reviewer:
             return obj.reviewer.get_full_name()
         return "System"
@@ -277,7 +278,7 @@ class KYCQueueSerializer(serializers.ModelSerializer):
             'kyc_documents'
         ]
 
-    def get_kyc_documents(self, obj):
+    def get_kyc_documents(self, obj: AgencyProfile) -> list[dict[str, Any]]:
         # We assume prefetch_related is used in the view for performance
         documents = obj.kyc_documents.all()
         return KYCDocumentSerializer(documents, many=True).data
@@ -309,12 +310,14 @@ class KYCReviewSerializer(serializers.Serializer):
         Enforce mandatory notes for REJECT action.
         """
         action = attrs.get('action')
-        notes = attrs.get('notes', '')
+        notes = (attrs.get('notes', '') or '').strip()
 
         if action == 'REJECT' and not notes:
             raise serializers.ValidationError({
                 'notes': _('Notes are required when rejecting an agency.')
             })
 
+        # Store the trimmed notes back
+        attrs['notes'] = notes
         return attrs
 

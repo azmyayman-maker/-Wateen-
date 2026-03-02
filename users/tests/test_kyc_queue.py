@@ -1,6 +1,6 @@
 from unittest.mock import patch
+
 import pytest
-from unittest.mock import patch
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -35,6 +35,13 @@ def superadmin_client():
 
 @pytest.fixture
 def agency_admin():
+    agency = AgencyProfile.objects.create(
+        manager_name='Test Manager',
+        status=AgencyStatus.PENDING,
+        commercial_registry='12345',
+        moh_license_number='67890',
+        tax_id='11111',
+    )
     return CustomUser.objects.create_user(
         national_id='29001011234568',
         email='admin@agency.com',
@@ -43,19 +50,13 @@ def agency_admin():
         role='AGENCY_ADMIN',
         first_name_ar='Admin',
         last_name_ar='User',
+        agency=agency,
     )
 
 
 @pytest.fixture
 def pending_agency(agency_admin):
-    agency = agency_admin.agency
-    agency.manager_name = 'Test Manager'
-    agency.status = AgencyStatus.PENDING
-    agency.commercial_registry = '12345'
-    agency.moh_license_number = '67890'
-    agency.tax_id = '11111'
-    agency.save()
-    return agency
+    return agency_admin.agency
 
 
 # ---------------------------------------------------------------------------
@@ -318,7 +319,8 @@ def test_rejected_agency_resubmit_transitions_to_pending(agency_admin):
     client = APIClient()
     client.force_authenticate(user=agency_admin)
     
-    with override_settings(DEFAULT_FILE_STORAGE='django.core.files.storage.InMemoryStorage'):
+    with override_settings(DEFAULT_FILE_STORAGE='django.core.files.storage.InMemoryStorage'), \
+         patch('users.agency_views.AgencyNotificationService.notify_superadmins_of_new_registration'):
         response = client.post(
             url,
             {
@@ -347,7 +349,8 @@ def test_resubmit_creates_audit_log(agency_admin):
     client = APIClient()
     client.force_authenticate(user=agency_admin)
     
-    with override_settings(DEFAULT_FILE_STORAGE='django.core.files.storage.InMemoryStorage'):
+    with override_settings(DEFAULT_FILE_STORAGE='django.core.files.storage.InMemoryStorage'), \
+         patch('users.agency_views.AgencyNotificationService.notify_superadmins_of_new_registration'):
         response = client.post(
             url,
             {

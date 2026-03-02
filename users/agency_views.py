@@ -28,11 +28,20 @@ from .agency_serializers import (
 
 
 def get_client_ip(request: Request) -> str:
-    """Extract client IP address from request, handling proxies."""
-    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
-    if x_forwarded_for:
-        return x_forwarded_for.split(',')[0].strip()
-    return request.META.get('REMOTE_ADDR', '')
+    """Extract client IP address from request, handling proxies.
+    
+    Only trusts X-Forwarded-For when the immediate peer IP (REMOTE_ADDR)
+    is in settings.TRUSTED_PROXIES to prevent client spoofing.
+    """
+    from django.conf import settings
+    remote_addr = request.META.get('REMOTE_ADDR', '')
+    trusted_proxies = getattr(settings, 'TRUSTED_PROXIES', [])
+    
+    if remote_addr in trusted_proxies:
+        x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+        if x_forwarded_for:
+            return x_forwarded_for.split(',')[0].strip()
+    return remote_addr
 
 
 class AgencyRegisterView(generics.CreateAPIView):

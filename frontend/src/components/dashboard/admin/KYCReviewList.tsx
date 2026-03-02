@@ -86,7 +86,34 @@ const ReviewActions: React.FC<ReviewActionProps> = ({ agencyId, onActionComplete
     <>
       <div className="flex gap-2">
         <button
-          onClick={() => setAction("APPROVE")}
+          onClick={() => {
+            setAction("APPROVE");
+            // Trigger submission immediately for approve flow
+            setTimeout(async () => {
+              setIsLoading(true);
+              try {
+                const response = await fetch(`/api/v1/admin/agencies/${agencyId}/review/`, {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${localStorage.getItem("access_token")}`,
+                  },
+                  body: JSON.stringify({ action: "APPROVE", notes: "" }),
+                });
+                if (response.ok) {
+                  onActionComplete();
+                } else {
+                  const error = await response.json();
+                  alert(error.detail || "Action failed");
+                }
+              } catch (error) {
+                console.error("Review action failed:", error);
+                alert("Failed to process review action");
+              } finally {
+                setIsLoading(false);
+              }
+            }, 0);
+          }}
           disabled={isLoading}
           className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-lg bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all text-xs font-bold uppercase tracking-wider disabled:opacity-50"
         >
@@ -304,7 +331,7 @@ export const KYCReviewList: React.FC = () => {
                       <FileText className="w-3 h-3" />
                       {agency.kyc_documents.length} Documents
                     </span>
-                    {agency.kyc_documents.every(doc => doc.status === "VERIFIED") && (
+                    {agency.kyc_documents.every(doc => doc.status === "APPROVED") && (
                       <span className="text-xs text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded">
                         All Verified
                       </span>

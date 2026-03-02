@@ -86,14 +86,11 @@ def send_kyc_review_email_task(
     try:
         admin_user = CustomUser.objects.get(agency_id=agency_id, role='AGENCY_ADMIN')
     except CustomUser.DoesNotExist:
-        # Try to find any user linked to this agency
-        admin_user = CustomUser.objects.filter(agency_id=agency_id).first()
-        if not admin_user:
-            logger.error("No admin user found for agency %s", agency_id)
-            return
+        logger.warning("No AGENCY_ADMIN user found for agency %s — skipping notification", agency_id)
+        return
 
     if not admin_user.email:
-        logger.error("No email address for agency admin %s", admin_user.national_id)
+        logger.error("No email address for agency admin (user_id=%s)", admin_user.id)
         return
 
     # Prepare email content
@@ -107,10 +104,13 @@ def send_kyc_review_email_task(
         subject = _("🎉 Your agency has been approved! - Wateen")
         message_text = render_to_string('users/emails/agency_approved.txt', template_context)
         message_html = render_to_string('users/emails/agency_approved.html', template_context)
-    else:  # REJECT
+    elif action == 'REJECT':
         subject = _("⚠️ Your agency application requires updates - Wateen")
         message_text = render_to_string('users/emails/agency_rejected.txt', template_context)
         message_html = render_to_string('users/emails/agency_rejected.html', template_context)
+    else:
+        logger.error("Unexpected KYC review action '%s' for agency %s — aborting email", action, agency_id)
+        return
 
     try:
         send_mail(
@@ -121,7 +121,7 @@ def send_kyc_review_email_task(
             html_message=message_html,
             fail_silently=False,
         )
-        logger.info("KYC review email sent to %s for agency %s", admin_user.email, agency_id)
+        logger.info("KYC review email sent for agency %s (user_id=%s)", agency_id, admin_user.id)
     except Exception as exc:
         logger.warning(
             "Failed to send KYC review email for agency %s: %s", agency_id, exc

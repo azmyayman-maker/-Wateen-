@@ -1,6 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.contrib.gis.admin import GISModelAdmin
+from django.http import HttpRequest
 from django.utils.translation import gettext_lazy as _
 
 from .models import (
@@ -230,12 +231,12 @@ class KYCAuditLogAdmin(admin.ModelAdmin):
     search_fields = ("agency__manager_name", "notes", "ip_address")
     readonly_fields = ("id", "agency", "reviewer", "action", "notes", "ip_address", "user_agent", "timestamp")
     
-    def has_add_permission(self, request):
+    def has_add_permission(self, request: HttpRequest) -> bool:
         return False
         
-    def has_change_permission(self, request, obj=None):
+    def has_change_permission(self, request: HttpRequest, obj: KYCAuditLog | None = None) -> bool:
         return False
         
-    def has_delete_permission(self, request, obj=None):
+    def has_delete_permission(self, request: HttpRequest, obj: KYCAuditLog | None = None) -> bool:
         return False
 
