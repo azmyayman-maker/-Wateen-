@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gdal-bin \
     libgdal-dev \
     libgeos-dev \
+    libmagic1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy Python packages globally from builder

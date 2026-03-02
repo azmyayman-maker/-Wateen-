@@ -62,6 +62,7 @@ nul
 # ── Temporary Test & Debug Output ──
 *_output.txt
 *_output*.txt
+test_out*.txt
 test_errors.txt
 test_failures*.txt
 logs_dump.txt

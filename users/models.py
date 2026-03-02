@@ -10,6 +10,7 @@ from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 import uuid
+from typing import Any
 
 from .validators import validate_egyptian_national_id, validate_phone_number
 
@@ -715,3 +716,84 @@ class KYCDocument(models.Model):
                 super().save(*args, **kwargs)
             return  # already saved inside the atomic block
         super().save(*args, **kwargs)
+
+
+class KYCAuditLog(models.Model):
+    """
+    Immutable audit trail for all KYC review actions.
+    Enforces compliance with Egyptian MoH and Law 151/2020.
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_("المعرّف"),
+    )
+    agency = models.ForeignKey(
+        AgencyProfile,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="kyc_audit_logs",
+        verbose_name=_("الشركة/الوكالة"),
+    )
+    reviewer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="kyc_reviews",
+        verbose_name=_("المراجع"),
+    )
+    class ActionChoices(models.TextChoices):
+        APPROVE = "APPROVE", _("موافقة")
+        REJECT = "REJECT", _("رفض")
+        RESUBMIT = "RESUBMIT", _("إعادة تقديم")
+
+    action = models.CharField(
+        _("الإجراء"),
+        max_length=50,
+        choices=ActionChoices.choices,
+        help_text=_("APPROVE, REJECT, or RESUBMIT"),
+    )
+    notes = models.TextField(
+        _("ملاحظات"),
+        blank=True,
+        default="",
+    )
+    ip_address = models.GenericIPAddressField(
+        _("عنوان IP"),
+        null=True,
+        blank=True,
+    )
+    user_agent = models.CharField(
+        _("متصفح المستخدم"),
+        max_length=512,
+        blank=True,
+        default="",
+    )
+    timestamp = models.DateTimeField(
+        _("وقت الإجراء"),
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = _("سجل تدقيق KYC")
+        verbose_name_plural = _("سجلات تدقيق KYC")
+        db_table = "users_kyc_audit_log"
+        ordering = ["-timestamp"]
+
+    def __str__(self) -> str:
+        reviewer_name = self.reviewer.get_full_name() if self.reviewer else "System"
+        agency_name = getattr(self.agency, 'manager_name', None) if self.agency else "Unknown Agency"
+        return f"[{self.action}] {agency_name} by {reviewer_name} at {self.timestamp}"
+
+    def save(self, *args: Any, **kwargs: Any) -> None:
+        from django.core.exceptions import PermissionDenied
+        if not self._state.adding:
+            raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args: Any, **kwargs: Any) -> None:
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
+

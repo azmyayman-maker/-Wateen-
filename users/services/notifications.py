@@ -1,10 +1,18 @@
 import logging
-from celery import shared_task
+
 from django.conf import settings
-from channels.layers import get_channel_layer
+from django.core.mail import send_mail
+from django.template.loader import render_to_string
+from django.utils.translation import gettext_lazy as _
+
 from asgiref.sync import async_to_sync
+from celery import shared_task
+from channels.layers import get_channel_layer
+
+from users.models import AgencyProfile, CustomUser, UserRole
 
 logger = logging.getLogger(__name__)
+
 
 class AgencyNotificationService:
     """
@@ -20,8 +28,9 @@ class AgencyNotificationService:
         send_superadmin_notification_task.delay(
             agency_id=agency_id,
             message=f"New agency registration: {manager_name} (ID: {agency_id}) requires KYC review.",
-            notification_type="NEW_REGISTRATION"
+            notification_type="NEW_REGISTRATION",
         )
+
 
 @shared_task
 def send_superadmin_notification_task(agency_id: str, message: str, notification_type: str) -> None:
@@ -43,9 +52,85 @@ def send_superadmin_notification_task(agency_id: str, message: str, notification
                     "id": agency_id,
                     "type": notification_type,
                     "text": message,
-                    "timestamp": None # Could add isoformat timestamp
-                }
-            }
+                    "timestamp": None,
+                },
+            },
         )
     except Exception:
         logger.exception("Failed to send SuperAdmin notification")
+
+
+@shared_task(bind=True, max_retries=5, default_retry_delay=60)
+def send_kyc_review_email_task(
+    self,
+    agency_id: str,
+    action: str,
+    notes: str = "",
+) -> None:
+    """
+    Celery task to send KYC review notification emails to agency admins.
+    Uses exponential backoff for retries.
+
+    Args:
+        agency_id: UUID of the agency
+        action: 'APPROVE' or 'REJECT'
+        notes: Reviewer notes (required for REJECT)
+    """
+    try:
+        agency = AgencyProfile.objects.get(id=agency_id)
+    except AgencyProfile.DoesNotExist:
+        logger.error("Agency %s not found for email notification", agency_id)
+        return
+
+    # Get the agency admin user
+    try:
+        admin_user = CustomUser.objects.get(agency_id=agency_id, role=UserRole.AGENCY_ADMIN)
+    except CustomUser.DoesNotExist:
+        logger.warning("No AGENCY_ADMIN user found for agency %s — skipping notification", agency_id)
+        return
+
+    if not admin_user.email:
+        logger.error("No email address for agency admin (user_id=%s)", admin_user.id)
+        return
+
+    # Prepare email content
+    template_context = {
+        'manager_name': agency.manager_name,
+        'commercial_registry': agency.commercial_registry,
+        'notes': notes,
+    }
+
+    if action == 'APPROVE':
+        subject = _("🎉 Your agency has been approved! - Wateen")
+        message_text = render_to_string('users/emails/agency_approved.txt', template_context)
+        message_html = render_to_string('users/emails/agency_approved.html', template_context)
+    elif action == 'REJECT':
+        subject = _("⚠️ Your agency application requires updates - Wateen")
+        message_text = render_to_string('users/emails/agency_rejected.txt', template_context)
+        message_html = render_to_string('users/emails/agency_rejected.html', template_context)
+    else:
+        logger.error("Unexpected KYC review action '%s' for agency %s — aborting email", action, agency_id)
+        return
+
+    try:
+        send_mail(
+            subject=subject,
+            message=message_text,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[admin_user.email],
+            html_message=message_html,
+            fail_silently=False,
+        )
+        logger.info("KYC review email sent for agency %s (user_id=%s)", agency_id, admin_user.id)
+    except Exception as exc:
+        logger.warning(
+            "Failed to send KYC review email for agency %s: %s", agency_id, exc
+        )
+        # Retry with exponential backoff
+        try:
+            raise self.retry(exc=exc, countdown=60 * (2 ** self.request.retries))
+        except self.MaxRetriesExceededError:
+            logger.error(
+                "Max retries exceeded for sending KYC review email to agency %s",
+                agency_id,
+            )

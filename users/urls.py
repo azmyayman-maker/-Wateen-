@@ -14,7 +14,10 @@ from .agency_views import (
     AgencyRegisterView, 
     AgencyApprovalView, 
     AgencyKYCResubmitView,
-    AgencyKYCDocumentsListView
+    AgencyKYCDocumentsListView,
+    KYCAuditLogListView,
+    KYCQueueListView,
+    KYCReviewView
 )
 from .coverage_views import AgencyCoverageUpdateView
 from .nurse_views import InviteNurseView, AcceptNurseInvitationView
@@ -40,4 +43,7 @@ urlpatterns = [
     path('agency/<uuid:pk>/coverage/', AgencyCoverageUpdateView.as_view(), name='agency_coverage'),
     path('agency/invite-nurse/', InviteNurseView.as_view(), name='invite_nurse'),
     path('admin/agencies/<uuid:pk>/approve/', AgencyApprovalView.as_view(), name='agency_approve'),
+    path('admin/agencies/<uuid:pk>/review/', KYCReviewView.as_view(), name='kyc-review'),
+    path('admin/agencies/<uuid:agency_id>/kyc-audit-logs/', KYCAuditLogListView.as_view(), name='kyc-audit-logs'),
+    path('admin/kyc-queue/', KYCQueueListView.as_view(), name='kyc-queue'),
 ]
