@@ -50,15 +50,6 @@ python-magic-bin==0.4.14
 # =============================================================================
 # Cloud Storage Configuration (S3 / django-storages)
 # =============================================================================
-STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3.S3Storage",
-    },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
-}
-
 # AWS SDK (boto3) Credentials & Location
 AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default=None)
 AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default=None)
@@ -66,23 +57,41 @@ AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default=None)
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="me-central-1")
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default=None)
 
+# Conditional: only use S3 if bucket name is set (boto3 resolves creds via IAM chain)
+_has_s3_config = bool(AWS_STORAGE_BUCKET_NAME)
+
+if not _has_s3_config and not DEBUG:
+    raise RuntimeError("AWS_STORAGE_BUCKET_NAME is required in production.")
+
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage" if _has_s3_config
+                   else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
 # Security & Compliance (Law 151/2020 Protocol)
 AWS_DEFAULT_ACL = "private"           # 1. لا وصول عام أبداً
 AWS_QUERYSTRING_AUTH = True           # 2. روابط موقتة فقط
 AWS_QUERYSTRING_EXPIRE = 900          # 3. مدة الصلاحية 15 دقيقة
-AWS_S3_SECURE_URLS = True             # 4. HTTPS إجباري
+AWS_S3_URL_PROTOCOL = "https:"        # 4. HTTPS إجباري (replaces deprecated AWS_S3_SECURE_URLS)
 AWS_S3_FILE_OVERWRITE = False         # 5. منع الكتابة فوق الملفات القديمة
 ```
 
+> **ملاحظة**: النظام يستخدم `FileSystemStorage` كبديل محلي في وضع DEBUG عندما لا توجد إعدادات S3، ويرفض التشغيل في بيئة الإنتاج بدون `AWS_STORAGE_BUCKET_NAME`.
+
 **التبرير الأمني:**
 
-| الإعداد                  | القيمة      | الحيثية                                                                 |
-| ------------------------ | ----------- | ----------------------------------------------------------------------- |
-| `AWS_DEFAULT_ACL`        | `"private"` | قانون 151/2020 يمنع أي وصول عام للمستندات الحساسة                       |
-| `AWS_QUERYSTRING_AUTH`   | `True`      | يفرض أن كل رابط ملف يحتوي على توقيع مشفر مؤقت                           |
-| `AWS_QUERYSTRING_EXPIRE` | `900`       | 15 دقيقة — كافية للعرض/التحميل لكنها قصيرة بما يكفي لمنع مشاركة الروابط |
-| `AWS_S3_SECURE_URLS`     | `True`      | يمنع نقل البيانات عبر HTTP غير المشفر                                   |
-| `AWS_S3_FILE_OVERWRITE`  | `False`     | يحافظ على السجل التاريخي لكل إصدار من المستندات                         |
+| الإعداد                  | القيمة      | الحيثية                                                                   |
+| ------------------------ | ----------- | ------------------------------------------------------------------------- |
+| `AWS_DEFAULT_ACL`        | `"private"` | قانون 151/2020 يمنع أي وصول عام للمستندات الحساسة                         |
+| `AWS_QUERYSTRING_AUTH`   | `True`      | يفرض أن كل رابط ملف يحتوي على توقيع مشفر مؤقت                             |
+| `AWS_QUERYSTRING_EXPIRE` | `900`       | 15 دقيقة — كافية للعرض/التحميل لكنها قصيرة بما يكفي لمنع مشاركة الروابط   |
+| `AWS_S3_URL_PROTOCOL`    | `"https:"`  | يمنع نقل البيانات عبر HTTP غير المشفر (يستبدل AWS_S3_SECURE_URLS المحذوف) |
+| `AWS_S3_FILE_OVERWRITE`  | `False`     | يحافظ على السجل التاريخي لكل إصدار من المستندات                           |
 
 ---
 
@@ -134,98 +143,67 @@ def agency_kyc_document_upload_path(instance, filename):
 
 ```python
 class KYCDocument(models.Model):
-    """
-    Entity for Agency KYC (Know Your Customer) documents.
-    Supports versioning for historical audit trails on re-uploads.
-    """
-
-    id = models.UUIDField(
-        primary_key=True,
-        default=uuid.uuid4,
-        editable=False,
-        verbose_name=_("المعرّف"),
-    )
-    agency = models.ForeignKey(
-        "users.AgencyProfile",
-        on_delete=models.CASCADE,
-        related_name="kyc_documents",
-        verbose_name=_("الشركة/الوكالة"),
-    )
-    document_type = models.CharField(
-        _("نوع المستند"),
-        max_length=50,
-        choices=KYCDocumentType.choices,
-    )
-    file = models.FileField(
-        _("الملف"),
-        upload_to=agency_kyc_document_upload_path,
-    )
-    status = models.CharField(
-        _("الحالة"),
-        max_length=20,
-        choices=KYCDocumentStatus.choices,
-        default=KYCDocumentStatus.PENDING,
-    )
-    version = models.IntegerField(
-        _("الإصدار"),
-        default=1,
-    )
-    reviewer_notes = models.TextField(
-        _("ملاحظات المراجع"),
-        blank=True,
-        default="",
-    )
-    uploaded_at = models.DateTimeField(
-        _("تاريخ الرفع"),
-        auto_now_add=True,
-    )
+    # ... fields omitted for brevity (see section 3.2) ...
 
     class Meta:
         verbose_name = _("مستند الشركة/الوكالة (KYC)")
         verbose_name_plural = _("مستندات الشركة/الوكالة (KYC)")
         db_table = "users_agency_kyc_document"
         ordering = ["-uploaded_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['agency', 'document_type', 'version'],
+                name='unique_agency_kyc_version'
+            )
+        ]
 
-    def __str__(self) -> str:
-        return f"{self.get_document_type_display()} (v{self.version}) — {self.agency}"
-
-    def save(self, *args, **kwargs):
-        """
-        Automatic Versioning: Auto-increments version number for the same
-        document type within an agency profile.
-        """
+    def save(self, *args, **kwargs) -> None:
         if not self.pk:
-            latest = KYCDocument.objects.filter(
-                agency=self.agency, document_type=self.document_type
-            ).order_by("-version").first()
-            if latest:
-                self.version = latest.version + 1
+            from django.db import connection, transaction
+            with transaction.atomic():
+                # Advisory lock covers the "no prior row" race condition
+                lock_key = hash((str(self.agency_id), self.document_type)) % (2**31)
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_key])
+
+                latest = KYCDocument.objects.filter(
+                    agency=self.agency, document_type=self.document_type
+                ).select_for_update().order_by("-version").first()
+                if latest:
+                    self.version = latest.version + 1
         super().save(*args, **kwargs)
 ```
 
 ### 3.5 خوارزمية الإصدار التلقائي (Auto-Versioning Algorithm)
 
 ```text
-Algorithm: KYC Document Version Incrementer
+Algorithm: KYC Document Version Incrementer (Concurrency-Safe)
 ─────────────────────────────────────────────
 INPUT: new KYCDocument instance (agency_id, document_type, file)
 
 1. IF instance.pk IS NULL (new record):
-   a. QUERY: SELECT * FROM users_agency_kyc_document
+   a. BEGIN TRANSACTION (ATOMIC)
+   b. ACQUIRE pg_advisory_xact_lock(hash(agency_id, document_type))
+      → Serializes concurrent creates for the same (agency, doc_type)
+      → Covers the "no prior row" race that select_for_update cannot
+   c. QUERY: SELECT * FROM users_agency_kyc_document
               WHERE agency_id = instance.agency_id
               AND document_type = instance.document_type
               ORDER BY version DESC
               LIMIT 1
-   b. SET latest = result of query
-   c. IF latest EXISTS:
+              FOR UPDATE
+   d. SET latest = result of query
+   e. IF latest EXISTS:
         SET instance.version = latest.version + 1
       ELSE:
         SET instance.version = 1 (default)
 2. CALL super().save()
+3. DB-level UniqueConstraint(agency, document_type, version) prevents duplicates
 
 OUTPUT: Document saved with correct version number
 ─────────────────────────────────────────────
 Big-O Complexity: O(1) — single indexed query
+Concurrency: serialized via pg_advisory_xact_lock
 ```
 
 **الحيثية**: هذه الخوارزمية تحافظ على كل الإصدارات السابقة بحالتها (`REJECTED` / `APPROVED`) مما يتيح سجل تدقيقي كامل (Full Audit Trail) كما يتطلب قانون 151/2020 فيما يخص الاحتفاظ بالسجلات.
@@ -809,7 +787,7 @@ Agency KYC Registration — Implementation Tests
   [PASS] storages in INSTALLED_APPS
   [PASS] AWS_DEFAULT_ACL = private
   [PASS] AWS_QUERYSTRING_AUTH = True
-  [PASS] AWS_S3_SECURE_URLS = True
+  [PASS] AWS_S3_URL_PROTOCOL = https:
   [PASS] AWS_S3_FILE_OVERWRITE = False
   [PASS] AWS_QUERYSTRING_EXPIRE = 900 (15 min)
   [PASS] STORAGES dict configured

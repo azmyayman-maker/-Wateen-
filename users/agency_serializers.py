@@ -99,7 +99,7 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'status']
 
     @transaction.atomic
-    def create(self, validated_data) -> AgencyProfile:
+    def create(self, validated_data: dict) -> AgencyProfile:
         # Extract administrative and document data
         admin_national_id = validated_data.pop('admin_national_id')
         admin_phone_number = validated_data.pop('admin_phone_number')
@@ -110,45 +110,53 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         moh_file = validated_data.pop('moh_license_file')
         tax_file = validated_data.pop('tax_id_file')
         
-        # 1. Create the Agency Profile (defaults to PENDING status)
-        agency = AgencyProfile.objects.create(**validated_data)
-        
-        # 2. Create the initial AgencyAdmin user linked to this agency
-        CustomUser.objects.create_user(
-            national_id=admin_national_id,
-            phone_number=admin_phone_number,
-            password=admin_password,
-            role=UserRole.AGENCY_ADMIN,
-            agency=agency,
-        )
-
-        # 3. Create the initial KYC Documents (v1 auto-assigned by model)
-        KYCDocument.objects.create(
-            agency=agency,
-            document_type=KYCDocumentType.COMMERCIAL_REGISTRY,
-            file=cr_file
-        )
-        KYCDocument.objects.create(
-            agency=agency,
-            document_type=KYCDocumentType.MOH_LICENSE,
-            file=moh_file
-        )
-        KYCDocument.objects.create(
-            agency=agency,
-            document_type=KYCDocumentType.TAX_ID,
-            file=tax_file
-        )
-        
-        # 4. Notify SuperAdmins (Async after transaction commit)
-        from .services.notifications import AgencyNotificationService
-        transaction.on_commit(
-            lambda: AgencyNotificationService.notify_superadmins_of_new_registration(
-                agency_id=str(agency.id),
-                manager_name=agency.manager_name
+        # Track created KYC documents for file cleanup on failure
+        created_docs: list[KYCDocument] = []
+        try:
+            # 1. Create the Agency Profile (defaults to PENDING status)
+            agency = AgencyProfile.objects.create(**validated_data)
+            
+            # 2. Create the initial AgencyAdmin user linked to this agency
+            CustomUser.objects.create_user(
+                national_id=admin_national_id,
+                phone_number=admin_phone_number,
+                password=admin_password,
+                role=UserRole.AGENCY_ADMIN,
+                agency=agency,
             )
-        )
-        
-        return agency
+
+            # 3. Create the initial KYC Documents (v1 auto-assigned by model)
+            for doc_type, doc_file in [
+                (KYCDocumentType.COMMERCIAL_REGISTRY, cr_file),
+                (KYCDocumentType.MOH_LICENSE, moh_file),
+                (KYCDocumentType.TAX_ID, tax_file),
+            ]:
+                doc = KYCDocument.objects.create(
+                    agency=agency,
+                    document_type=doc_type,
+                    file=doc_file,
+                )
+                created_docs.append(doc)
+            
+            # 4. Notify SuperAdmins (Async after transaction commit)
+            from .services.notifications import AgencyNotificationService
+            transaction.on_commit(
+                lambda: AgencyNotificationService.notify_superadmins_of_new_registration(
+                    agency_id=str(agency.id),
+                    manager_name=agency.manager_name
+                )
+            )
+            
+            return agency
+        except Exception:
+            # DB rows will be rolled back by @transaction.atomic, but
+            # files already written to storage are NOT part of the DB tx.
+            for doc in created_docs:
+                try:
+                    doc.file.delete(save=False)
+                except Exception:
+                    pass  # Best-effort cleanup; log separately if needed
+            raise
 
 
 class AgencyApprovalSerializer(serializers.ModelSerializer):

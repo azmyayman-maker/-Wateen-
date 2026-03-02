@@ -379,16 +379,15 @@ AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default=None)
 AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="me-central-1")
 AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default=None)
 
-_has_s3_config = bool(
-    AWS_STORAGE_BUCKET_NAME
-    and (
-        (AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY)
-        or AWS_S3_ENDPOINT_URL
-    )
-)
+# boto3 supports its own credential chain (IAM roles, instance profiles, env vars)
+# so we only require a bucket name to consider S3 configured.
+_has_s3_config = bool(AWS_STORAGE_BUCKET_NAME)
 
 if not _has_s3_config and not DEBUG:
-    raise RuntimeError("Missing required AWS S3 configuration in production environment.")
+    raise RuntimeError(
+        "AWS_STORAGE_BUCKET_NAME is required in production. "
+        "Credentials can be provided via IAM roles, env vars, or explicit keys."
+    )
 
 # Using django-storages 1.14+ dictionary configuration
 STORAGES = {

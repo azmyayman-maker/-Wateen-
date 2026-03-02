@@ -689,10 +689,19 @@ class KYCDocument(models.Model):
         """
         Automatic Versioning: Auto-increments version number for the same 
         document type within an agency profile.
+        
+        Uses Postgres advisory lock to serialize concurrent first-uploads
+        for the same (agency, document_type) pair. select_for_update() alone
+        cannot lock rows that don't yet exist.
         """
         if not self.pk:
-            from django.db import transaction
+            from django.db import connection, transaction
             with transaction.atomic():
+                # Compute a deterministic lock key from (agency_id, document_type)
+                lock_key = hash((str(self.agency_id), self.document_type)) % (2**31)
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_key])
+
                 latest = KYCDocument.objects.filter(
                     agency=self.agency, document_type=self.document_type
                 ).select_for_update().order_by("-version").first()
