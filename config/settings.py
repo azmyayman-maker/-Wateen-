@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "users",
     "visits",
+    "storages",
 ]
 
 MIDDLEWARE = [
@@ -366,3 +367,46 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
+
+
+# =============================================================================
+# Cloud Storage Configuration (S3 / django-storages)
+# =============================================================================
+# AWS SDK (boto3) Credentials & Location
+AWS_ACCESS_KEY_ID = config("AWS_ACCESS_KEY_ID", default=None)
+AWS_SECRET_ACCESS_KEY = config("AWS_SECRET_ACCESS_KEY", default=None)
+AWS_STORAGE_BUCKET_NAME = config("AWS_STORAGE_BUCKET_NAME", default=None)
+AWS_S3_REGION_NAME = config("AWS_S3_REGION_NAME", default="me-central-1")
+AWS_S3_ENDPOINT_URL = config("AWS_S3_ENDPOINT_URL", default=None)
+
+# boto3 supports its own credential chain (IAM roles, instance profiles, env vars)
+# so we only require a bucket name to consider S3 configured.
+_has_s3_config = bool(AWS_STORAGE_BUCKET_NAME)
+
+if not _has_s3_config and not DEBUG:
+    raise RuntimeError(
+        "AWS_STORAGE_BUCKET_NAME is required in production. "
+        "Credentials can be provided via IAM roles, env vars, or explicit keys."
+    )
+
+# Using django-storages 1.14+ dictionary configuration
+STORAGES = {
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage" if _has_s3_config else "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+    },
+}
+
+# Security & Compliance (Law 151/2020 Protocol)
+# 1. Enforce private object ACLs (No public access by default)
+AWS_DEFAULT_ACL = "private"
+# 2. Require query-string authentication (Pre-signed URLs)
+AWS_QUERYSTRING_AUTH = True
+# 3. Short TTL for links (15 minutes)
+AWS_QUERYSTRING_EXPIRE = 900
+# 4. Enforce HTTPS for all S3 interactions (AWS_S3_SECURE_URLS is removed in django-storages 1.14)
+AWS_S3_URL_PROTOCOL = "https:"
+# 5. Prevent silent overwrites to preserve kyc version history
+AWS_S3_FILE_OVERWRITE = False

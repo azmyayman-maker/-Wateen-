@@ -601,3 +601,117 @@ class NurseDocument(models.Model):
 
     def __str__(self) -> str:
         return f"{self.get_document_type_display()} — {self.nurse}"
+
+
+class KYCDocumentType(models.TextChoices):
+    COMMERCIAL_REGISTRY = "COMMERCIAL_REGISTRY", _("السجل التجاري")
+    MOH_LICENSE = "MOH_LICENSE", _("ترخيص وزارة الصحة")
+    TAX_ID = "TAX_ID", _("البطاقة الضريبية")
+
+
+class KYCDocumentStatus(models.TextChoices):
+    PENDING = "PENDING", _("قيد المراجعة")
+    APPROVED = "APPROVED", _("مقبول")
+    REJECTED = "REJECTED", _("مرفوض")
+
+
+def agency_kyc_document_upload_path(instance: models.Model, filename: str) -> str:
+    """
+    Generate secure upload path: kyc/<agency_uuid>/<document_type>/<filename>
+    This segregation prevents path traversal and cross-tenant leakage.
+    """
+    return f"kyc/{instance.agency_id}/{instance.document_type}/{filename}"
+
+
+class KYCDocument(models.Model):
+    """
+    Entity for Agency KYC (Know Your Customer) documents.
+    Supports versioning for historical audit trails on re-uploads.
+    """
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_("المعرّف"),
+    )
+    agency = models.ForeignKey(
+        "users.AgencyProfile",
+        on_delete=models.CASCADE,
+        related_name="kyc_documents",
+        verbose_name=_("الشركة/الوكالة"),
+    )
+    document_type = models.CharField(
+        _("نوع المستند"),
+        max_length=50,
+        choices=KYCDocumentType.choices,
+    )
+    file = models.FileField(
+        _("الملف"),
+        upload_to=agency_kyc_document_upload_path,
+    )
+    status = models.CharField(
+        _("الحالة"),
+        max_length=20,
+        choices=KYCDocumentStatus.choices,
+        default=KYCDocumentStatus.PENDING,
+    )
+    version = models.IntegerField(
+        _("الإصدار"),
+        default=1,
+    )
+    reviewer_notes = models.TextField(
+        _("ملاحظات المراجع"),
+        blank=True,
+        default="",
+    )
+    uploaded_at = models.DateTimeField(
+        _("تاريخ الرفع"),
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = _("مستند الشركة/الوكالة (KYC)")
+        verbose_name_plural = _("مستندات الشركة/الوكالة (KYC)")
+        db_table = "users_agency_kyc_document"
+        ordering = ["-uploaded_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['agency', 'document_type', 'version'],
+                name='unique_agency_kyc_version'
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.get_document_type_display()} (v{self.version}) — {self.agency}"
+
+    def save(self, *args, **kwargs) -> None:
+        """
+        Automatic Versioning: Auto-increments version number for the same 
+        document type within an agency profile.
+        
+        Uses Postgres advisory lock to serialize concurrent first-uploads
+        for the same (agency, document_type) pair. select_for_update() alone
+        cannot lock rows that don't yet exist.
+        """
+        if not self.pk:
+            import hashlib
+            from django.db import connection, transaction
+            with transaction.atomic():
+                # Stable, cross-process lock key (hash() is randomized per process)
+                raw = f"{self.agency_id}:{self.document_type}"
+                lock_key = int(hashlib.sha256(raw.encode()).hexdigest(), 16) % (2**31)
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_key])
+
+                latest = KYCDocument.objects.filter(
+                    agency=self.agency, document_type=self.document_type
+                ).select_for_update().order_by("-version").first()
+                if latest:
+                    self.version = latest.version + 1
+
+                # INSERT must happen inside the atomic block so the advisory
+                # lock protects the gap between version-read and row-insert.
+                super().save(*args, **kwargs)
+            return  # already saved inside the atomic block
+        super().save(*args, **kwargs)

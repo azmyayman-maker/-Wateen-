@@ -144,4 +144,4 @@ mcp_client.mjs
 invoke_mcp.mjs
 setup_fw.mjs
 verification-report.json
-.specs/
+specs/
