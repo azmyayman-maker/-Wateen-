@@ -7,10 +7,12 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
-from .models import AgencyProfile, CustomUser, UserRole, KYCDocument, KYCDocumentType
+from .models import AgencyProfile, CustomUser, UserRole, KYCDocument, KYCDocumentType, KYCAuditLog
 from .validators import validate_kyc_file_extension_and_size
 
+
 logger = logging.getLogger(__name__)
+
 
 class AgencyProfileSerializer(GeoFeatureModelSerializer):
     """
@@ -229,3 +231,90 @@ class KYCDocumentSerializer(serializers.ModelSerializer):
             
         from .services.storage import KYCStorageService
         return KYCStorageService.get_presigned_url(obj.file.name)
+
+
+class KYCAuditLogSerializer(serializers.ModelSerializer):
+    """
+    Read-only serializer for returning KYC audit trail records.
+    """
+    reviewer_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = KYCAuditLog
+        fields = [
+            'id',
+            'reviewer_name',
+            'action',
+            'notes',
+            'ip_address',
+            'user_agent',
+            'timestamp',
+        ]
+        read_only_fields = fields
+
+    def get_reviewer_name(self, obj) -> str:
+        if obj.reviewer:
+            return obj.reviewer.get_full_name()
+        return "System"
+
+
+class KYCQueueSerializer(serializers.ModelSerializer):
+    """
+    Serializer for SuperAdmins reviewing the KYC queue.
+    """
+    kyc_documents = serializers.SerializerMethodField()
+
+    class Meta:
+        model = AgencyProfile
+        fields = [
+            'id',
+            'manager_name',
+            'commercial_registry',
+            'moh_license_number',
+            'tax_id',
+            'status',
+            'created_at',
+            'kyc_documents'
+        ]
+
+    def get_kyc_documents(self, obj):
+        # We assume prefetch_related is used in the view for performance
+        documents = obj.kyc_documents.all()
+        return KYCDocumentSerializer(documents, many=True).data
+
+
+class KYCReviewSerializer(serializers.Serializer):
+    """
+    Serializer for SuperAdmin KYC review actions (APPROVE/REJECT).
+    Validates the action and enforces mandatory notes for REJECT.
+    """
+    ACTION_CHOICES = [
+        ('APPROVE', _('Approve')),
+        ('REJECT', _('Reject')),
+    ]
+
+    action = serializers.ChoiceField(
+        choices=ACTION_CHOICES,
+        required=True,
+        help_text=_("The review action: APPROVE or REJECT")
+    )
+    notes = serializers.CharField(
+        required=False,
+        allow_blank=True,
+        help_text=_("Optional notes for APPROVE, mandatory for REJECT")
+    )
+
+    def validate(self, attrs: dict) -> dict:
+        """
+        Enforce mandatory notes for REJECT action.
+        """
+        action = attrs.get('action')
+        notes = attrs.get('notes', '')
+
+        if action == 'REJECT' and not notes:
+            raise serializers.ValidationError({
+                'notes': _('Notes are required when rejecting an agency.')
+            })
+
+        return attrs
+

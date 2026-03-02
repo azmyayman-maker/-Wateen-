@@ -55,6 +55,31 @@ class IsAgencyAdmin(BasePermission):
         return agency.status == 'verified'
 
 
+class IsAgencyAdminAnyStatus(BasePermission):
+    """
+    Allow access to AGENCY_ADMIN users regardless of agency verification status.
+    Required for endpoints like KYC documents resubmission where agency might be PENDING or REJECTED.
+    """
+
+    message = 'يجب أن تكون مديراً لوكالة'
+
+    def has_permission(self, request, view):
+        # Check basic authentication
+        if not (request.user and request.user.is_authenticated):
+            return False
+        
+        # Check user has AGENCY_ADMIN role
+        if not request.user.is_agency_admin:
+            return False
+        
+        # Check agency exists
+        agency = getattr(request.user, 'agency', None)
+        if agency is None:
+            return False
+            
+        return True
+
+
 class IsAgencyAdminOrSuperAdmin(BasePermission):
     """
     Allow access to AGENCY_ADMIN with verified agency OR SUPERADMIN users.

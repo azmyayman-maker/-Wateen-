@@ -715,3 +715,75 @@ class KYCDocument(models.Model):
                 super().save(*args, **kwargs)
             return  # already saved inside the atomic block
         super().save(*args, **kwargs)
+
+
+class KYCAuditLog(models.Model):
+    """
+    Immutable audit trail for all KYC review actions.
+    Enforces compliance with Egyptian MoH and Law 151/2020.
+    """
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid.uuid4,
+        editable=False,
+        verbose_name=_("المعرّف"),
+    )
+    agency = models.ForeignKey(
+        AgencyProfile,
+        on_delete=models.CASCADE,
+        related_name="kyc_audit_logs",
+        verbose_name=_("الشركة/الوكالة"),
+    )
+    reviewer = models.ForeignKey(
+        CustomUser,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name="kyc_reviews",
+        verbose_name=_("المراجع"),
+    )
+    action = models.CharField(
+        _("الإجراء"),
+        max_length=50,
+        help_text=_("APPROVE or REJECT"),
+    )
+    notes = models.TextField(
+        _("ملاحظات"),
+        blank=True,
+        default="",
+    )
+    ip_address = models.GenericIPAddressField(
+        _("عنوان IP"),
+        null=True,
+        blank=True,
+    )
+    user_agent = models.CharField(
+        _("متصفح المستخدم"),
+        max_length=512,
+        blank=True,
+        default="",
+    )
+    timestamp = models.DateTimeField(
+        _("وقت الإجراء"),
+        auto_now_add=True,
+    )
+
+    class Meta:
+        verbose_name = _("سجل تدقيق KYC")
+        verbose_name_plural = _("سجلات تدقيق KYC")
+        db_table = "users_kyc_audit_log"
+        ordering = ["-timestamp"]
+
+    def __str__(self) -> str:
+        reviewer_name = self.reviewer.get_full_name() if self.reviewer else "System"
+        return f"[{self.action}] {self.agency.manager_name} by {reviewer_name} at {self.timestamp}"
+
+    def save(self, *args, **kwargs) -> None:
+        from django.core.exceptions import PermissionDenied
+        if not self._state.adding:
+            raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
+        super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        from django.core.exceptions import PermissionDenied
+        raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")
+

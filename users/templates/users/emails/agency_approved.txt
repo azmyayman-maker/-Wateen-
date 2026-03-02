@@ -1,0 +1,18 @@
+{% load i18n %}{% trans "Dear" %} {{ manager_name }},
+
+{% blocktrans with cr=commercial_registry %}Congratulations! Your agency (Commercial Registry: {{ cr }}) has been approved and verified on the Wateen platform.{% endblocktrans %}
+
+{% trans "You can now:" %}
+- {% trans "Log in to your agency dashboard" %}
+- {% trans "Invite nurses to join your agency" %}
+- {% trans "Start receiving patient visit requests" %}
+
+{% if notes %}
+{% trans "Notes from the reviewer:" %}
+{{ notes }}
+{% endif %}
+
+{% trans "Thank you for joining Wateen!" %}
+
+{% trans "Best regards," %}
+{% trans "The Wateen Team" %}

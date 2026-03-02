@@ -10,6 +10,7 @@ from .models import (
     NurseProfile,
     PatientProfile,
     KYCDocument,
+    KYCAuditLog,
 )
 
 
@@ -217,3 +218,24 @@ class KYCDocumentAdmin(admin.ModelAdmin):
             "fields": ("file", "id", "uploaded_at")
         }),
     )
+
+
+@admin.register(KYCAuditLog)
+class KYCAuditLogAdmin(admin.ModelAdmin):
+    """
+    Immutable audit log interface. All fields are read-only.
+    """
+    list_display = ("agency", "action", "reviewer", "ip_address", "timestamp")
+    list_filter = ("action", "timestamp", "reviewer")
+    search_fields = ("agency__manager_name", "notes", "ip_address")
+    readonly_fields = ("id", "agency", "reviewer", "action", "notes", "ip_address", "user_agent", "timestamp")
+    
+    def has_add_permission(self, request):
+        return False
+        
+    def has_change_permission(self, request, obj=None):
+        return False
+        
+    def has_delete_permission(self, request, obj=None):
+        return False
+
