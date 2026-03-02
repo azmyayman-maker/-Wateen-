@@ -112,8 +112,9 @@ django-storages==1.14.4
 boto3==1.34.131
 
 # MIME-type identification for secure file validation (includes libmagic DLL on Windows)
-# NOTE: Do NOT install python-magic alongside python-magic-bin — they conflict.
-python-magic-bin==0.4.14
+# Windows uses python-magic-bin, others use python-magic
+python-magic-bin==0.4.14 ; sys_platform == "win32"
+python-magic==0.4.27 ; sys_platform != "win32"
 
 # -----------------------------------------------------------------------------
 # Development & Debugging (Optional - uncomment if needed)

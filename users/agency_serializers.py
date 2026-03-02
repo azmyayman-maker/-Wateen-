@@ -1,4 +1,3 @@
-from django.contrib.auth.hashers import make_password
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -100,7 +99,7 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'status']
 
     @transaction.atomic
-    def create(self, validated_data):
+    def create(self, validated_data) -> AgencyProfile:
         # Extract administrative and document data
         admin_national_id = validated_data.pop('admin_national_id')
         admin_phone_number = validated_data.pop('admin_phone_number')
@@ -115,32 +114,29 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         agency = AgencyProfile.objects.create(**validated_data)
         
         # 2. Create the initial AgencyAdmin user linked to this agency
-        CustomUser.objects.create(
+        CustomUser.objects.create_user(
             national_id=admin_national_id,
             phone_number=admin_phone_number,
-            password=make_password(admin_password),
+            password=admin_password,
             role=UserRole.AGENCY_ADMIN,
             agency=agency,
         )
 
-        # 3. Create the initial KYC Documents (v1)
+        # 3. Create the initial KYC Documents (v1 auto-assigned by model)
         KYCDocument.objects.create(
             agency=agency,
             document_type=KYCDocumentType.COMMERCIAL_REGISTRY,
-            file=cr_file,
-            version=1
+            file=cr_file
         )
         KYCDocument.objects.create(
             agency=agency,
             document_type=KYCDocumentType.MOH_LICENSE,
-            file=moh_file,
-            version=1
+            file=moh_file
         )
         KYCDocument.objects.create(
             agency=agency,
             document_type=KYCDocumentType.TAX_ID,
-            file=tax_file,
-            version=1
+            file=tax_file
         )
         
         # 4. Notify SuperAdmins (Async after transaction commit)
@@ -178,7 +174,7 @@ class KYCDocumentUpdateSerializer(serializers.ModelSerializer):
         model = KYCDocument
         fields = ['document_type', 'file']
 
-    def create(self, validated_data):
+    def create(self, validated_data) -> KYCDocument:
         # Agency is injected by the view (e.g. from the request context or URL)
         return KYCDocument.objects.create(**validated_data)
 

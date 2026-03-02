@@ -615,7 +615,7 @@ class KYCDocumentStatus(models.TextChoices):
     REJECTED = "REJECTED", _("مرفوض")
 
 
-def agency_kyc_document_upload_path(instance, filename):
+def agency_kyc_document_upload_path(instance: models.Model, filename: str) -> str:
     """
     Generate secure upload path: kyc/<agency_uuid>/<document_type>/<filename>
     This segregation prevents path traversal and cross-tenant leakage.
@@ -675,19 +675,27 @@ class KYCDocument(models.Model):
         verbose_name_plural = _("مستندات الشركة/الوكالة (KYC)")
         db_table = "users_agency_kyc_document"
         ordering = ["-uploaded_at"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=['agency', 'document_type', 'version'],
+                name='unique_agency_kyc_version'
+            )
+        ]
 
     def __str__(self) -> str:
         return f"{self.get_document_type_display()} (v{self.version}) — {self.agency}"
 
-    def save(self, *args, **kwargs):
+    def save(self, *args, **kwargs) -> None:
         """
         Automatic Versioning: Auto-increments version number for the same 
         document type within an agency profile.
         """
         if not self.pk:
-            latest = KYCDocument.objects.filter(
-                agency=self.agency, document_type=self.document_type
-            ).order_by("-version").first()
-            if latest:
-                self.version = latest.version + 1
+            from django.db import transaction
+            with transaction.atomic():
+                latest = KYCDocument.objects.filter(
+                    agency=self.agency, document_type=self.document_type
+                ).select_for_update().order_by("-version").first()
+                if latest:
+                    self.version = latest.version + 1
         super().save(*args, **kwargs)

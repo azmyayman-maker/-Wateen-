@@ -92,7 +92,7 @@ AWS_S3_FILE_OVERWRITE = False         # 5. منع الكتابة فوق المل
 
 ملف: `users/models.py` (السطور 606-694)
 
-```
+```text
 AgencyProfile (1) ──────< (N) KYCDocument
     │                           │
     │ kyc_documents              │
@@ -205,7 +205,7 @@ class KYCDocument(models.Model):
 
 ### 3.5 خوارزمية الإصدار التلقائي (Auto-Versioning Algorithm)
 
-```
+```text
 Algorithm: KYC Document Version Incrementer
 ─────────────────────────────────────────────
 INPUT: new KYCDocument instance (agency_id, document_type, file)
@@ -270,7 +270,7 @@ def validate_kyc_file_extension_and_size(file):
 
 ### 4.2 خوارزمية MIME-Type Sniffing (الكشف العميق عن نوع الملف)
 
-```
+```text
 Algorithm: Deep File Content Validation (Anti-Malware)
 ─────────────────────────────────────────────────────────
 INPUT: uploaded file object
@@ -385,7 +385,7 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
 
 ### 5.2 خوارزمية عملية التسجيل الذرية (Atomic Registration Pipeline)
 
-```
+```text
 Algorithm: Atomic Agency Registration
 ──────────────────────────────────────
 INPUT: multipart/form-data request
@@ -515,7 +515,7 @@ class KYCStorageService:
 
 ### 6.2 خوارزمية Pre-signed URL
 
-```
+```text
 Algorithm: Secure Pre-signed URL Generation
 ─────────────────────────────────────────────
 INPUT: file_key (S3 object key), expiry (TTL in seconds)
@@ -591,7 +591,7 @@ def send_superadmin_notification_task(agency_id: str, message: str, notification
 
 ### 6.4 خوارزمية الإشعارات المتزامنة
 
-```
+```text
 Algorithm: Decoupled Async Notification Pipeline
 ──────────────────────────────────────────────────
 TRIGGER: transaction.on_commit() fires AFTER database commit
@@ -887,7 +887,7 @@ ALL TESTS PASSED
 ## 14. قرار مهندس النظام (Staff Engineer Sign-off)
 
 1. **نموذج البيانات (`KYCDocument`)** مُصمم بإصدارات تلقائية وعزل على مستوى المسار — **مصادق عليه**.
-2. **التحقق من الملفات** عبر MIME Sniffing يمنع 100% من محاولات رفع الملفات الخبيثة المُقنعة — **مصادق عليه**.
+2. **التحقق من الملفات** عبر MIME Sniffing يساهم في تقليل مخاطر محاولات رفع الملفات الخبيثة لكنه لا يضمن منعها تمامًا، ويُوصى بأنظمة مساعدة כמו (Content Scanning / Antivirus).
 3. **روابط Pre-signed** بـ TTL 15 دقيقة تمنع مشاركة الوصول غير المصرح به — **مصادق عليه**.
 4. **المعاملات الذرية** تضمن عدم وجود بيانات يتيمة أو حالات غير متسقة — **مصادق عليه**.
 5. **الإشعارات المفصولة** عبر `on_commit` + Celery تضمن عدم تأثير فشل الإشعار على التسجيل — **مصادق عليه**.

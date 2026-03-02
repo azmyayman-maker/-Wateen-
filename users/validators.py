@@ -1,4 +1,6 @@
+import magic
 import re
+from django.core.files.uploadedfile import UploadedFile
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
@@ -111,7 +113,7 @@ def validate_phone_number(value: str) -> None:
         )
 
 
-def validate_kyc_file_extension_and_size(file):
+def validate_kyc_file_extension_and_size(file: UploadedFile) -> None:
     """
     Validate that the uploaded file is a PDF or Image and under 10MB.
     Uses python-magic for secure MIME-type sniffing (Law 151/2020 Compliance).

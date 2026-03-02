@@ -2,6 +2,9 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status, exceptions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.parsers import MultiPartParser, JSONParser
+from django.db.models import QuerySet
+from .permissions import IsSuperAdmin, IsAgencyAdmin
 
 from .models import AgencyProfile, KYCDocument
 from .agency_serializers import (
@@ -31,7 +34,7 @@ class AgencyApprovalView(generics.UpdateAPIView):
     """
     queryset = AgencyProfile.objects.all()
     serializer_class = AgencyApprovalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsSuperAdmin]
 
     def patch(self, request, *args, **kwargs):
         # Additional SuperAdmin role check could go here if not fully covered by RBAC middleware
@@ -49,6 +52,16 @@ class AgencyApprovalView(generics.UpdateAPIView):
 
         return Response(serializer.data)
 
+    def put(self, request, *args, **kwargs):
+        # Additional SuperAdmin role check could go here if not fully covered by RBAC middleware
+        user = request.user
+        if not (user.is_superadmin or user.is_superuser):
+            return Response(
+                {"detail": "Only superusers can approve agencies."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        return super().put(request, *args, **kwargs)
+
 
 class AgencyKYCResubmitView(generics.CreateAPIView):
     """
@@ -56,16 +69,11 @@ class AgencyKYCResubmitView(generics.CreateAPIView):
     Agency-authenticated endpoint for resubmitting a rejected (or updated) document.
     """
     serializer_class = KYCDocumentUpdateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAgencyAdmin]
     parser_classes = [MultiPartParser]
 
-    def perform_create(self, serializer):
-        # Restricted to Agency Admins for their OWN agency
+    def perform_create(self, serializer) -> None:
         user = self.request.user
-        if not user.is_agency_admin or not user.agency:
-            raise exceptions.PermissionDenied(
-                _("Only assigned agency administrators can resubmit documents.")
-            )
 
         # 1. Inject agency context from the authenticated user
         serializer.save(agency=user.agency)
@@ -84,12 +92,8 @@ class AgencyKYCDocumentsListView(generics.ListAPIView):
     Agency-authenticated endpoint for viewing all submitted KYC docs and their status.
     """
     serializer_class = KYCDocumentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsAgencyAdmin]
 
-    def get_queryset(self):
+    def get_queryset(self) -> "QuerySet[KYCDocument]":
         user = self.request.user
-        if not user.is_agency_admin or not user.agency:
-            raise exceptions.PermissionDenied(
-                _("You must be an agency admin to access these documents.")
-            )
         return KYCDocument.objects.filter(agency=user.agency)

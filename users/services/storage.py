@@ -1,6 +1,7 @@
-import boto3
 import logging
 from django.conf import settings
+
+import boto3
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
@@ -51,9 +52,9 @@ class KYCStorageService:
                 ExpiresIn=expiry,
             )
             return response
-        except ClientError as e:
-            logger.error(f"Error generating pre-signed URL for key '{file_key}': {e}")
+        except ClientError:
+            logger.exception(f"Error generating pre-signed URL for key '{file_key}'")
             return None
-        except Exception as e:
-            logger.error(f"Unexpected error in KYCStorageService: {e}")
-            return None
+        except Exception:
+            logger.exception("Unexpected error in KYCStorageService")
+            raise

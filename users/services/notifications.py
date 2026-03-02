@@ -13,7 +13,7 @@ class AgencyNotificationService:
     """
 
     @staticmethod
-    def notify_superadmins_of_new_registration(agency_id: str, manager_name: str):
+    def notify_superadmins_of_new_registration(agency_id: str, manager_name: str) -> None:
         """
         Trigger an asynchronous task to notify all SuperAdmins of a new agency registration.
         """
@@ -24,7 +24,7 @@ class AgencyNotificationService:
         )
 
 @shared_task
-def send_superadmin_notification_task(agency_id: str, message: str, notification_type: str):
+def send_superadmin_notification_task(agency_id: str, message: str, notification_type: str) -> None:
     """
     Celery task to deliver real-time notifications via WebSocket (Django Channels).
     """
@@ -47,5 +47,5 @@ def send_superadmin_notification_task(agency_id: str, message: str, notification
                 }
             }
         )
-    except Exception as e:
-        logger.error(f"Failed to send SuperAdmin notification: {e}")
+    except Exception:
+        logger.exception("Failed to send SuperAdmin notification")
