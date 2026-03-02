@@ -76,8 +76,6 @@ def send_kyc_review_email_task(
         action: 'APPROVE' or 'REJECT'
         notes: Reviewer notes (required for REJECT)
     """
-    from users.models import AgencyProfile, CustomUser
-
     try:
         agency = AgencyProfile.objects.get(id=agency_id)
     except AgencyProfile.DoesNotExist:

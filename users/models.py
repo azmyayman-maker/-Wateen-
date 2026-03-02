@@ -787,7 +787,7 @@ class KYCAuditLog(models.Model):
         agency_name = getattr(self.agency, 'manager_name', None) if self.agency else "Unknown Agency"
         return f"[{self.action}] {agency_name} by {reviewer_name} at {self.timestamp}"
 
-    def save(self, *args, **kwargs) -> None:
+    def save(self, *args: Any, **kwargs: Any) -> None:
         from django.core.exceptions import PermissionDenied
         if not self._state.adding:
             raise PermissionDenied("سجلات تدقيق KYC غير قابلة للتعديل أو الحذف.")

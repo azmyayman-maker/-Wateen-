@@ -5,7 +5,7 @@ This module contains business logic for agency KYC review workflows,
 extracted from views to maintain proper separation of concerns.
 """
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from django.db import transaction
 
@@ -61,6 +61,10 @@ class AgencyKYCService:
                 f"Cannot review agency in '{agency.status}' status. "
                 "Only PENDING agencies can be reviewed."
             )
+        
+        # Validate action is one of the allowed values
+        if action not in ('APPROVE', 'REJECT'):
+            raise ValueError(f"Invalid action '{action}'. Must be 'APPROVE' or 'REJECT'.")
         
         # Determine new status
         new_status = (
@@ -125,7 +129,7 @@ class AgencyKYCService:
             audit_log = KYCAuditLog.objects.create(
                 agency=agency,
                 reviewer=reviewer,
-                action='RESUBMIT',
+                action=KYCAuditLog.ActionChoices.RESUBMIT,
                 notes='Documents resubmitted after rejection',
                 ip_address=ip_address,
                 user_agent=user_agent,
