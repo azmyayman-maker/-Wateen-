@@ -1,6 +1,7 @@
+from datetime import timedelta
+
 from unittest.mock import patch
 
-import pytest
 from django.core.exceptions import PermissionDenied
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import override_settings
@@ -8,6 +9,8 @@ from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
+
+import pytest
 
 from users.models import (
     AgencyProfile, AgencyStatus, CustomUser, KYCAuditLog,
@@ -148,7 +151,7 @@ def test_kyc_queue_oldest_first(mock_presigned, pending_agency, superadmin_clien
         tax_id='77777',
     )
     # auto_now_add fields ignore .save(), so use queryset.update()
-    future = timezone.now() + timezone.timedelta(hours=1)
+    future = timezone.now() + timedelta(hours=1)
     AgencyProfile.objects.filter(pk=newer_agency.pk).update(created_at=future)
 
     url = reverse('users:kyc-queue')

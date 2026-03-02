@@ -9,6 +9,8 @@ from asgiref.sync import async_to_sync
 from celery import shared_task
 from channels.layers import get_channel_layer
 
+from users.models import AgencyProfile, CustomUser, UserRole
+
 logger = logging.getLogger(__name__)
 
 
@@ -84,7 +86,7 @@ def send_kyc_review_email_task(
 
     # Get the agency admin user
     try:
-        admin_user = CustomUser.objects.get(agency_id=agency_id, role='AGENCY_ADMIN')
+        admin_user = CustomUser.objects.get(agency_id=agency_id, role=UserRole.AGENCY_ADMIN)
     except CustomUser.DoesNotExist:
         logger.warning("No AGENCY_ADMIN user found for agency %s — skipping notification", agency_id)
         return

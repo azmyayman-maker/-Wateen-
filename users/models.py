@@ -784,7 +784,8 @@ class KYCAuditLog(models.Model):
 
     def __str__(self) -> str:
         reviewer_name = self.reviewer.get_full_name() if self.reviewer else "System"
-        return f"[{self.action}] {self.agency.manager_name} by {reviewer_name} at {self.timestamp}"
+        agency_name = getattr(self.agency, 'manager_name', None) if self.agency else "Unknown Agency"
+        return f"[{self.action}] {agency_name} by {reviewer_name} at {self.timestamp}"
 
     def save(self, *args, **kwargs) -> None:
         from django.core.exceptions import PermissionDenied

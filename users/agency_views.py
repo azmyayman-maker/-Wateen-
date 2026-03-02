@@ -16,6 +16,7 @@ from .services.notifications import (
     AgencyNotificationService,
     send_kyc_review_email_task,
 )
+from .services.kyc_review_service import AgencyKYCService
 from .agency_serializers import (
     AgencyRegistrationSerializer,
     AgencyApprovalSerializer,
@@ -110,26 +111,18 @@ class AgencyKYCResubmitView(generics.CreateAPIView):
             )
 
         agency = user.agency
+        ip_address = get_client_ip(self.request)
+        user_agent = self.request.META.get('HTTP_USER_AGENT', '')[:500]
 
-        # Check if agency was REJECTED and needs to transition back to PENDING
-        was_rejected = agency.status == AgencyStatus.REJECTED
+        # Wrap in atomic transaction
+        with transaction.atomic():
+            # 1. Save the new document version
+            serializer.save(agency=agency)
 
-        # 1. Save the new document version
-        serializer.save(agency=agency)
-
-        # 2. If agency was REJECTED, transition back to PENDING
-        if was_rejected:
-            agency.status = AgencyStatus.PENDING
-            agency.save(update_fields=['status', 'updated_at'])
-            
-            # Create audit log for resubmission
-            ip_address = get_client_ip(self.request)
-            user_agent = self.request.META.get('HTTP_USER_AGENT', '')[:500]
-            KYCAuditLog.objects.create(
+            # 2. Handle resubmission status transition and audit log via service
+            AgencyKYCService.handle_resubmission(
                 agency=agency,
                 reviewer=user,
-                action='RESUBMIT',
-                notes='Documents resubmitted after rejection',
                 ip_address=ip_address,
                 user_agent=user_agent,
             )
@@ -221,11 +214,8 @@ class KYCReviewView(generics.UpdateAPIView):
     @transaction.atomic
     def update(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
-        Process the review action atomically:
-        1. Validate agency is PENDING
-        2. Update agency status
-        3. Create immutable audit log
-        4. Schedule email notification on transaction commit
+        Process the review action using the KYC service.
+        The service handles status validation, transitions, and audit logging.
         """
         agency = self.get_object()
         serializer = self.get_serializer(data=request.data)
@@ -234,41 +224,25 @@ class KYCReviewView(generics.UpdateAPIView):
         action = serializer.validated_data['action']
         notes = serializer.validated_data.get('notes', '')
 
-        # Validate agency is in PENDING status
-        if agency.status != AgencyStatus.PENDING:
-            return Response(
-                {
-                    "detail": _(
-                        "Cannot review agency in '%(status)s' status. "
-                        "Only PENDING agencies can be reviewed."
-                    ) % {"status": agency.status}
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        # Determine new status
-        new_status = (
-            AgencyStatus.VERIFIED if action == 'APPROVE'
-            else AgencyStatus.REJECTED
-        )
-
         # Get client IP and user agent for audit log (Law 151/2020)
         ip_address = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
-        # Update agency status
-        agency.status = new_status
-        agency.save(update_fields=['status', 'updated_at'])
-
-        # Create immutable audit log entry
-        audit_log = KYCAuditLog.objects.create(
-            agency=agency,
-            reviewer=request.user,
-            action=action,
-            notes=notes,
-            ip_address=ip_address,
-            user_agent=user_agent,
-        )
+        # Delegate business logic to the service
+        try:
+            result = AgencyKYCService.review_agency(
+                agency=agency,
+                reviewer=request.user,
+                action=action,
+                notes=notes,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+        except ValueError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         # Schedule email notification via Celery on transaction commit
         transaction.on_commit(
@@ -290,7 +264,7 @@ class KYCReviewView(generics.UpdateAPIView):
                 "id": str(agency.id),
                 "status": agency.status,
                 "action": action,
-                "audit_log_id": str(audit_log.id),
+                "audit_log_id": str(result.audit_log.id),
                 "message": message,
             },
             status=status.HTTP_200_OK,
