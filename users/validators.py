@@ -109,3 +109,33 @@ def validate_phone_number(value: str) -> None:
             _('رقم الهاتف يجب أن يكون 11 رقم ويبدأ بـ 01'),
             code='invalid_phone'
         )
+
+
+def validate_kyc_file_extension_and_size(file):
+    """
+    Validate that the uploaded file is a PDF or Image and under 10MB.
+    Uses python-magic for secure MIME-type sniffing (Law 151/2020 Compliance).
+    """
+    # 1. Size check (10MB limit)
+    MAX_SIZE = 10 * 1024 * 1024
+    if file.size > MAX_SIZE:
+        raise ValidationError(
+            _("حجم الملف يتجاوز الحد المسموح به (10 ميجابايت)."),
+            code='file_too_large'
+        )
+
+    # 2. Content check (MIME-type sniffing)
+    # Read first 2048 bytes for sniffing
+    initial_bytes = file.read(2048)
+    file.seek(0)  # Reset pointer for subsequent reads/saves
+    
+    mime_type = magic.from_buffer(initial_bytes, mime=True)
+    allowed_mimes = ["application/pdf", "image/jpeg", "image/png"]
+    
+    if mime_type not in allowed_mimes:
+        raise ValidationError(
+            _("نوع الملف غير مسموح. المسموح فقط: PDF, JPEG, PNG."),
+            code='invalid_file_type'
+        )
+    
+    return file

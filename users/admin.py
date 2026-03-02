@@ -9,6 +9,7 @@ from .models import (
     NurseDocument,
     NurseProfile,
     PatientProfile,
+    KYCDocument,
 )
 
 
@@ -181,3 +182,38 @@ class AgencyProfileAdmin(GISModelAdmin):
     default_lon = 30.8025
     default_lat = 26.8206
     default_zoom = 6
+
+
+@admin.register(KYCDocument)
+class KYCDocumentAdmin(admin.ModelAdmin):
+    """
+    Admin interface for Agency KYC documents.
+    Provides easy oversight of pending applications and historical versions.
+    """
+    list_display = (
+        "agency", 
+        "document_type", 
+        "status", 
+        "version", 
+        "uploaded_at"
+    )
+    list_filter = ("status", "document_type", "uploaded_at")
+    search_fields = (
+        "agency__manager_name", 
+        "agency__commercial_registry", 
+        "agency__tax_id"
+    )
+    readonly_fields = ("id", "version", "uploaded_at")
+    raw_id_fields = ("agency",)
+    
+    fieldsets = (
+        (None, {
+            "fields": ("agency", "document_type", "status", "version")
+        }),
+        (_("Review Details"), {
+            "fields": ("reviewer_notes",)
+        }),
+        (_("File & Metadata"), {
+            "fields": ("file", "id", "uploaded_at")
+        }),
+    )
