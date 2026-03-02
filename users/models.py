@@ -695,10 +695,12 @@ class KYCDocument(models.Model):
         cannot lock rows that don't yet exist.
         """
         if not self.pk:
+            import hashlib
             from django.db import connection, transaction
             with transaction.atomic():
-                # Compute a deterministic lock key from (agency_id, document_type)
-                lock_key = hash((str(self.agency_id), self.document_type)) % (2**31)
+                # Stable, cross-process lock key (hash() is randomized per process)
+                raw = f"{self.agency_id}:{self.document_type}"
+                lock_key = int(hashlib.sha256(raw.encode()).hexdigest(), 16) % (2**31)
                 with connection.cursor() as cursor:
                     cursor.execute("SELECT pg_advisory_xact_lock(%s)", [lock_key])
 
@@ -707,4 +709,9 @@ class KYCDocument(models.Model):
                 ).select_for_update().order_by("-version").first()
                 if latest:
                     self.version = latest.version + 1
+
+                # INSERT must happen inside the atomic block so the advisory
+                # lock protects the gap between version-read and row-insert.
+                super().save(*args, **kwargs)
+            return  # already saved inside the atomic block
         super().save(*args, **kwargs)

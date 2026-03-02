@@ -1,3 +1,5 @@
+import logging
+
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.db import transaction
 from django.utils.translation import gettext_lazy as _
@@ -7,6 +9,8 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from .models import AgencyProfile, CustomUser, UserRole, KYCDocument, KYCDocumentType
 from .validators import validate_kyc_file_extension_and_size
+
+logger = logging.getLogger(__name__)
 
 class AgencyProfileSerializer(GeoFeatureModelSerializer):
     """
@@ -154,8 +158,14 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
             for doc in created_docs:
                 try:
                     doc.file.delete(save=False)
-                except Exception:
-                    pass  # Best-effort cleanup; log separately if needed
+                except Exception as exc:
+                    logger.error(
+                        "Failed to clean up orphaned file for KYCDocument "
+                        "(agency=%s, type=%s): %s",
+                        getattr(doc, 'agency_id', '?'),
+                        getattr(doc, 'document_type', '?'),
+                        exc,
+                    )
             raise
 
 
@@ -182,7 +192,7 @@ class KYCDocumentUpdateSerializer(serializers.ModelSerializer):
         model = KYCDocument
         fields = ['document_type', 'file']
 
-    def create(self, validated_data) -> KYCDocument:
+    def create(self, validated_data: dict) -> KYCDocument:
         # Agency is injected by the view (e.g. from the request context or URL)
         return KYCDocument.objects.create(**validated_data)
 

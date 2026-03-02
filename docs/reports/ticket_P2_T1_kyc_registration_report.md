@@ -323,7 +323,7 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'status']
 
     @transaction.atomic
-    def create(self, validated_data):
+    def create(self, validated_data: dict) -> AgencyProfile:
         # Extract administrative and document data
         admin_national_id = validated_data.pop('admin_national_id')
         admin_phone_number = validated_data.pop('admin_phone_number')
@@ -332,33 +332,51 @@ class AgencyRegistrationSerializer(serializers.ModelSerializer):
         moh_file = validated_data.pop('moh_license_file')
         tax_file = validated_data.pop('tax_id_file')
 
-        # 1. Create the Agency Profile (defaults to PENDING status)
-        agency = AgencyProfile.objects.create(**validated_data)
+        # Track created KYC documents for file cleanup on failure
+        created_docs: list[KYCDocument] = []
+        try:
+            # 1. Create the Agency Profile (defaults to PENDING status)
+            agency = AgencyProfile.objects.create(**validated_data)
 
-        # 2. Create the initial AgencyAdmin user linked to this agency
-        CustomUser.objects.create(
-            national_id=admin_national_id,
-            phone_number=admin_phone_number,
-            password=make_password(admin_password),
-            role=UserRole.AGENCY_ADMIN,
-            agency=agency,
-        )
-
-        # 3. Create KYC Documents (v1)
-        KYCDocument.objects.create(agency=agency, document_type=KYCDocumentType.COMMERCIAL_REGISTRY, file=cr_file, version=1)
-        KYCDocument.objects.create(agency=agency, document_type=KYCDocumentType.MOH_LICENSE, file=moh_file, version=1)
-        KYCDocument.objects.create(agency=agency, document_type=KYCDocumentType.TAX_ID, file=tax_file, version=1)
-
-        # 4. Notify SuperAdmins (Async after transaction commit)
-        from .services.notifications import AgencyNotificationService
-        transaction.on_commit(
-            lambda: AgencyNotificationService.notify_superadmins_of_new_registration(
-                agency_id=str(agency.id),
-                manager_name=agency.manager_name
+            # 2. Create the initial AgencyAdmin user linked to this agency
+            CustomUser.objects.create_user(
+                national_id=admin_national_id,
+                phone_number=admin_phone_number,
+                password=admin_password,  # create_user handles hashing
+                role=UserRole.AGENCY_ADMIN,
+                agency=agency,
             )
-        )
 
-        return agency
+            # 3. Create the initial KYC Documents (version auto-assigned by model)
+            for doc_type, doc_file in [
+                (KYCDocumentType.COMMERCIAL_REGISTRY, cr_file),
+                (KYCDocumentType.MOH_LICENSE, moh_file),
+                (KYCDocumentType.TAX_ID, tax_file),
+            ]:
+                doc = KYCDocument.objects.create(
+                    agency=agency, document_type=doc_type, file=doc_file,
+                )
+                created_docs.append(doc)
+
+            # 4. Notify SuperAdmins (Async after transaction commit)
+            from .services.notifications import AgencyNotificationService
+            transaction.on_commit(
+                lambda: AgencyNotificationService.notify_superadmins_of_new_registration(
+                    agency_id=str(agency.id),
+                    manager_name=agency.manager_name
+                )
+            )
+
+            return agency
+        except Exception:
+            # DB rows are rolled back by @transaction.atomic, but
+            # files already written to S3 are NOT part of the DB tx.
+            for doc in created_docs:
+                try:
+                    doc.file.delete(save=False)
+                except Exception as exc:
+                    logger.error("Failed to clean up orphaned file: %s", exc)
+            raise
 ```
 
 ### 5.2 خوارزمية عملية التسجيل الذرية (Atomic Registration Pipeline)
@@ -383,10 +401,11 @@ BEGIN TRANSACTION ← (Atomic — all or nothing)
   │
   ├─ STEP 2: CREATE AgencyProfile (status = PENDING)
   │
-  ├─ STEP 3: CREATE CustomUser (role = AGENCY_ADMIN, linked to agency)
-  │   └── Password hashed with make_password() → Argon2
+  ├─ STEP 3: CREATE CustomUser via create_user() (role = AGENCY_ADMIN)
+  │   └── create_user() handles password hashing internally
   │
-  ├─ STEP 4: CREATE 3 × KYCDocument (version = 1, status = PENDING)
+  ├─ STEP 4: CREATE 3 × KYCDocument (version auto-assigned by model.save())
+  │   ├── Each file tracked in created_docs[] for cleanup on failure
   │   ├── COMMERCIAL_REGISTRY → kyc/<uuid>/COMMERCIAL_REGISTRY/filename
   │   ├── MOH_LICENSE → kyc/<uuid>/MOH_LICENSE/filename
   │   └── TAX_ID → kyc/<uuid>/TAX_ID/filename
@@ -400,7 +419,9 @@ POST-COMMIT:
 
 OUTPUT: 201 Created + AgencyProfile JSON
 ──────────────────────────────────────
-FAILURE MODE: If ANY step fails → entire transaction ROLLS BACK
+FAILURE MODE: If ANY step fails →
+  1. DB rows rolled back by @transaction.atomic
+  2. Uploaded S3 files cleaned up via created_docs loop
   → No orphaned users, no orphaned files, no partial data
 ```
 

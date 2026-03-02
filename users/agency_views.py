@@ -1,15 +1,17 @@
 from typing import Any
 
+from django.db import transaction
+from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
-from rest_framework import generics, status, exceptions
+
+from rest_framework import generics, status, exceptions, serializers
+from rest_framework.parsers import MultiPartParser, JSONParser
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from rest_framework.parsers import MultiPartParser, JSONParser
-from django.db.models import QuerySet
-from .permissions import IsSuperAdmin, IsAgencyAdmin
 
 from .models import AgencyProfile, KYCDocument
+from .permissions import IsSuperAdmin, IsAgencyAdmin
 from .agency_serializers import (
     AgencyRegistrationSerializer,
     AgencyApprovalSerializer,
@@ -73,7 +75,7 @@ class AgencyKYCResubmitView(generics.CreateAPIView):
     permission_classes = [IsAuthenticated, IsAgencyAdmin]
     parser_classes = [MultiPartParser]
 
-    def perform_create(self, serializer) -> None:
+    def perform_create(self, serializer: serializers.BaseSerializer) -> None:
         user = self.request.user
 
         # Guard: misconfigured agency-admin without a linked AgencyProfile
@@ -85,11 +87,13 @@ class AgencyKYCResubmitView(generics.CreateAPIView):
         # 1. Inject agency context from the authenticated user
         serializer.save(agency=user.agency)
 
-        # 2. Re-trigger SuperAdmin notification for the update
+        # 2. Re-trigger SuperAdmin notification (deferred until DB commit)
         from .services.notifications import AgencyNotificationService
-        AgencyNotificationService.notify_superadmins_of_new_registration(
-            agency_id=str(user.agency.id),
-            manager_name=user.agency.manager_name
+        transaction.on_commit(
+            lambda: AgencyNotificationService.notify_superadmins_of_new_registration(
+                agency_id=str(user.agency.id),
+                manager_name=user.agency.manager_name
+            )
         )
 
 
@@ -104,4 +108,3 @@ class AgencyKYCDocumentsListView(generics.ListAPIView):
     def get_queryset(self) -> "QuerySet[KYCDocument]":
         user = self.request.user
         return KYCDocument.objects.filter(agency=user.agency)
-
