@@ -1,0 +1,142 @@
+# =============================================================================
+# Wateen Project - Python Dependencies
+# Production-Grade Requirements with Pinned Versions
+# =============================================================================
+# All dependencies are pinned to exact versions for:
+# - Deterministic builds across all environments
+# - Reproducible deployments
+# - Security and stability guarantees
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Core Framework
+# -----------------------------------------------------------------------------
+# Django web framework - LTS version for long-term support
+Django==5.0.2
+
+# -----------------------------------------------------------------------------
+# Database Drivers
+# -----------------------------------------------------------------------------
+# PostgreSQL adapter for Django
+# Binary package for easier installation (no compilation required)
+psycopg2-binary==2.9.9
+
+# Database URL parser for 12-factor apps
+dj-database-url==2.1.0
+
+# -----------------------------------------------------------------------------
+# Cache & Message Broker
+# -----------------------------------------------------------------------------
+# Redis Python client for caching and message brokering
+redis==5.0.1
+
+# Django cache backend for Redis
+django-redis==6.0.0
+
+# Celery for background tasks
+celery[redis]==5.3.6
+
+# -----------------------------------------------------------------------------
+# Real-time / WebSocket
+# -----------------------------------------------------------------------------
+# Django Channels for WebSocket and async protocol support
+channels==4.0.0
+
+# Daphne ASGI server (HTTP + WebSocket)
+daphne==4.1.0
+
+# Redis channel layer backend for Django Channels
+channels-redis==4.2.0
+
+# -----------------------------------------------------------------------------
+# Configuration Management
+# -----------------------------------------------------------------------------
+# Environment variable and configuration management
+python-decouple==3.8
+
+# -----------------------------------------------------------------------------
+# WSGI/ASGI Servers
+# -----------------------------------------------------------------------------
+# Production-grade WSGI HTTP server
+gunicorn==21.2.0
+
+# ASGI server for async support (optional, for future use)
+# uvicorn[standard]==0.27.1
+
+# -----------------------------------------------------------------------------
+# Additional Production Dependencies
+# -----------------------------------------------------------------------------
+# Whitenoise for static file serving (production-ready)
+whitenoise==6.6.0
+
+# Django CORS headers for API support
+django-cors-headers==4.3.1
+
+# For secure password hashing
+argon2-cffi==23.1.0
+
+# -----------------------------------------------------------------------------
+# REST API & Authentication
+# -----------------------------------------------------------------------------
+# Django REST Framework for building APIs
+djangorestframework==3.15.1
+
+# JWT Authentication for DRF
+djangorestframework-simplejwt==5.3.1
+
+# GIS Support for DRF
+djangorestframework-gis==1.2.0
+
+# Stripe SDK for payments
+stripe==8.0.0
+
+# -----------------------------------------------------------------------------
+# KYC / Document Processing (Computer Vision + OCR)
+# -----------------------------------------------------------------------------
+# OpenCV (headless — no GUI, for Docker/server environments)
+opencv-python-headless==4.9.0.80
+
+# Python wrapper for Google's Tesseract OCR engine
+pytesseract==0.3.10
+
+# Image processing library (required by pytesseract)
+Pillow==10.2.0
+
+# -----------------------------------------------------------------------------
+# Storage & Security (KYC Implementation)
+# -----------------------------------------------------------------------------
+# AWS S3 storage backend for Django
+django-storages==1.14.4
+
+# AWS SDK for Python (required by django-storages for S3 connectivity)
+boto3==1.34.131
+
+# MIME-type identification for secure file validation (includes libmagic DLL on Windows)
+# Windows uses python-magic-bin, others use python-magic
+python-magic-bin==0.4.14 ; sys_platform == "win32"
+python-magic==0.4.27 ; sys_platform != "win32"
+
+# -----------------------------------------------------------------------------
+# Development & Debugging (Optional - uncomment if needed)
+# -----------------------------------------------------------------------------
+# Django debug toolbar for development
+# django-debug-toolbar==4.2.0
+
+# IPython for enhanced Django shell
+# ipython==8.21.0
+
+# -----------------------------------------------------------------------------
+# Testing (Optional - uncomment if needed)
+# -----------------------------------------------------------------------------
+# pytest and Django integration
+# pytest==8.0.0
+# pytest-django==4.8.0
+# pytest-cov==4.1.0
+
+# =============================================================================
+# Version Pinning Strategy:
+# - Major.Minor.Patch versions are pinned (e.g., 5.0.2)
+# - Update versions deliberately after security review
+# - Use `pip list --outdated` to check for updates
+# - Test thoroughly before updating any dependency
+# =============================================================================

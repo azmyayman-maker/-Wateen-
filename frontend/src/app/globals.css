@@ -1,0 +1,133 @@
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══ Scrollbar Utilities ═══ */
+html {
+  scroll-behavior: smooth;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+:root {
+  --primary: 8 145 178;
+  --primary-light: 34 211 238;
+  --secondary: 20 184 166;
+  --background: 255 255 255;
+  --surface: 248 250 252;
+  --text-primary: 15 23 42;
+  --text-secondary: 71 85 105;
+  --border: 226 232 240;
+  --success: 16 185 129;
+  --warning: 245 158 11;
+  --error: 239 68 68;
+  --line-height: 1.8;
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg:
+    0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+body {
+  background: rgb(var(--background));
+  color: rgb(var(--text-primary));
+  line-height: var(--line-height);
+}
+
+:focus-visible {
+  outline: 2px solid rgb(var(--primary));
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  top: -40px;
+  inset-inline-start: 0;
+  background: rgb(var(--primary));
+  color: white;
+  padding: 0.5rem 1rem;
+  z-index: 100;
+  transition: top 0.3s;
+}
+
+.skip-link:focus {
+  top: 0;
+}
+
+/* === LTR / English Mode Overrides === */
+[dir="ltr"] body {
+  font-family: var(--font-inter), "Inter", "Segoe UI", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+[dir="ltr"] .text-start {
+  text-align: left;
+}
+
+[dir="ltr"] .text-end {
+  text-align: right;
+}
+
+/* === Egypt National Flag Gradient === */
+.egypt-gradient {
+  background: linear-gradient(
+    170deg,
+    rgba(206, 17, 38, 0.8) 0%,
+    rgba(206, 17, 38, 0.7) 20%,
+    rgba(255, 255, 255, 1) 45%,
+    rgba(255, 255, 255, 1) 55%,
+    rgba(0, 0, 0, 0.7) 80%,
+    rgba(0, 0, 0, 0.8) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: inline-block;
+  font-weight: 800;
+  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.05));
+}
+
+/* === Wateen Spinner Animations === */
+@keyframes wateen-pulse {
+  0% {
+    stroke-dashoffset: 1000;
+    stroke-dasharray: 1000;
+  }
+  50% {
+    stroke-dashoffset: 0;
+    stroke-dasharray: 1000;
+  }
+  100% {
+    stroke-dashoffset: -1000;
+    stroke-dasharray: 1000;
+  }
+}
+
+@keyframes wateen-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.animate-wateen-pulse {
+  animation: wateen-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+.animate-wateen-breathe {
+  animation: wateen-breathe 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}

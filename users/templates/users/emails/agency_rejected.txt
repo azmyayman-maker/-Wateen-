@@ -1,0 +1,18 @@
+{% load i18n %}{% trans "Dear" %} {{ manager_name }},
+
+{% blocktrans with cr=commercial_registry %}Your agency application (Commercial Registry: {{ cr }}) requires some updates before it can be approved.{% endblocktrans %}
+
+{% trans "Please review the following notes from our review team:" %}
+
+{{ notes }}
+
+{% trans "To proceed:" %}
+1. {% trans "Log in to your agency dashboard" %}
+2. {% trans "Navigate to the KYC documents section" %}
+3. {% trans "Upload corrected documents as needed" %}
+4. {% trans "Your application will be re-reviewed once documents are updated" %}
+
+{% trans "If you have any questions, please contact our support team." %}
+
+{% trans "Best regards," %}
+{% trans "The Wateen Team" %}

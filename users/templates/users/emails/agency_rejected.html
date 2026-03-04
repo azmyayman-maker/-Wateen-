@@ -1,0 +1,57 @@
+{% load i18n %}
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% trans "Agency Application Update Required" %}</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; direction: rtl; text-align: right; background-color: #f5f5f5; padding: 20px;">
+    <div style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div style="background-color: #f59e0b; color: #ffffff; padding: 30px; text-align: center;">
+            <h1 style="margin: 0; font-size: 24px;">⚠️ {% trans "Update Required" %}</h1>
+            <p style="margin: 10px 0 0 0;">{% trans "Your agency application needs updates" %}</p>
+        </div>
+        
+        <div style="padding: 30px;">
+            <p style="color: #374151; font-size: 16px;">{% trans "Dear" %} <strong>{{ manager_name }}</strong>,</p>
+            
+            <p style="color: #374151; font-size: 16px;">
+                {% blocktrans with cr=commercial_registry %}
+                Your agency application (Commercial Registry: <strong>{{ cr }}</strong>) requires some updates before it can be approved.
+                {% endblocktrans %}
+            </p>
+            
+            <div style="background-color: #fee2e2; border-radius: 8px; padding: 20px; margin: 20px 0; border-right: 4px solid #ef4444;">
+                <h3 style="color: #991b1b; margin-top: 0;">{% trans "Notes from the review team:" %}</h3>
+                <p style="color: #991b1b; margin: 0; line-height: 1.6;">{{ notes }}</p>
+            </div>
+            
+            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 20px; margin: 20px 0;">
+                <h3 style="color: #111827; margin-top: 0;">{% trans "To proceed:" %}</h3>
+                <ol style="color: #374151; line-height: 1.8;">
+                    <li>{% trans "Log in to your agency dashboard" %}</li>
+                    <li>{% trans "Navigate to the KYC documents section" %}</li>
+                    <li>{% trans "Upload corrected documents as needed" %}</li>
+                    <li>{% trans "Your application will be re-reviewed once documents are updated" %}</li>
+                </ol>
+            </div>
+            
+            <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+                {% trans "If you have any questions, please contact our support team." %}
+            </p>
+            
+            <p style="color: #6b7280; font-size: 14px;">
+                {% trans "Best regards," %}<br>
+                <strong>{% trans "The Wateen Team" %}</strong>
+            </p>
+        </div>
+        
+        <div style="background-color: #f9fafb; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+            <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+                © 2026 Wateen. {% trans "All rights reserved." %}
+            </p>
+        </div>
+    </div>
+</body>
+</html>

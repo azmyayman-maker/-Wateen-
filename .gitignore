@@ -1,0 +1,148 @@
+# =============================================================================
+# Wateen Project — .gitignore
+# =============================================================================
+
+# ── Python ──
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+*.egg
+dist/
+build/
+.eggs/
+
+# ── Virtual Environments ──
+venv/
+.venv/
+env/
+
+# ── Environment Variables ──
+.env
+.env.production
+!.env.example
+
+# ── SSL Certificates (NEVER COMMIT) ──
+*.pem
+*.key
+*.crt
+docker/ssl/*.pem
+
+# ── Backups ──
+backups/
+*.backup
+
+# ── Database ──
+db.sqlite3
+*.sqlite3
+
+# ── Django ──
+staticfiles/
+mediafiles/
+
+# ── IDE / Editor ──
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+nul
+
+# ── Docker ──
+# (docker volumes are external, nothing to ignore here)
+
+
+# ── OS ──
+*.log
+*.pid
+*.seed
+
+# ── Temporary Test & Debug Output ──
+*_output.txt
+*_output*.txt
+test_out*.txt
+test_errors.txt
+test_failures*.txt
+logs_dump.txt
+remaining_tests.txt
+error_log.txt
+check_output.txt
+output.txt
+
+# ── MCP & Tool Config (generated/temporary) ──
+mcp_output.json
+mcp_tools.json
+mcp_config.json
+invoke_mcp.mjs
+mcp_client.mjs
+projects_out.json
+tools.json
+act.json
+opencode.json
+
+# ── Temporary JSON files ──
+payload.json
+payload_auth.json
+firewall.json
+firewall_utf8.json
+rule.json
+schema.json
+verification-report.json
+
+# ── Cache Directories ──
+.pytest_cache/
+.ruff_cache/
+.agent/
+.opencode/
+.specify/
+
+# ── Node.js ──
+node_modules/
+package-lock.json
+
+# ── Frontend (Next.js) ──
+frontend/.next/
+frontend/node_modules/
+frontend/package-lock.json
+
+# ── Misc Temporary Files ──
+help.txt
+run_tests.bat
+run_tests.sh
+run_tests_manual.py
+verify_age.py
+.agents/
+.kilocode/
+.opencode/
+.specify/
+.vscode/
+node_modules/
+mcp_config.json
+package-lock.json
+package.json
+setup_fw.mjs
+test_output2.txt
+test_output3.txt
+.gitnexus
+.claude/
+# === Cleanup additions (auto-generated) ===
+# Prevent sensitive files from being committed
+payload*.json
+*.log
+*_output*.txt
+*_results*.txt
+desktop.ini
+nul
+firewall*.json
+act.json
+rule.json
+tools.json
+mcp_output.json
+mcp_tools.json
+mcp_client.mjs
+invoke_mcp.mjs
+setup_fw.mjs
+verification-report.json
+specs/

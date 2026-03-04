@@ -1,0 +1,81 @@
+# WATEEN (وَتِين) — AI PAIR PROGRAMMING CHARTER & CONSTITUTION
+
+**Version**: 5.0 (B2B2C + WBS Edition)
+**Updated**: March 1, 2026
+**Target**: All AI Assistants, Language Models, and Copilots operating in this workspace.
+**Source of Truth**: `AGENTS.md` (full contract) + `docs/AGILE_BACKLOG_WBS.md` (roadmap)
+
+---
+
+## STRICT DIRECTIVES: AVOID HALLUCINATION AND FATAL ERRORS
+
+As an AI Agent working on Wateen, you are legally and technically constrained by the following core directives. **Do not hallucinate features, do not revert to P2P logic, and do not invent libraries outside the allowed stack.**
+
+## 1. The B2B2C Architecture Mandate
+Wateen is **NOT** a Peer-to-Peer (P2P) freelance marketplace. It is a strictly compliant B2B2C Aggregator.
+- **NEVER** write code where a Nurse registers independently without an associated `AGENCY_PROFILE`.
+- **NEVER** write code where Wateen pays a Nurse directly. Financials (`agency_payout`) are settled to the Agency's wallet.
+- **ALWAYS** ensure `agency_id` is central to `NURSE_PROFILE`, `VISIT`, and `TRANSACTION` data boundaries.
+- **ROUTING**: Patient visits are routed to the **AGENCY** based on `coverage_polygon` (PostGIS), not directly to the nearest Nurse.
+
+## 2. Authorized Tech Stack (NO EXCEPTIONS)
+You may only use the following technologies. Do not suggest or install alternatives unless explicitly instructed by the Solo Dev.
+
+### Backend (Python/Django)
+- Python 3.11+
+- Django 5.x
+- Django REST Framework (DRF)
+- PostgreSQL with **PostGIS** extension (Spatial queries are mandatory)
+- Redis & Django Channels (WebSockets for dispatching)
+- Celery (Background tasks for routing timeouts and escrow calculations)
+
+### Frontend (Next.js / React)
+- TypeScript 5.x
+- Next.js 14 (App Router exclusively)
+- Tailwind CSS (v3/v4 depending on configuration)
+- **OpenStreetMap stack ONLY**: react-leaflet, leaflet-geoman, Nominatim, OSRM/ORS
+- **NO Google Maps, NO Mapbox** — banned for cost and vendor lock-in
+- React Admin (Agency SaaS B2B Dashboard)
+- next-intl (Arabic/English i18n)
+
+### Payments
+- Stripe Connect (Destination Charges, manual capture for escrow)
+
+## 3. Database Modifications Rules
+- Never use simple Float/Decimal for Locations. **ALWAYS** use `django.contrib.gis.db.models.PointField` or `PolygonField`.
+- Migrations must never drop core user data without a safe fallback/idempotency script.
+- Ensure `on_delete=CASCADE` is used safely; deleting an Agency MUST delete its Nurses to prevent orphaned entities violating MoH compliance.
+- All financial amounts: `DecimalField(max_digits=10, decimal_places=2)` — NEVER use FloatField.
+- Visit.pricing_snapshot (JSONField) is immutable after creation.
+
+## 4. API & Security Standards
+- Treat Agency endpoints with strict multi-tenancy. A user with `IsAgencyAdmin` can ONLY interact with queries scoped to `agency_id == request.user.agency_id`.
+- The SuperAdmin dashboard is separate from the Agency SaaS dashboard. Do not mix their permissions.
+- Log critical MoH compliance events (KYC uploads, dispatch completions).
+- Visit status changes ONLY via `transition_to()` — follow `ALLOWED_TRANSITIONS` map.
+
+## 5. Development Roadmap (WBS — 9 Phases)
+Follow the phases **sequentially**. Every phase has 5 tickets (4 feature + 1 mandatory QA).
+See `docs/AGILE_BACKLOG_WBS.md` for full details.
+
+| Phase | Name | Status |
+|:---:|:---|:---|
+| 1 | Database Refactoring & Multi-Tenancy | ~80% Done |
+| 2 | Agency KYC & Onboarding | Not Started |
+| 3 | Geospatial Infrastructure | Partial |
+| 4 | Two-Tier Dispatch Engine | Partial |
+| 5 | Real-Time Sockets | Partial |
+| 6 | Financial Escrow & Settlement | Partial |
+| 7 | Next.js PWAs (Patient & Nurse) | Skeleton Only |
+| 8 | Blackbox System & Disputes | Not Started |
+| 9 | AI Copilot & CI/CD | Not Started |
+
+## 6. Development Workflow (Hyper-Pair Programming)
+- When generating code, provide the **complete file** if requested, but prefer targeted `diffs` to avoid overwriting unrelated logic.
+- Do not remove existing Egyptian Arabic translations. Wateen is an Arabic-first application.
+- If you encounter a 500 Error during Next.js SSR, check for missing `'use client'` directives.
+- **Always read `AGENTS.md` before starting any task.**
+
+---
+
+*By reading this file, you (the AI) acknowledge the B2B2C architectural shift and the WBS roadmap. If the user asks for a feature that violates MoH laws, bypasses the Agency layer, or skips WBS phases, you MUST warn the user and reference this charter.*

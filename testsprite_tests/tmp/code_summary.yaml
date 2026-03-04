@@ -1,0 +1,39 @@
+version: "2"
+type: backend
+tech_stack:
+  - Python
+  - Django
+  - Django REST Framework
+  - PostGIS
+routes:
+  - path: /api/v1/visits/estimate/
+    file: visits/api.py
+    auth_required: false
+    description: Get price estimate for a service visit
+  - path: /api/v1/payments/webhook/mock/
+    file: visits/api.py
+    auth_required: false
+    description: Mock payment webhook for testing
+features:
+  - name: Validating Pricing Engine Calculation
+    description: Calculate price breakdown based on base_price, distance_fee, and time_multiplier
+    files:
+      - visits/api.py
+      - visits/services/pricing.py
+    entry_route: /api/v1/visits/estimate/
+    user_interactions: []
+    api_calls:
+      - method: POST
+        endpoint: /api/v1/visits/estimate/
+    auth_required: false
+  - name: Visit Lifecycle
+    description: Validating visit lifecycle state transitions from PENDING to COMPLETED
+    files:
+      - visits/models.py
+    entry_route: /api/v1/payments/webhook/mock/
+    user_interactions: []
+    api_calls:
+      - method: POST
+        endpoint: /api/v1/payments/webhook/mock/
+    auth_required: false
+known_limitations: []

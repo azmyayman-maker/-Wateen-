@@ -1,0 +1,112 @@
+[1;33mdiff --git a/AGENTS.md b/AGENTS.md[m
+[1;33mindex fe72b7c..4c4cfe8 100644[m
+[1;33m--- a/AGENTS.md[m
+[1;33m+++ b/AGENTS.md[m
+[1;35m@@ -1,4 +1,4 @@[m
+[1;31m-# Wateen B2B2C — AI Agent Development Contract[m
+[1;32m+[m[1;32m﻿# Wateen B2B2C — AI Agent Development Contract[m
+ [m
+ > **Version:** 2.0 | **Updated:** March 1, 2026 | **Status:** ACTIVE[m
+ [m
+[1;35m@@ -6,9 +6,9 @@[m
+ [m
+ ## CRITICAL CONTEXT — READ FIRST[m
+ [m
+[1;31m-Wateen is a **B2B2C Healthcare Aggregator** — NOT a P2P marketplace.[m
+[1;32m+[m[1;32mWateen is a **B2B2C Healthcare Aggregator** — NOT a P2P marketplace.[m
+ We connect **Patients** with **MoH-Licensed Nursing Agencies** (not freelancers).[m
+[1;31m-The platform onboards **Agencies** (B2B), and Agencies manage their own nurses.[m
+[1;32m+[m[1;32mThe platform onboards **Agencies** (B2B), and Agencies manage their own nurses.[m
+ Patients never interact with nurses directly outside of assigned visits.[m
+ [m
+ **If any code you write treats nurses as freelancers or bypasses the Agency layer, it is WRONG.**[m
+[1;35m@@ -19,13 +19,13 @@[m [mPatients never interact with nurses directly outside of assigned visits.[m
+ [m
+ | Layer             | Technology                                                              |[m
+ | :---------------- | :---------------------------------------------------------------------- |[m
+[1;31m-| **Backend**       | Python 3.11+, Django 5.2, Django REST  Framework  all that in docker                        |[m
+[1;32m+[m[1;32m| **Backend**       | Python 3.11+, Django 5.2, Django REST Framework all that in docker      |[m
+ | **Database**      | PostgreSQL 16 + PostGIS 3.4 (spatial queries)                           |[m
+ | **Cache/PubSub**  | Redis 7 (django-redis, channels_redis)                                  |[m
+ | **WebSockets**    | Django Channels + Redis Channel Layer                                   |[m
+ | **Async Tasks**   | Celery 5 + Redis Broker                                                 |[m
+ | **Frontend**      | Next.js 14 (App Router), TypeScript 5, Tailwind CSS                     |[m
+[1;31m-| **B2B Dashboard** | React Admin (Agency SaaS Dashboard)                                     |[m
+[1;32m+[m[1;32m| **B2B Dashboard** | React Admin (Agency SaaS Dashboard)                                     |[m
+ | **Maps**          | OpenStreetMap stack: react-leaflet, leaflet-geoman, Nominatim, OSRM/ORS |[m
+ | **Payments**      | Stripe Connect (Destination Charges)                                    |[m
+ | **Language**      | Arabic-first (RTL mandatory), i18n via next-intl                        |[m
+[1;35m@@ -38,12 +38,19 @@[m [mPatients never interact with nurses directly outside of assigned visits.[m
+ config/          → Django settings, ASGI, Celery, middleware, Redis utils[m
+ users/           → CustomUser, AgencyProfile, NurseProfile, PatientProfile, KYC[m
+   services/      → kyc_service.py (OpenCV + Tesseract OCR)[m
+[1;32m+[m[1;32m  utils/         → seed_helpers.py (Egyptian data generators, Cairo PostGIS helpers)[m
+[1;32m+[m[1;32m  management/commands/[m
+[1;32m+[m[1;32m    seed_b2b2c.py         → P2P→B2B2C legacy migration[m
+[1;32m+[m[1;32m    seed_wateen_data.py   → Zero-Trace massive test data seeder[m
+[1;32m+[m[1;32m    nuke_test_data.py     → Zero-Trace test data cleanup (nuclear option)[m
+ visits/          → Visit, ServiceType, Transaction, PricingFactor, EstimateLog[m
+   services/      → pricing.py, matching.py, dispatch.py, payment.py, settlement.py[m
+   consumers.py   → WebSocket consumers (Patient, Nurse, Agency, Test)[m
+ frontend/        → Next.js 14 Patient PWA[m
+ tests/           → Pytest suite (matching, websockets, infrastructure, audit)[m
+[1;32m+[m[1;32m  test_seed_nuke_integrity.py → Seeder/Nuke integrity tests (spatial + cleanup)[m
+ docs/            → PRD.md, MIP.md, AGILE_BACKLOG_WBS.md[m
+[1;32m+[m[1;32m  reports/       → Technical reports per ticket/feature[m
+ ```[m
+ [m
+ ---[m
+[1;35m@@ -105,7 +112,7 @@[m [mEvery phase has **5 tickets** (4 feature + 1 mandatory QA). Total: 45 tickets, ~[m
+ [m
+ - Agency document upload (Commercial Registry, MoH License)[m
+ - KYC verification pipeline (SuperAdmin review queue)[m
+[1;31m-- React Admin B2B Dashboard initialization[m
+[1;32m+[m[1;32m- React Admin B2B Dashboard initialization[m
+ - Nurse invitation system (token-based onboarding)[m
+ - **Status:** Nurse KYC exists (OCR), Agency KYC NOT started, React Admin NOT initialized[m
+ [m
+[1;35m@@ -173,7 +180,7 @@[m [mEvery phase has **5 tickets** (4 feature + 1 mandatory QA). Total: 45 tickets, ~[m
+ | **Execution Model**    | Solo Dev + AI (Hyper-Pair Programming)                      |[m
+ | **Sequential Phases**  | Complete Phase N before starting Phase N+1                  |[m
+ | **QA is Mandatory**    | Every phase ends with Ticket X-5: QA, Security & Validation |[m
+[1;31m-| **B2B2C Enforcement**  | Every feature must route through the Agency layer           |[m
+[1;32m+[m[1;32m| **B2B2C Enforcement**  | Every feature must route through the Agency layer           |[m
+ | **Arabic-First**       | All user-facing text in Arabic, all UI in RTL               |[m
+ | **Open Source Maps**   | OSM only — no Google Maps, no Mapbox                        |[m
+ | **Test Coverage**      | Backend ≥ 80%, Frontend ≥ 75%                               |[m
+[1;35m@@ -192,6 +199,12 @@[m [mruff check .                        # Lint[m
+ python manage.py makemigrations     # After model changes[m
+ python manage.py migrate            # Apply migrations[m
+ [m
+[1;32m+[m[1;32m# Zero-Trace Test Data (requires PostGIS)[m
+[1;32m+[m[1;32mpython manage.py seed_wateen_data                          # Full seed (~52K rows)[m
+[1;32m+[m[1;32mpython manage.py seed_wateen_data --agencies 3 --nurses-per-agency 5 --visits-per-nurse 10  # Small batch[m
+[1;32m+[m[1;32mpython manage.py nuke_test_data                            # Interactive cleanup (type NUKE)[m
+[1;32m+[m[1;32mpython manage.py nuke_test_data --force --no-vacuum        # CI/CD cleanup[m
+[1;32m+[m
+ # Frontend[m
+ cd frontend && npm run dev          # Dev server (port 3000)[m
+ cd frontend && npm run build        # Production build[m
+[1;35m@@ -212,14 +225,48 @@[m [mcd frontend && npm run lint         # ESLint[m
+ [m
+ ## Reference Documents[m
+ [m
+[1;31m-| Document                   | Path                        | Purpose                                 |[m
+[1;31m-| :------------------------- | :-------------------------- | :-------------------------------------- |[m
+[1;31m-| Master PRD                 | `docs/PRD.md`               | Full product requirements (774 lines)   |[m
+[1;31m-| Master Implementation Plan | `docs/MIP.md`               | Technical architecture + data flow      |[m
+[1;31m-| Agile Backlog WBS          | `docs/AGILE_BACKLOG_WBS.md` | 9-phase development roadmap (575 lines) |[m
+[1;32m+[m[1;32m| Document                   | Path                                        | Purpose                                 |[m
+[1;32m+[m[1;32m| :------------------------- | :------------------------------------------ | :-------------------------------------- |[m
+[1;32m+[m[1;32m| Master PRD                 | `docs/PRD.md`                               | Full product requirements (774 lines)   |[m
+[1;32m+[m[1;32m| Master Implementation Plan | `docs/MIP.md`                               | Technical architecture + data flow      |[m
+[1;32m+[m[1;32m| Agile Backlog WBS          | `docs/AGILE_BACKLOG_WBS.md`                 | 9-phase development roadmap (575 lines) |[m
+[1;32m+[m[1;32m| Zero-Trace Seeding Report  | `docs/reports/zero_trace_seeding_report.md` | Test data generation system docs        |[m
+ [m
+ **When in doubt, the WBS is the source of truth for what to build next.**[m
+ [m
+[1;32m+[m[1;32m---[m
+[1;32m+[m
+[1;32m+[m[1;32m## Zero-Trace Test Data System — CRITICAL FOR ALL AGENTS[m
+[1;32m+[m
+[1;32m+[m[1;32m> **Any AI agent working on this codebase MU

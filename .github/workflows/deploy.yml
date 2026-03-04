@@ -1,0 +1,40 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v1.0.0
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USERNAME }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          envs: GH_TOKEN
+          script: |
+            cd ~/-Wateen-
+            git fetch https://oauth2:${GH_TOKEN}@github.com/azmyayman-maker/-Wateen-.git main
+            git reset --hard FETCH_HEAD
+            docker compose down --remove-orphans
+            docker rm -f $(docker ps -a -q) || true
+            sudo systemctl stop apache2 || true
+            sudo systemctl stop nginx || true
+            sudo fuser -k 80/tcp || true
+            sudo fuser -k 443/tcp || true
+            docker network rm wateen_network || true
+            docker network prune -f || true
+            docker image prune -af || true
+            if ! docker compose up -d --build; then
+              echo "Deployment failed. Fetching web container logs..."
+              docker logs wateen_web
+              exit 1
+            fi
+            echo "Deployment successful. Fetching Next.js frontend logs to debug 500 error..."
+            docker logs wateen_frontend --tail 150

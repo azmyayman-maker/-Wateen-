@@ -1,0 +1,54 @@
+# ── Docker Ignore ──
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+docs/
+*.md
+
+# Mocking & Planning
+plans/
+specs/
+.specify/
+.agent/
+.agents/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Environment Variables
+.env
+.env.*
+!.env.example
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
