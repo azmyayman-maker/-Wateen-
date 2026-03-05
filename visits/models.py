@@ -324,6 +324,7 @@ class Visit(models.Model):
                 params={"current": self.status, "new": new_status},
             )
 
+        self._previous_status = self.status  # Stash for post_save signal (C2 fix)
         self.status = new_status
         self.save(update_fields=["status", "updated_at"])
 

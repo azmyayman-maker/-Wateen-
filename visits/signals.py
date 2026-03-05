@@ -6,31 +6,29 @@ T037: When a visit transitions to COMPLETED → capture escrowed payment.
 """
 
 import logging
-from django.db.models.signals import pre_save
+from django.db.models.signals import post_save
 from django.dispatch import receiver
 
 logger = logging.getLogger(__name__)
 
 
-@receiver(pre_save, sender="visits.Visit")
+@receiver(post_save, sender="visits.Visit")
 def handle_visit_status_change(sender, instance, **kwargs):
     """
     T037: Trigger payment actions on visit status transitions.
-    
+
+    Uses `_previous_status` attribute set by `Visit.transition_to()` to avoid
+    a DB query inside the signal handler (C2 fix).
+
     - COMPLETED: Capture escrowed payment and credit agency wallet.
     - CANCELLED: Issue refund via Paymob.
     """
-    if not instance.pk:
-        return  # New visit, skip
+    from visits.models import VisitStatus, Transaction, TransactionStatus
 
-    try:
-        from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
-        previous = Visit.objects.filter(pk=instance.pk).values_list("status", flat=True).first()
-    except Exception:
-        return
-
-    if previous == instance.status:
-        return  # No status change
+    # Read the stashed previous status (set by transition_to())
+    previous = getattr(instance, "_previous_status", None)
+    if previous is None or previous == instance.status:
+        return  # No transition occurred via transition_to()
 
     new_status = instance.status
 
@@ -61,7 +59,7 @@ def handle_visit_status_change(sender, instance, **kwargs):
 
                 logger.info(
                     "Captured payment for visit %s: settled=%s, agency_payout=%s",
-                    instance.id, txn.amount, txn.agency_payout,
+                    instance.id, txn.amount_paid, txn.agency_payout,
                 )
             except Exception as e:
                 logger.error("Failed to capture payment for visit %s: %s", instance.id, e)
@@ -85,7 +83,7 @@ def handle_visit_status_change(sender, instance, **kwargs):
                 if txn.paymob_transaction_id:
                     PaymobService.process_refund(
                         transaction_id=txn.paymob_transaction_id,
-                        amount_egp=txn.amount,
+                        amount_egp=txn.amount_paid,
                     )
 
                 txn.status = TransactionStatus.REFUNDED

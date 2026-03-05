@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.db import transaction
 
@@ -498,9 +499,9 @@ class VisitTransitionView(APIView):
 
         try:
             visit.transition_to(new_status)
-        except Exception as e:
+        except ValidationError as e:
             return Response(
-                {"detail": str(e)},
+                {"detail": e.message},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 

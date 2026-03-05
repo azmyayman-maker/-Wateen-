@@ -216,7 +216,7 @@ class PaymentIntentView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if visit.status not in (VisitStatus.ACCEPTED, VisitStatus.PENDING_AGENCY):
+        if visit.status != VisitStatus.ACCEPTED:
             return Response(
                 {"detail": _("لا يمكن الدفع لهذه الزيارة في حالتها الحالية.")},
                 status=status.HTTP_400_BAD_REQUEST,
@@ -241,7 +241,7 @@ class PaymentIntentView(APIView):
         txn, _ = Transaction.objects.update_or_create(
             visit=visit,
             defaults={
-                "amount": visit.final_price,
+                "amount_paid": visit.final_price,
                 "status": TransactionStatus.ESCROWED,
                 "paymob_order_id": result.order_id,
                 "agency": visit.agency,
@@ -305,7 +305,7 @@ class PaymobWebhookView(APIView):
         txn.paymob_transaction_id = transaction_id
 
         if success:
-            txn.status = TransactionStatus.ESCROWED
+            txn.status = TransactionStatus.SETTLED
             txn.save(update_fields=["status", "paymob_transaction_id"])
             logger.info("Paymob payment confirmed for order %s", paymob_order_id)
         else:

@@ -287,7 +287,7 @@ def rank_agencies(agencies_qs, patient_location=None) -> list:
     from django.db.models import Count, Q
 
     # Annotate nurse counts in a single query (eliminates N+1)
-    annotated_agencies = agencies_qs.annotate(
+    annotated_agencies = agencies_qs.select_related("user").annotate(
         total_nurses=Count("nurses"),
         available_nurses=Count(
             "nurses",
@@ -298,18 +298,23 @@ def rank_agencies(agencies_qs, patient_location=None) -> list:
         ),
     )
 
+    # Batch cache lookup for response rates (W4 fix — eliminates N+1 on cache)
+    agency_list = list(annotated_agencies)
+    cache_keys = {a.id: f"agency_response_rate:{a.id}" for a in agency_list}
+    cached_rates = cache.get_many(list(cache_keys.values()))
+
     scored_agencies = []
 
-    for agency in annotated_agencies:
+    for agency in agency_list:
         # 1. Rating component (0-5 scale, normalized to 0-1)
         rating = float(agency.rating or 0) / 5.0
 
         # 2. Capacity component — available nurses / total nurses
         capacity = agency.available_nurses / max(agency.total_nurses, 1)
 
-        # 3. Response rate — cached for 1 hour
-        cache_key = f"agency_response_rate:{agency.id}"
-        response_rate = cache.get(cache_key)
+        # 3. Response rate — batch-cached for 1 hour
+        cache_key = cache_keys[agency.id]
+        response_rate = cached_rates.get(cache_key)
         if response_rate is None:
             from visits.models import Visit, VisitStatus
             last_100 = Visit.objects.filter(agency=agency).order_by("-created_at")[:100]
