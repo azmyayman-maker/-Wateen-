@@ -98,7 +98,7 @@ export const kycHandlers = [
   }),
 
   // POST /api/v1/admin/agencies/:pk/review/ - Review agency KYC
-  http.post('/api/v1/admin/agencies/:id/review/', async ({ params, request }) => {
+  http.post('/api/v1/admin/agencies/:id/review/', async ({ params, request }: any) => {
     await delay(300);
     
     const body = await request.json() as { action: string; notes?: string };
@@ -106,7 +106,7 @@ export const kycHandlers = [
     
     // Find the agency
     const agencyIndex = mockPendingAgencies.findIndex(
-      (a) => a.id === id
+      (a) => String(a.id) === String(id)
     );
     
     if (agencyIndex === -1) {
@@ -153,7 +153,7 @@ export const kycHandlers = [
   }),
 
   // GET /api/v1/admin/agencies/:id/kyc-audit-logs/ - Get audit logs
-  http.get('/api/v1/admin/agencies/:id/kyc-audit-logs/', async ({ params }) => {
+  http.get('/api/v1/admin/agencies/:id/kyc-audit-logs/', async ({ params }: any) => {
     await delay(200);
     
     const { id } = params;
