@@ -16,7 +16,6 @@ import { HealthWalletSection } from "@/components/landing/HealthWalletSection";
 import { LiveECGMonitor } from "@/components/landing/LiveECGMonitor";
 import { useLanguage } from "@/lib/i18n";
 import { LanguageSwitcher } from "@/components/shared/LanguageSwitcher";
-import { TrustedAgenciesSection } from "@/components/landing/TrustedAgenciesSection";
 
 // --- 0. MOBILE DETECTION HOOK ---
 function useIsMobile(breakpoint = 768) {
@@ -34,7 +33,7 @@ function useIsMobile(breakpoint = 768) {
 
 export default function LandingPage() {
   const containerRef = useRef<HTMLDivElement>(null);
-  const SECTION_COUNT = 6;
+  const SECTION_COUNT = 5;
   
   const { scrollYProgress } = useScroll({
     target: containerRef,
@@ -71,19 +70,16 @@ export default function LandingPage() {
         <Section3D index={0} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="hero">
           <HeroContent />
         </Section3D>
-        <Section3D index={1} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="partnership">
-          <TrustedAgenciesSection />
-        </Section3D>
-        <Section3D index={2} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="vitals">
+        <Section3D index={1} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="vitals">
           <IoTVitalsContent />
         </Section3D>
-        <Section3D index={3} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="ai">
+        <Section3D index={2} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="ai">
           <AICopilotContent />
         </Section3D>
-        <Section3D index={4} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="health-wallet">
+        <Section3D index={3} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="health-wallet">
           <HealthWalletSection />
         </Section3D>
-        <Section3D index={5} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="shield">
+        <Section3D index={4} scrollYProgress={scrollYProgress} total={SECTION_COUNT} id="shield">
           <ShieldContent />
         </Section3D>
       </div>
@@ -137,14 +133,14 @@ const Section3D = ({ children, index, scrollYProgress, total, id }: { children: 
   return (
     <div id={id} className="h-screen w-full flex items-center justify-center fixed top-0 left-0 perspective-[2000px] md:perspective-[2000px] select-none overflow-hidden" style={{ pointerEvents: isActive ? 'auto' : 'none' }}>
       <motion.div 
-        className="w-full h-full flex items-center justify-center p-0 sm:p-1 md:p-4"
+        className="w-full h-full flex items-center justify-center p-1 md:p-4"
         style={{ rotateX: sectionRotateX, scale: sectionScale, opacity: sectionOpacity, z: zOffset, transformStyle: "preserve-3d" }}
       >
         <motion.div 
           ref={ref as React.RefObject<HTMLDivElement>}
           onMouseMove={isMobile ? undefined : handleMouseMove}
           onMouseLeave={isMobile ? undefined : handleMouseLeave}
-          className={`relative w-full max-w-[100vw] md:max-w-[90vw] xl:max-w-[1200px] 2xl:max-w-[1400px] mx-auto min-h-0 h-auto max-h-[100vh] overflow-y-auto overflow-x-hidden md:overflow-visible ${index === 0 ? 'md:h-[68vh]' : 'md:h-[80vh]'} flex flex-col md:flex-row items-center justify-center rounded-xl sm:rounded-2xl md:rounded-[2.5rem]`}
+          className={`relative w-full max-w-[100vw] md:max-w-[90vw] xl:max-w-[1200px] 2xl:max-w-[1400px] mx-auto min-h-[85vh] ${index === 0 ? 'md:h-[68vh]' : 'md:h-[80vh]'} flex flex-col md:flex-row items-center justify-center rounded-2xl md:rounded-[2.5rem]`}
           style={{ rotateX: isMobile ? 0 : rotateX, rotateY: isMobile ? 0 : rotateY, transformStyle: isMobile ? undefined : "preserve-3d" }}
         >
           {children}
@@ -260,17 +256,17 @@ const HeroContent = () => {
 const IoTVitalsContent = () => {
   const { t } = useLanguage();
   return (
-  <div className="flex flex-col items-center justify-center w-full h-full px-3 sm:px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
-    <motion.div className="flex flex-col items-center gap-2 sm:gap-3 md:gap-6 mb-4 sm:mb-6 md:mb-16" style={{ translateZ: 160 }}>
-      <Activity className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 text-rose-500" />
-      <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center shadow-black drop-shadow-lg leading-snug">{t.landing.connectedPulse}</h2>
+  <div className="flex flex-col items-center justify-center w-full h-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
+    <motion.div className="flex flex-col items-center gap-3 md:gap-6 mb-6 md:mb-16" style={{ translateZ: 160 }}>
+      <Activity className="w-10 h-10 md:w-12 md:h-12 text-rose-500" />
+      <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white text-center shadow-black drop-shadow-lg leading-snug">{t.landing.connectedPulse}</h2>
     </motion.div>
 
     {/* Desktop: Absolute positioned cards around ECG. Mobile: Vertical stack */}
     <div className="relative w-full max-w-[1300px] flex flex-col lg:flex-row items-center justify-center lg:min-h-[400px]" style={{ transformStyle: "preserve-3d", transform: "translateZ(60px)" }}>
       
       {/* Central Heartbeat Grid Box */}
-      <motion.div className="w-full max-w-3xl aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9] bg-slate-900/50 backdrop-blur-2xl rounded-xl sm:rounded-2xl md:rounded-[2.5rem] border border-white/10 shadow-[0_0_120px_-20px_rgba(225,29,72,0.25)] overflow-hidden z-10 relative" style={{ transformStyle: "preserve-3d" }}>
+      <motion.div className="w-full max-w-3xl aspect-[16/9] md:aspect-[21/9] bg-slate-900/50 backdrop-blur-2xl rounded-2xl md:rounded-[2.5rem] border border-white/10 shadow-[0_0_120px_-20px_rgba(225,29,72,0.25)] overflow-hidden z-10 relative" style={{ transformStyle: "preserve-3d" }}>
         
         {/* Live Canvas ECG */}
         <div className="absolute inset-0 z-10">
@@ -289,7 +285,7 @@ const IoTVitalsContent = () => {
       </motion.div>
 
       {/* Mobile: Grid of feature cards below ECG */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mt-3 sm:mt-4 w-full lg:hidden">
+      <div className="grid grid-cols-2 gap-2.5 mt-4 w-full lg:hidden">
         {[
           { icon: BrainCircuit, title: t.landing.anomalyDetection, desc: t.landing.anomalyDesc, color: "emerald" },
           { icon: Activity, title: t.landing.continuousMonitoring, desc: t.landing.continuousMonitoringDesc, color: "cyan" },
@@ -419,11 +415,11 @@ const AICopilotContent = () => {
   ];
 
   return (
-    <div className="relative flex items-center overflow-hidden py-6 sm:py-8 md:py-16 lg:py-24 w-full px-3 sm:px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
+    <div className="min-h-screen relative flex items-center overflow-hidden py-8 md:py-16 lg:py-24 w-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
       {/* Background Aura */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[250px] h-[250px] sm:w-[300px] sm:h-[300px] md:w-[500px] md:h-[500px] lg:w-[700px] lg:h-[700px] bg-cyan-500/10 mix-blend-screen blur-[60px] sm:blur-[80px] md:blur-[100px] rounded-full animate-pulse pointer-events-none" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] h-[300px] md:w-[500px] md:h-[500px] lg:w-[700px] lg:h-[700px] bg-cyan-500/10 mix-blend-screen blur-[80px] md:blur-[100px] rounded-full animate-pulse pointer-events-none" />
 
-      <div className="relative z-10 w-full max-w-[1200px] mx-auto px-1 sm:px-2 md:px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-12 items-center">
+      <div className="relative z-10 w-full max-w-[1200px] mx-auto px-2 md:px-6 lg:px-12 grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-12 items-center">
         {/* Typography & Bullets Column */}
         <motion.div
            variants={containerVariants}
@@ -439,7 +435,7 @@ const AICopilotContent = () => {
 
           <motion.h2
             variants={itemVariants}
-            className="text-xl sm:text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-snug lg:leading-snug tracking-tight drop-shadow-md"
+            className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-black text-white leading-snug lg:leading-snug tracking-tight drop-shadow-md"
           >
             {t.landing.aiAssistant}{" "}
             <span className="bg-gradient-to-l from-cyan-400 via-cyan-300 to-purple-500 bg-clip-text text-transparent">
@@ -455,7 +451,7 @@ const AICopilotContent = () => {
           </motion.p>
 
           {/* Bullet Points */}
-          <motion.ul variants={itemVariants} className="mt-4 sm:mt-5 md:mt-8 space-y-2 sm:space-y-3 md:space-y-4">
+          <motion.ul variants={itemVariants} className="mt-5 md:mt-8 space-y-3 md:space-y-4">
             {BULLETS.map((bullet, i) => {
               const Icon = bullet.icon;
               return (
@@ -629,15 +625,15 @@ const AICopilotContent = () => {
 const ShieldContent = () => {
   const { t } = useLanguage();
   return (
-  <div className="flex flex-col items-center justify-center w-full h-full px-3 sm:px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
-    <motion.div style={{ translateZ: 180 }} className="text-center mb-4 sm:mb-6 md:mb-16 z-10 relative">
-      <ShieldCheck className="w-8 h-8 sm:w-10 sm:h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 text-emerald-400 mx-auto mb-3 sm:mb-4 md:mb-5 drop-shadow-[0_0_30px_rgba(52,211,153,0.5)]" />
-      <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-5xl font-bold text-white text-balance drop-shadow-xl leading-snug">{t.landing.cyberShield}</h2>
+  <div className="flex flex-col items-center justify-center w-full h-full px-4 md:px-0" style={{ transformStyle: "preserve-3d" }}>
+    <motion.div style={{ translateZ: 180 }} className="text-center mb-6 md:mb-16 z-10 relative">
+      <ShieldCheck className="w-10 h-10 md:w-14 md:h-14 lg:w-16 lg:h-16 text-emerald-400 mx-auto mb-4 md:mb-5 drop-shadow-[0_0_30px_rgba(52,211,153,0.5)]" />
+      <h2 className="text-2xl md:text-3xl lg:text-5xl font-bold text-white text-balance drop-shadow-xl leading-snug">{t.landing.cyberShield}</h2>
     </motion.div>
     
     <div className="relative w-full max-w-[1300px] flex flex-col lg:flex-row items-center justify-center lg:min-h-[400px]" style={{ transformStyle: "preserve-3d", transform: "translateZ(60px)" }}>
       {/* Central Shield Animation Box - Floating Radar */}
-      <motion.div className="w-full max-w-4xl aspect-[16/10] sm:aspect-[16/9] md:aspect-[21/9] flex items-center justify-center overflow-visible z-10 relative" style={{ transformStyle: "preserve-3d" }}>
+      <motion.div className="w-full max-w-4xl aspect-[16/9] md:aspect-[21/9] flex items-center justify-center overflow-visible z-10 relative" style={{ transformStyle: "preserve-3d" }}>
         
         <div className="absolute inset-0 flex items-center justify-center opacity-80" style={{ transformStyle: "preserve-3d", transform: "translateZ(20px) rotateX(60deg)", marginTop: "10vh" }}>
           <div className="absolute w-12 h-12 md:w-16 md:h-16 lg:w-20 lg:h-20 bg-emerald-500 rounded-full shadow-[0_0_80px_rgba(16,185,129,1)] z-20" style={{ transform: "translateZ(60px)" }} />
@@ -657,7 +653,7 @@ const ShieldContent = () => {
       </motion.div>
 
       {/* Mobile: Grid of security cards below radar */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 mt-3 sm:mt-4 w-full lg:hidden">
+      <div className="grid grid-cols-2 gap-2.5 mt-4 w-full lg:hidden">
         {[
           { icon: ShieldCheck, title: t.landing.e2eEncryption, desc: t.landing.e2eEncryptionDesc, color: "emerald" },
           { icon: BrainCircuit, title: t.landing.decentralizedIdentity, desc: t.landing.decentralizedIdentityDesc, color: "cyan" },

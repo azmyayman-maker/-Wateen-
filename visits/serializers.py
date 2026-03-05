@@ -178,18 +178,6 @@ class NurseRespondSerializer(serializers.Serializer):
     )
 
 
-class NurseRespondOfferSerializer(serializers.Serializer):
-    """Input serializer for responding to a DispatchOffer (T020)."""
-
-    offer_id = serializers.UUIDField(
-        help_text=_("UUID of the dispatch offer to respond to"),
-    )
-    action = serializers.ChoiceField(
-        choices=["accept", "reject"],
-        help_text=_("Whether to accept or reject the offer"),
-    )
-
-
 class NursePendingVisitSerializer(serializers.Serializer):
     """Output serializer for pending visits shown to nurses."""
 

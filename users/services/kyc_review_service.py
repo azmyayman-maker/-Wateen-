@@ -1,11 +1,11 @@
 """
 KYC Service Layer for Agency KYC operations.
 
-This module contains b2b logic for agency KYC review workflows,
+This module contains business logic for agency KYC review workflows,
 extracted from views to maintain proper separation of concerns.
 """
 from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
 
 from django.db import transaction
 
@@ -25,7 +25,7 @@ class AgencyKYCService:
     """
     Service for handling agency KYC review operations.
     
-    Provides b2b logic for reviewing agency KYC applications,
+    Provides business logic for reviewing agency KYC applications,
     including status transitions, audit logging, and notification orchestration.
     """
     

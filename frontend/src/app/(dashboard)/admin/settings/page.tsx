@@ -1,9 +1,7 @@
 'use client';
 
 import React, { useState, useCallback } from 'react';
-import dynamic from 'next/dynamic';
-
-const CoverageMap = dynamic(() => import('@/components/map/CoverageMap'), { ssr: false });
+import CoverageMap from '@/components/map/CoverageMap';
 import { Save, Map } from 'lucide-react';
 import { getCookie } from '@/lib/api/cookies';
 import { authAPI } from '@/lib/api/auth';

@@ -1305,7 +1305,7 @@ class TestSignalEdgeCases(TestCase):
         )
 
         # Profile should be created by signal
-        PatientProfile.objects.get(user=user)
+        profile1 = PatientProfile.objects.get(user=user)
 
         # Manually trigger signal again shouldn't create duplicate
         from users.signals import create_user_profile
@@ -1502,12 +1502,12 @@ class TestNurseDocumentModel(TestCase):
             'syndicate.jpg', b'\xff\xd8\xff\xe0' + b'\x00' * 100, content_type='image/jpeg'
         )
 
-        NurseDocument.objects.create(
+        doc1 = NurseDocument.objects.create(
             nurse=self.nurse_profile,
             document_type=DocumentType.NATIONAL_ID,
             document_file=fake_id,
         )
-        NurseDocument.objects.create(
+        doc2 = NurseDocument.objects.create(
             nurse=self.nurse_profile,
             document_type=DocumentType.SYNDICATE_CARD,
             document_file=fake_card,

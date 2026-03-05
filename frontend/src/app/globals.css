@@ -1,21 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* ═══ Scrollbar Utilities ═══ */
-html {
-  scroll-behavior: smooth;
-}
-
-.scrollbar-none {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
 
 :root {
   --primary: 8 145 178;
@@ -81,13 +66,12 @@ body {
 
 /* === Egypt National Flag Gradient === */
 .egypt-gradient {
-  background: linear-gradient(
-    170deg,
-    rgba(206, 17, 38, 0.8) 0%,
-    rgba(206, 17, 38, 0.7) 20%,
-    rgba(255, 255, 255, 1) 45%,
-    rgba(255, 255, 255, 1) 55%,
-    rgba(0, 0, 0, 0.7) 80%,
+  background: linear-gradient(170deg, 
+    rgba(206, 17, 38, 0.8) 0%, 
+    rgba(206, 17, 38, 0.7) 20%, 
+    rgba(255, 255, 255, 1) 45%, 
+    rgba(255, 255, 255, 1) 55%, 
+    rgba(0, 0, 0, 0.7) 80%, 
     rgba(0, 0, 0, 0.8) 100%
   );
   -webkit-background-clip: text;
@@ -95,39 +79,5 @@ body {
   background-clip: text;
   display: inline-block;
   font-weight: 800;
-  filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.05));
-}
-
-/* === Wateen Spinner Animations === */
-@keyframes wateen-pulse {
-  0% {
-    stroke-dashoffset: 1000;
-    stroke-dasharray: 1000;
-  }
-  50% {
-    stroke-dashoffset: 0;
-    stroke-dasharray: 1000;
-  }
-  100% {
-    stroke-dashoffset: -1000;
-    stroke-dasharray: 1000;
-  }
-}
-
-@keyframes wateen-breathe {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.05);
-  }
-}
-
-.animate-wateen-pulse {
-  animation: wateen-pulse 3s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-}
-
-.animate-wateen-breathe {
-  animation: wateen-breathe 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  filter: drop-shadow(0 0 1px rgba(255,255,255,0.05));
 }

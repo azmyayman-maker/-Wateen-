@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 class TestNurseAgencyFKIntegrity:
     """
-    Validates B2B2C b2b rule: Nurses cannot be freelancers.
+    Validates B2B2C business rule: Nurses cannot be freelancers.
     They must be attached to an AgencyProfile.
     """
 

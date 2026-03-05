@@ -27,7 +27,7 @@ Key technical highlights include:
 The following files were created or modified to implement this feature:
 
 - `visits/models.py`: Defines the `Visit` model, `VisitStatus` enumeration, and the `ALLOWED_TRANSITIONS` map.
-- `visits/services.py`: Contains the b2b logic for handling state transitions (e.g., `transition_to`) and visit creation.
+- `visits/services.py`: Contains the business logic for handling state transitions (e.g., `transition_to`) and visit creation.
 - `visits/serializers.py`: DRF Serializers for API input/output.
 - `visits/views.py`: The API ViewSet for handling requests.
 - `visits/urls.py`: URL routing.

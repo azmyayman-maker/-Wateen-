@@ -146,14 +146,3 @@ invoke_mcp.mjs
 setup_fw.mjs
 verification-report.json
 specs/
-
-# ── Accidental Debug/Temp Files ──
-err.txt
-final.txt
-passed.txt
-passed2.txt
-passed3.txt
-migration_err.txt
-ruff.txt
-Wateen'
-Wateenfrontend'

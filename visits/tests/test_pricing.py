@@ -592,8 +592,8 @@ class TestMockPaymentWebhookSuccess:
         from django.test import RequestFactory
         from visits.api import MockPaymentWebhookView
 
-        RequestFactory()
-        MockPaymentWebhookView.as_view()
+        factory = RequestFactory()
+        view = MockPaymentWebhookView.as_view()
 
     @pytest.mark.skip(reason="TODO: implement webhook integration test")
     def test_webhook_success_response(self, db):
@@ -699,7 +699,7 @@ class TestDynamicDistanceCalculation:
             national_id="12345678901234",
             phone_number="+201234567890",
         )
-        NurseProfile.objects.create(
+        nurse = NurseProfile.objects.create(
             user=user,
             is_available=True,
             verification_status=VerificationStatus.VERIFIED,

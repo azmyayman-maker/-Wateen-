@@ -202,7 +202,7 @@ Verifies:
 
 These tests are **infrastructure validation tests**, not application logic tests. They do NOT test:
 
-- ❌ B2B logic execution
+- ❌ Business logic execution
 - ❌ Django models or views
 - ❌ API endpoints functionality
 - ❌ Database queries

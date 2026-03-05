@@ -11,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .models import AgencyProfile, AgencyStatus, KYCDocument, KYCAuditLog
-from .permissions import IsSuperAdmin, IsAgencyAdminAnyStatus
+from .permissions import IsSuperAdmin, IsAgencyAdmin, IsAgencyAdminAnyStatus
 from .services.notifications import (
     AgencyNotificationService,
     send_kyc_review_email_task,
@@ -228,7 +228,7 @@ class KYCReviewView(generics.UpdateAPIView):
         ip_address = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')[:500]
 
-        # Delegate b2b logic to the service
+        # Delegate business logic to the service
         try:
             result = AgencyKYCService.review_agency(
                 agency=agency,

@@ -1,131 +1,119 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, FeatureGroup } from 'react-leaflet';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import '@geoman-io/leaflet-geoman-free';
-import '@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
+import Map, { NavigationControl } from 'react-map-gl';
+import DrawControl from './DrawControl';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import '@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css';
 
 interface CoverageMapProps {
-  initialPolygon?: any; // GeoJSON Polygon geometry
+  initialPolygon?: any; // GeoJSON Polygon
   onCoverageChange: (polygon: any) => void;
   isSaving?: boolean;
 }
 
 export default function CoverageMap({ initialPolygon, onCoverageChange, isSaving = false }: CoverageMapProps) {
-  const mapRef = useRef<any>(null);
-  const geoGroupRef = useRef<any>(null);
-
-  // Default to Cairo, Egypt
-  const center: [number, number] = [30.0444, 31.2357];
-
+  const [features, setFeatures] = useState<any>({});
+  
+  // Initialize features from initialPolygon prop
   useEffect(() => {
-    if (mapRef.current) {
-        const map = mapRef.current;
-        
-        // Setup Geoman
-        map.pm.addControls({
-          position: 'topleft',
-          drawMarker: false,
-          drawCircleMarker: false,
-          drawPolyline: false,
-          drawRectangle: false,
-          drawCircle: false,
-          drawText: false,
-          cutPolygon: false,
-          rotateMode: false,
-          drawPolygon: true,
-          editMode: true,
-          dragMode: true,
-          removalMode: true,
-        });
-
-        map.pm.setLang('ar');
-
-        // Global draw style - Wateen Cyan/Amber
-        map.pm.setPathOptions({
-          color: '#22d3ee',
-          fillColor: '#22d3ee',
-          fillOpacity: 0.2,
-          weight: 3,
-        });
-
-        // Event listeners
-        map.on('pm:create', (e: any) => {
-          const layer = e.layer;
-          onCoverageChange(layer.toGeoJSON().geometry);
-          layer.on('pm:edit', (editEvent: any) => {
-             onCoverageChange(editEvent.layer.toGeoJSON().geometry);
-          });
-        });
-
-        map.on('pm:remove', () => {
-          onCoverageChange(null);
-        });
-
-        // Fix map size issues on initial load
-        setTimeout(() => {
-          map.invalidateSize();
-        }, 500);
+    if (initialPolygon && Object.keys(features).length === 0) {
+      const initialFeature = {
+        id: 'initial-coverage',
+        type: 'Feature',
+        geometry: initialPolygon,
+        properties: {}
+      };
+      setFeatures({ 'initial-coverage': initialFeature });
+      onCoverageChange(initialPolygon);
     }
-  }, [mapRef.current]);
+  }, [initialPolygon, features, onCoverageChange]);
+  
+  // Default to Cairo, Egypt
+  const [viewState, setViewState] = useState({
+    longitude: 31.2357,
+    latitude: 30.0444,
+    zoom: 11
+  });
 
-  // Convert GeoJSON geometry to Leaflet LatLngs
-  const getInitialCoords = () => {
-    if (initialPolygon && initialPolygon.type === 'Polygon') {
-      return initialPolygon.coordinates[0].map((coord: any) => [coord[1], coord[0]]);
+  const onUpdate = useCallback((e: any) => {
+    setFeatures((currFeatures: any) => {
+      const newFeatures = { ...currFeatures };
+      for (const f of e.features) {
+        newFeatures[f.id] = f;
+      }
+      return newFeatures;
+    });
+
+    // We only care about the single polygon for the coverage area
+    // Just pass the last modified feature
+    if (e.features.length > 0) {
+        onCoverageChange(e.features[0].geometry);
     }
-    return null;
-  };
+  }, [onCoverageChange]);
 
-  const initialCoords = getInitialCoords();
+  const onDelete = useCallback((e: any) => {
+    setFeatures((currFeatures: any) => {
+      const newFeatures = { ...currFeatures };
+      for (const f of e.features) {
+        delete newFeatures[f.id];
+      }
+      return newFeatures;
+    });
+    // Only clear coverage if all features are deleted
+    setFeatures((currFeatures: any) => {
+      const remainingFeatures = Object.keys(currFeatures);
+      if (remainingFeatures.length === 0) {
+        onCoverageChange(null);
+      } else {
+        const lastFeature = currFeatures[remainingFeatures[remainingFeatures.length - 1]];
+        if (lastFeature) {
+          onCoverageChange(lastFeature.geometry);
+        }
+      }
+      return currFeatures;
+    });
+  }, [onCoverageChange]);
 
   return (
-    <div className="w-full h-full relative rounded-xl overflow-hidden shadow-lg border border-neutral-700 bg-slate-900">
-      <MapContainer
-        center={center}
-        zoom={11}
-        className="w-full h-full z-10"
-        ref={mapRef}
-        attributionControl={false}
+    <div className="w-full h-full relative rounded-xl overflow-hidden shadow-lg border border-neutral-700">
+      {/* Validate Mapbox token exists at runtime */}
+      {!process.env.NEXT_PUBLIC_MAPBOX_TOKEN && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-red-900/90 text-white p-4">
+          <p className="text-center">Mapbox token is missing. Please set NEXT_PUBLIC_MAPBOX_TOKEN environment variable.</p>
+        </div>
+      )}
+      <Map
+        {...viewState}
+        onMove={evt => setViewState(evt.viewState)}
+        mapStyle="mapbox://styles/mapbox/dark-v11"
+        mapboxAccessToken={process.env.NEXT_PUBLIC_MAPBOX_TOKEN}
       >
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          subdomains="abcd"
-        />
+        <NavigationControl position="top-left" />
         
-        <FeatureGroup ref={geoGroupRef}>
-          {initialCoords && (
-            <Polygon 
-              positions={initialCoords} 
-              pathOptions={{ 
-                color: '#f59e0b', 
-                fillColor: '#f59e0b', 
-                fillOpacity: 0.2,
-                weight: 3
-              }} 
-            />
-          )}
-        </FeatureGroup>
-      </MapContainer>
+        <DrawControl
+          position="top-right"
+          displayControlsDefault={false}
+          controls={{
+            polygon: true,
+            trash: true
+          }}
+          defaultMode="draw_polygon"
+          onCreate={onUpdate}
+          onUpdate={onUpdate}
+          onDelete={onDelete}
+        />
+      </Map>
 
       {/* Saving Overlay */}
       {isSaving && (
-        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[1000]">
-           <div className="bg-neutral-800 border border-neutral-700 px-6 py-4 rounded-2xl flex flex-col items-center gap-4 text-white shadow-2xl animate-in fade-in zoom-in duration-300">
-               <div className="w-12 h-12 border-4 border-cyan-500/30 border-t-cyan-400 rounded-full animate-spin"></div>
-               <span className="font-medium text-lg">جاري حفظ النطاق الجغرافي...</span>
+        <div className="absolute inset-0 bg-neutral-900/50 backdrop-blur-sm flex items-center justify-center z-50">
+           <div className="bg-neutral-800 border border-neutral-700 px-6 py-3 rounded-lg flex items-center gap-3 text-amber-500 font-medium shadow-xl">
+               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-amber-500"></div>
+               جاري حفظ النطاق...
            </div>
         </div>
       )}
-      
-      {/* Custom Tooltip */}
-      <div className="absolute bottom-4 left-4 right-4 z-[1000] pointer-events-none">
-          <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700 p-3 rounded-xl text-xs text-slate-300 text-center shadow-lg">
-             <span className="text-cyan-400 font-bold">تلميح:</span> استخدم أيقونة المضلع في اليسار لرسم منطقة تغطية جديدة.
-          </div>
-      </div>
     </div>
   );
 }

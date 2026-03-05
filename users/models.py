@@ -454,7 +454,7 @@ class NurseProfile(models.Model):
         Validate that the nurse is assigned to an agency.
 
         B2B2C Rule: Nurses must belong to an agency - they are not freelancers.
-        This enforces the b2b rule at model validation level.
+        This enforces the business rule at model validation level.
         """
         super().clean()
         if not self.agency_id:

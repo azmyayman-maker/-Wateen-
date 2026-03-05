@@ -1,13 +1,10 @@
 from django.urls import path
 
-from .api import EstimateView, MockPaymentWebhookView, PaymentIntentView, PaymobWebhookView
+from .api import EstimateView, MockPaymentWebhookView
 from .views import (
     NurseToggleAvailabilityView,
     NursePendingVisitsView,
     NurseRespondVisitView,
-    NurseRespondOfferView,
-    VisitStatusView,
-    VisitTransitionView,
 )
 from .request_views import VisitRequestView
 from .dispatch_views import ManualDispatchView
@@ -26,18 +23,9 @@ urlpatterns = [
     path("nurse/toggle/", NurseToggleAvailabilityView.as_view(), name="nurse_toggle"),
     path("nurse/pending/", NursePendingVisitsView.as_view(), name="nurse_pending"),
     path("nurse/respond/", NurseRespondVisitView.as_view(), name="nurse_respond"),
-    path("nurse/respond-offer/", NurseRespondOfferView.as_view(), name="nurse_respond_offer"),
     
     # Agency/Dispatch endpoints
     path("agency/<uuid:agency_id>/dispatch/manual/", ManualDispatchView.as_view(), name="agency_dispatch_manual"),
     path("agency/<uuid:agency_id>/dashboard/overview/", AgencyDashboardOverviewView.as_view(), name="agency_dashboard_overview"),
-
-    # Payment endpoints
-    path("payments/intent/", PaymentIntentView.as_view(), name="payment_intent"),
-    path("webhooks/paymob/", PaymobWebhookView.as_view(), name="paymob_webhook"),
-
-    # Status polling
-    path("<uuid:visit_id>/status/", VisitStatusView.as_view(), name="visit_status"),
-    path("<uuid:visit_id>/transition/", VisitTransitionView.as_view(), name="visit_transition"),
 ]
 

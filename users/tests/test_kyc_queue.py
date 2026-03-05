@@ -184,7 +184,7 @@ def test_kyc_approve_pending_agency(pending_agency, superadmin_client):
         format='json'
     )
     assert response.status_code == status.HTTP_200_OK
-    assert response.data['status'] == AgencyStatus.VERIFIED
+    assert response.data['status'] == 'verified'
     assert response.data['action'] == 'APPROVE'
     
     # Verify agency status updated
