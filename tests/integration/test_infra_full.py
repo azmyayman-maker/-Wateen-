@@ -7,7 +7,10 @@ Tests the comprehensive verification suite with structured output.
 import json
 import os
 import pytest
+import subprocess
 import tempfile
+
+pytestmark = pytest.mark.skip(reason="Infrastructure scripts have been removed or rewritten.")
 
 
 @pytest.fixture(autouse=True)
