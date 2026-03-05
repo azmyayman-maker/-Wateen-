@@ -14,9 +14,19 @@ import { AgencySettings } from './agency/AgencySettings';
 import { OperationsCenter } from './agency/OperationsCenter';
 import { GeographicalScope } from './agency/GeographicalScope';
 import { FinancialLedger } from './agency/FinancialLedger';
+import { InvitationList, InvitationCreate } from './invitations';
+
+// Typed fetch options for Data Provider
+interface FetchOptions {
+    user?: { authenticated?: boolean; token?: string };
+    credentials?: RequestCredentials;
+    headers?: HeadersInit;
+    method?: string;
+    body?: BodyInit | null;
+}
 
 // Use HttpOnly Cookies context for Data Provider (T008)
-const fetchJson = (url: string, options: any = {}) => {
+const fetchJson = (url: string, options: FetchOptions = {}) => {
     options.user = {
         authenticated: true,
         token: 'HttpOnly' // In a real scenario, the token flows via HttpOnly cookie
@@ -25,8 +35,13 @@ const fetchJson = (url: string, options: any = {}) => {
     return fetchUtils.fetchJson(url, options);
 };
 
-// Dummy provider for scaffolding phase or hook to Django REST
-const dataProvider = simpleRestProvider('http://localhost:8000/api', fetchJson);
+// Build-time validation: VITE_API_URL must be set
+const API_URL = import.meta.env.VITE_API_URL as string;
+if (!API_URL) {
+    console.error('[App] VITE_API_URL is not configured. Data provider will fail.');
+}
+
+const dataProvider = simpleRestProvider(API_URL, fetchJson);
 
 const App = () => (
     <Admin
@@ -43,6 +58,12 @@ const App = () => (
             create={NurseCreate}
             edit={NurseEdit}
             options={{ label: 'الممرضين' }}
+        />
+        <Resource
+            name="invitations"
+            list={InvitationList}
+            create={InvitationCreate}
+            options={{ label: 'الدعوات' }}
         />
         <CustomRoutes>
             <Route path="/coverage" element={<GeographicalScope />} />

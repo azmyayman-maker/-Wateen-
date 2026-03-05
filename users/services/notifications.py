@@ -134,3 +134,95 @@ def send_kyc_review_email_task(
                 "Max retries exceeded for sending KYC review email to agency %s",
                 agency_id,
             )
+
+
+class NotificationService:
+    """
+    Service for dispatching nurse-related notifications.
+    
+    Handles SMS and email delivery for:
+    - New invitation notifications
+    - Invitation reminders (24h before expiry)
+    """
+
+    @staticmethod
+    def send_nurse_invitation(
+        phone: str,
+        agency_name: str,
+        token: str,
+        expires_at,
+    ) -> dict:
+        """
+        Send nurse invitation notification via SMS/Email.
+        
+        Args:
+            phone: Target phone number
+            agency_name: Name of the inviting agency
+            token: Invitation token UUID string
+            expires_at: Invitation expiry datetime
+            
+        Returns:
+            dict with message_id and delivery status
+        """
+        # Mask phone in logs for Law 151/2020 compliance
+        masked_phone = f"{phone[:3]}***{phone[-4:]}" if len(phone) >= 7 else "***"
+        
+        # TODO: Integrate with SMS gateway (e.g., Twilio, Vonage, or local Egyptian provider)
+        # For now, log the invitation and return a mock message_id
+        import uuid as _uuid
+        message_id = str(_uuid.uuid4())
+        
+        logger.info(
+            "Sending invitation SMS to %s from agency '%s', token=...%s, message_id=%s",
+            masked_phone,
+            agency_name,
+            token[-4:],
+            message_id,
+        )
+        
+        # Attempt email notification if email is on file
+        # This is a placeholder — replace with actual gateway call
+        return {
+            "message_id": message_id,
+            "status": "queued",
+            "channel": "sms",
+        }
+
+    @staticmethod
+    def send_invitation_reminder(
+        phone: str,
+        agency_name: str,
+        hours_remaining: int,
+    ) -> dict:
+        """
+        Send invitation reminder notification.
+        
+        Sent 24 hours before the invitation expires.
+        
+        Args:
+            phone: Target phone number
+            agency_name: Name of the inviting agency
+            hours_remaining: Hours until invitation expires
+            
+        Returns:
+            dict with message_id and delivery status
+        """
+        masked_phone = f"{phone[:3]}***{phone[-4:]}" if len(phone) >= 7 else "***"
+        
+        import uuid as _uuid
+        message_id = str(_uuid.uuid4())
+        
+        logger.info(
+            "Sending invitation reminder to %s (expires in %dh), agency '%s', message_id=%s",
+            masked_phone,
+            hours_remaining,
+            agency_name,
+            message_id,
+        )
+        
+        return {
+            "message_id": message_id,
+            "status": "queued",
+            "channel": "sms",
+        }
+

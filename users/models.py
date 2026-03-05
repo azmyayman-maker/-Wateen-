@@ -473,12 +473,22 @@ class InvitationStatus(models.TextChoices):
     PENDING = "PENDING", _("قيد الانتظار")
     ACCEPTED = "ACCEPTED", _("مقبول")
     EXPIRED = "EXPIRED", _("منتهي الصلاحية")
+    REVOKED = "REVOKED", _("ملغى")
 
 
 class NurseInvitation(models.Model):
     """
     Cryptographic Nurse Invitation Model.
     Binds a nurse to a specific agency securely prior to the nurse registering an account.
+    
+    State Transitions:
+    - PENDING -> ACCEPTED: Valid token consumed by registration.
+    - PENDING -> EXPIRED: System marks as expired after 72h.
+    - PENDING -> REVOKED: Agency Admin manually invalidates.
+    
+    Constraints:
+    - Token must be unique across the system.
+    - All queries MUST filter by agency_id to prevent cross-tenant leakage.
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     agency = models.ForeignKey(
@@ -494,6 +504,7 @@ class NurseInvitation(models.Model):
         max_length=15,
         choices=InvitationStatus.choices,
         default=InvitationStatus.PENDING,
+        db_index=True,
     )
     expires_at = models.DateTimeField(_("تاريخ الانتهاء"))
     created_at = models.DateTimeField(_("تاريخ الإنشاء"), auto_now_add=True)
@@ -503,14 +514,15 @@ class NurseInvitation(models.Model):
         verbose_name_plural = _("دعوات الممرضين")
         db_table = "users_nurse_invitation"
         indexes = [
-            models.Index(fields=["status"]),
+            models.Index(fields=["agency", "status"]),
         ]
 
     def __str__(self) -> str:
-        return f"Invite({self.phone}) -> {self.agency.manager_name}"
+        return f"Invite({self.phone}) -> Agency({self.agency_id})"
 
     @property
     def is_valid(self) -> bool:
+        """Check if invitation is valid (PENDING and not expired)."""
         return self.status == InvitationStatus.PENDING and self.expires_at > timezone.now()
 
 
