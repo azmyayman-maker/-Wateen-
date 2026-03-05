@@ -53,6 +53,16 @@ import {
 } from '@mui/icons-material';
 import { InvitationActions } from './InvitationActions';
 
+// Typed record interface for NurseInvitation
+interface InvitationRecord {
+    id: string;
+    phone: string;
+    status: string;
+    expires_at: string;
+    created_at: string;
+    token?: string;
+}
+
 // Status color mapping
 const statusColors: Record<string, 'warning' | 'success' | 'error' | 'default'> = {
     PENDING: 'warning',
@@ -116,7 +126,7 @@ const InvitationListActions = () => (
 );
 
 // Status Chip Field
-const StatusField = ({ record }: { record?: any }) => {
+const StatusField = ({ record }: { record?: InvitationRecord }) => {
     if (!record) return null;
     
     const status = record.status as string;
@@ -136,7 +146,7 @@ const StatusField = ({ record }: { record?: any }) => {
 };
 
 // Time Remaining Field
-const TimeRemainingField = ({ record }: { record?: any }) => {
+const TimeRemainingField = ({ record }: { record?: InvitationRecord }) => {
     if (!record || record.status !== 'PENDING') return null;
     
     const expiresAt = new Date(record.expires_at);
@@ -196,11 +206,11 @@ export const InvitationList = () => {
                 />
                 <FunctionField
                     label={translate('resources.invitations.fields.status')}
-                    render={(record: any) => <StatusField record={record} />}
+                    render={(record: InvitationRecord) => <StatusField record={record} />}
                 />
                 <FunctionField
                     label={translate('resources.invitations.fields.time_remaining')}
-                    render={(record: any) => <TimeRemainingField record={record} />}
+                    render={(record: InvitationRecord) => <TimeRemainingField record={record} />}
                 />
                 <DateField
                     source="created_at"
@@ -216,7 +226,7 @@ export const InvitationList = () => {
                 />
                 <FunctionField
                     label={translate('resources.invitations.fields.actions')}
-                    render={(record: any) => (
+                    render={(_record: InvitationRecord) => (
                         <InvitationActions />
                     )}
                 />

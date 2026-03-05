@@ -35,8 +35,11 @@ import {
     Warning as WarningIcon,
 } from '@mui/icons-material';
 
-// API base URL — use env variable for staging/production
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// API base URL — must be set via VITE_API_URL in .env / build pipeline
+const API_BASE = import.meta.env.VITE_API_URL as string;
+if (!API_BASE) {
+    console.error('[InvitationCreate] VITE_API_URL is not configured. API calls will fail.');
+}
 
 // Egyptian phone number validation regex
 const EGYPTIAN_PHONE_REGEX = /^01[0-25][0-9]{8}$/;
@@ -166,7 +169,7 @@ export const InvitationCreate = () => {
         redirect('list', 'invitations');
     };
     
-    const onError = (error: any) => {
+    const onError = (error: Error & { body?: { detail?: string } }) => {
         const message = error?.body?.detail || 'resources.invitations.notifications.error';
         notify(message, { type: 'error' });
     };

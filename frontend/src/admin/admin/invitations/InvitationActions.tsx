@@ -25,8 +25,11 @@ import {
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
 
-// API base URL — use env variable for staging/production
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+// API base URL — must be set via VITE_API_URL in .env / build pipeline
+const API_BASE = import.meta.env.VITE_API_URL as string;
+if (!API_BASE) {
+    console.error('[InvitationActions] VITE_API_URL is not configured. API calls will fail.');
+}
 
 // Status type
 type InvitationStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED' | 'REVOKED';
@@ -73,11 +76,11 @@ export const RevokeInvitationButton: React.FC<RevokeInvitationButtonProps> = ({ 
             
             notify(translate('resources.invitations.notifications.revoked'), { type: 'success' });
             onRevoked?.();
-        } catch (error: any) {
-            notify(
-                error.message || translate('resources.invitations.notifications.revoke_error'),
-                { type: 'error' }
-            );
+        } catch (error: unknown) {
+            const message = error instanceof Error
+                ? error.message
+                : translate('resources.invitations.notifications.revoke_error');
+            notify(message, { type: 'error' });
         } finally {
             setLoading(false);
             setOpen(false);
@@ -166,11 +169,11 @@ export const ResendInvitationButton: React.FC = () => {
             
             notify(translate('resources.invitations.notifications.resent'), { type: 'success' });
             refresh();
-        } catch (error: any) {
-            notify(
-                error.message || translate('resources.invitations.notifications.error'),
-                { type: 'error' }
-            );
+        } catch (error: unknown) {
+            const message = error instanceof Error
+                ? error.message
+                : translate('resources.invitations.notifications.error');
+            notify(message, { type: 'error' });
         } finally {
             setLoading(false);
         }
