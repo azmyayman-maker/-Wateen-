@@ -14,6 +14,7 @@ import { AgencySettings } from './agency/AgencySettings';
 import { OperationsCenter } from './agency/OperationsCenter';
 import { GeographicalScope } from './agency/GeographicalScope';
 import { FinancialLedger } from './agency/FinancialLedger';
+import { InvitationList, InvitationCreate } from './invitations';
 
 // Use HttpOnly Cookies context for Data Provider (T008)
 const fetchJson = (url: string, options: any = {}) => {
@@ -26,7 +27,10 @@ const fetchJson = (url: string, options: any = {}) => {
 };
 
 // Dummy provider for scaffolding phase or hook to Django REST
-const dataProvider = simpleRestProvider('http://localhost:8000/api', fetchJson);
+const dataProvider = simpleRestProvider(
+    import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+    fetchJson
+);
 
 const App = () => (
     <Admin
@@ -43,6 +47,12 @@ const App = () => (
             create={NurseCreate}
             edit={NurseEdit}
             options={{ label: 'الممرضين' }}
+        />
+        <Resource
+            name="invitations"
+            list={InvitationList}
+            create={InvitationCreate}
+            options={{ label: 'الدعوات' }}
         />
         <CustomRoutes>
             <Route path="/coverage" element={<GeographicalScope />} />

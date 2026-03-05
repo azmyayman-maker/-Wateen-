@@ -1,0 +1,12 @@
+diff --git a/frontend/src/admin/admin/invitations/index.ts b/frontend/src/admin/admin/invitations/index.ts
+index 0fbfd47..6fa55fd 100644
+--- a/frontend/src/admin/admin/invitations/index.ts
++++ b/frontend/src/admin/admin/invitations/index.ts
+@@ -9,6 +9,5 @@ export { InvitationCreate } from './InvitationCreate';
+ export {
+     RevokeInvitationButton,
+     ResendInvitationButton,
+-    CopyInvitationLinkButton,
+     InvitationActions,
+ } from './InvitationActions';
+\ No newline at end of file

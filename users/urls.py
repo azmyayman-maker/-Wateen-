@@ -21,7 +21,14 @@ from .agency_views import (
     KYCReviewView
 )
 from .coverage_views import AgencyCoverageUpdateView
-from .nurse_views import InviteNurseView, AcceptNurseInvitationView
+from .nurse_views import (
+    InviteNurseView,
+    AcceptNurseInvitationView,
+    InvitationListView,
+    RevokeInvitationView,
+    AgencyCapacityView,
+    InvitationLimitsView,
+)
 
 app_name = 'users'
 
@@ -43,7 +50,17 @@ urlpatterns = [
     path('agency/kyc/resubmit/', AgencyKYCResubmitView.as_view(), name='agency_kyc_resubmit'),
     path('agency/kyc/documents/', AgencyKYCDocumentsListView.as_view(), name='agency_kyc_list'),
     path('agency/<uuid:pk>/coverage/', AgencyCoverageUpdateView.as_view(), name='agency_coverage'),
-    path('agency/invite-nurse/', InviteNurseView.as_view(), name='invite_nurse'),
+    
+    # Nurse Invitation Management (Agency Admin)
+    path('agency/invitations/', InviteNurseView.as_view(), name='invite_nurse'),
+    path('agency/invitations/list/', InvitationListView.as_view(), name='invitation_list'),
+    path('agency/invitations/<uuid:invitation_id>/revoke/', RevokeInvitationView.as_view(), name='revoke_invitation'),
+    
+    # Agency Capacity and Rate Limit Info
+    path('agency/capacity/', AgencyCapacityView.as_view(), name='agency_capacity'),
+    path('agency/invitation-limits/', InvitationLimitsView.as_view(), name='invitation_limits'),
+    
+    # Admin endpoints
     path('admin/agencies/<uuid:pk>/approve/', AgencyApprovalView.as_view(), name='agency_approve'),
     path('admin/agencies/<uuid:pk>/review/', KYCReviewView.as_view(), name='kyc-review'),
     path('admin/agencies/<uuid:agency_id>/kyc-audit-logs/', KYCAuditLogListView.as_view(), name='kyc-audit-logs'),
