@@ -9,9 +9,7 @@ ISOLATION MARKER: All test entities use email domain @wateen-test-seed.local
 """
 
 import random
-import string
 from decimal import Decimal
-from typing import Any
 
 from django.contrib.gis.geos import Point, Polygon
 

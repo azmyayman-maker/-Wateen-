@@ -11,7 +11,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from .models import AgencyProfile, AgencyStatus, KYCDocument, KYCAuditLog
-from .permissions import IsSuperAdmin, IsAgencyAdmin, IsAgencyAdminAnyStatus
+from .permissions import IsSuperAdmin, IsAgencyAdminAnyStatus
 from .services.notifications import (
     AgencyNotificationService,
     send_kyc_review_email_task,

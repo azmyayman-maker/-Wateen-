@@ -144,6 +144,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "users",
     "visits",
+    "notifications",
     "storages",
 ]
 
@@ -256,9 +257,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "users.CustomUser"
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": [
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
-    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'users.authentication.JWTCookieAuthentication',
+    ),
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.IsAuthenticated",
     ],
@@ -410,3 +411,21 @@ AWS_QUERYSTRING_EXPIRE = 900
 AWS_S3_URL_PROTOCOL = "https:"
 # 5. Prevent silent overwrites to preserve kyc version history
 AWS_S3_FILE_OVERWRITE = False
+
+# =============================================================================
+# Routing Provider Configuration (OSRM / OpenRouteService)
+# =============================================================================
+ROUTING_PROVIDER = config("ROUTING_PROVIDER", default="osrm")  # "osrm" or "ors"
+OSRM_BASE_URL = config("OSRM_BASE_URL", default="http://router.project-osrm.org")
+ORS_BASE_URL = config("ORS_BASE_URL", default="https://api.openrouteservice.org")
+ORS_API_KEY = config("ORS_API_KEY", default="")
+
+# Route cache TTL in seconds (15 minutes)
+ROUTE_CACHE_TTL = 900
+
+# =============================================================================
+# Paymob Payment Gateway (Egyptian Payments)
+# =============================================================================
+PAYMOB_API_KEY = config("PAYMOB_API_KEY", default="")
+PAYMOB_INTEGRATION_ID = config("PAYMOB_INTEGRATION_ID", default="")
+PAYMOB_HMAC_SECRET = config("PAYMOB_HMAC_SECRET", default="")

@@ -19,9 +19,8 @@ import time
 import uuid
 from decimal import Decimal
 
-from django.contrib.gis.geos import Point
-from django.core.management.base import BaseCommand, CommandError
-from django.db import connection, transaction
+from django.core.management.base import BaseCommand
+from django.db import transaction
 from django.utils import timezone
 
 from users.models import (

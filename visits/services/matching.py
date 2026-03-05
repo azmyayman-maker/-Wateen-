@@ -266,3 +266,72 @@ class GeoMatchingService:
                 exc_info=True,
             )
             return False
+
+
+def rank_agencies(agencies_qs, patient_location=None) -> list:
+    """
+    Rank overlapping agencies by QualityScore for Tier 1 dispatch selection.
+    
+    QualityScore = (rating × 0.4) + (normalized_capacity × 0.3) + (response_rate × 0.3)
+    
+    Args:
+        agencies_qs: QuerySet of AgencyProfile instances (already filtered by coverage)
+        patient_location: Optional Point for distance bonus (future enhancement)
+    
+    Returns:
+        List of dicts: [{"agency": AgencyProfile, "score": float}, ...]
+        Sorted by score descending (best agency first)
+    """
+    from users.models import VerificationStatus
+    from django.core.cache import cache
+    from django.db.models import Count, Q
+
+    # Annotate nurse counts in a single query (eliminates N+1)
+    annotated_agencies = agencies_qs.annotate(
+        total_nurses=Count("nurses"),
+        available_nurses=Count(
+            "nurses",
+            filter=Q(
+                nurses__is_available=True,
+                nurses__verification_status=VerificationStatus.VERIFIED,
+            ),
+        ),
+    )
+
+    scored_agencies = []
+
+    for agency in annotated_agencies:
+        # 1. Rating component (0-5 scale, normalized to 0-1)
+        rating = float(agency.rating or 0) / 5.0
+
+        # 2. Capacity component — available nurses / total nurses
+        capacity = agency.available_nurses / max(agency.total_nurses, 1)
+
+        # 3. Response rate — cached for 1 hour
+        cache_key = f"agency_response_rate:{agency.id}"
+        response_rate = cache.get(cache_key)
+        if response_rate is None:
+            from visits.models import Visit, VisitStatus
+            last_100 = Visit.objects.filter(agency=agency).order_by("-created_at")[:100]
+            total = last_100.count()
+            if total > 0:
+                accepted = last_100.filter(
+                    status__in=[
+                        VisitStatus.ACCEPTED,
+                        VisitStatus.EN_ROUTE,
+                        VisitStatus.IN_PROGRESS,
+                        VisitStatus.COMPLETED,
+                    ]
+                ).count()
+                response_rate = accepted / total
+            else:
+                response_rate = 0.5  # Default for new agencies
+            cache.set(cache_key, response_rate, 3600)  # 1 hour
+
+        # Compute QualityScore
+        score = (rating * 0.4) + (capacity * 0.3) + (response_rate * 0.3)
+        scored_agencies.append({"agency": agency, "score": round(score, 4)})
+
+    # Sort by score descending
+    scored_agencies.sort(key=lambda x: x["score"], reverse=True)
+    return scored_agencies

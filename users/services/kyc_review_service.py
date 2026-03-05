@@ -5,7 +5,7 @@ This module contains b2b logic for agency KYC review workflows,
 extracted from views to maintain proper separation of concerns.
 """
 from dataclasses import dataclass
-from typing import Any, Optional
+from typing import Optional
 
 from django.db import transaction
 

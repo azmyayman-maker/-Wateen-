@@ -138,7 +138,7 @@ class Command(BaseCommand):
         # ── Step 2: Display summary ──────────────────────────────────────
         self.stdout.write(self.style.WARNING("  TARGET ISOLATION:"))
         self.stdout.write(f"    Email Domain:    @{TEST_EMAIL_DOMAIN}")
-        self.stdout.write(f"    Registry Prefix: TEST-CR-*")
+        self.stdout.write("    Registry Prefix: TEST-CR-*")
         self.stdout.write("")
         self.stdout.write(self.style.WARNING("  ENTITIES TO DELETE:"))
         self.stdout.write(f"    CustomUser:              {test_user_count:>8,}")
@@ -236,7 +236,7 @@ class Command(BaseCommand):
                 self.stdout.write(f"    [✓] KYCAuditLog (raw SQL):   {count:,} rows")
             else:
                 deleted_counts["KYCAuditLog"] = 0
-                self.stdout.write(f"    [✓] KYCAuditLog:             0 rows")
+                self.stdout.write("    [✓] KYCAuditLog:             0 rows")
 
             # Layer 1: AgencyProfile
             count, _ = test_agencies.delete()

@@ -50,7 +50,7 @@ services:
     hostname: web
     command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     environment:
-      DEBUG: "False"
+      DEBUG: "${DEBUG:-False}"
       SECRET_KEY: ${SECRET_KEY:-change-me-in-production}
       ALLOWED_HOSTS: localhost,127.0.0.1,nginx
       DATABASE_URL: postgresql://${POSTGRES_USER:-wateen_admin}:${POSTGRES_PASSWORD:-wateen_secure_password_123}@db:5432/${POSTGRES_DB:-wateen_db}
@@ -100,7 +100,15 @@ services:
     ports:
       - "3000:3000"
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+      test:
+        [
+          "CMD",
+          "wget",
+          "--quiet",
+          "--tries=1",
+          "--spider",
+          "http://localhost:3000/",
+        ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -123,7 +131,8 @@ services:
       - web
       - frontend
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      test:
+        ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
       timeout: 10s
       retries: 5

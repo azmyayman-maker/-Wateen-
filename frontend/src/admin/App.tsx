@@ -10,10 +10,13 @@ import { CommandCenter } from './dashboard/CommandCenter';
 import { NurseList } from './nurses/NurseList';
 import { NurseCreate } from './nurses/NurseCreate';
 import { NurseEdit } from './nurses/NurseEdit';
+import { StaffProfileShow } from './nurses/StaffProfileShow';
 import { AgencySettings } from './agency/AgencySettings';
 import { OperationsCenter } from './agency/OperationsCenter';
 import { GeographicalScope } from './agency/GeographicalScope';
 import { FinancialLedger } from './agency/FinancialLedger';
+import { authProvider } from './auth/authProvider';
+import { CustomLogin } from './auth/CustomLogin';
 
 // Use HttpOnly Cookies context for Data Provider (T008)
 const fetchJson = (url: string, options: any = {}) => {
@@ -25,23 +28,27 @@ const fetchJson = (url: string, options: any = {}) => {
     return fetchUtils.fetchJson(url, options);
 };
 
-// Dummy provider for scaffolding phase or hook to Django REST
-const dataProvider = simpleRestProvider('http://localhost:8000/api', fetchJson);
+// Data provider connects to Django REST API — URL configured via environment variable
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const dataProvider = simpleRestProvider(API_URL, fetchJson);
 
 const App = () => (
     <Admin
         theme={theme}
         i18nProvider={i18nProvider}
         dataProvider={dataProvider}
+        authProvider={authProvider}
         layout={WateenLayout}
         dashboard={CommandCenter}
-        requireAuth={false}
+        loginPage={CustomLogin}
+        requireAuth={true}
     >
         <Resource
             name="nurses"
             list={NurseList}
             create={NurseCreate}
             edit={NurseEdit}
+            show={StaffProfileShow}
             options={{ label: 'الممرضين' }}
         />
         <CustomRoutes>

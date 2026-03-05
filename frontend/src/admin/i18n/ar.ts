@@ -62,5 +62,14 @@ export const arabicMessages = {
             not_found: 'إما أنك أدخلت عنوان URL غير صحيح، أو أنك قريت مستنداً محذوفاً',
             yes: 'نعم',
         },
+        auth: {
+            auth_check_error: 'الرجاء تسجيل الدخول للمتابعة',
+            user_menu: 'الملف الشخصي',
+            username: 'اسم المستخدم',
+            password: 'كلمة المرور',
+            sign_in: 'تسجيل الدخول',
+            sign_in_error: 'فشل تسجيل الدخول، يرجى المحاولة مرة أخرى',
+            logout: 'تسجيل الخروج',
+        },
     }
 };

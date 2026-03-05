@@ -249,10 +249,283 @@ class NurseRespondVisitView(APIView):
 
         elif action == "decline":
             # Decline is a no-op — the visit stays PENDING for other nurses
-            return Response(
-                {
-                    "visit_id": str(visit.id),
+            return Response({
+                "detail": _("تم رفض الطلب."),
+                "visit": {
+                    "id": str(visit.id),
                     "status": visit.status,
-                    "message": _("تم رفض الطلب."),
-                }
+                },
+            }, status=status.HTTP_200_OK)
+
+
+class NurseRespondOfferView(APIView):
+    """
+    POST /api/v1/visits/nurse/respond-offer/
+
+    Accept or reject a DispatchOffer (T020).
+    Uses select_for_update() for race-condition-safe acceptance.
+    On ACCEPT: transitions visit → ACCEPTED, expires other offers.
+    On REJECT: marks offer REJECTED.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from visits.models import DispatchOffer, OfferStatus
+        from visits.serializers import NurseRespondOfferSerializer
+        from django.db import transaction
+        from django.utils import timezone
+
+        serializer = NurseRespondOfferSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        offer_id = serializer.validated_data["offer_id"]
+        action = serializer.validated_data["action"]
+
+        # Verify the requester is the nurse in the offer
+        user = request.user
+        if user.role != "NURSE":
+            return Response(
+                {"detail": _("فقط الممرضات يمكنهن الرد على العروض.")},
+                status=status.HTTP_403_FORBIDDEN,
             )
+
+        try:
+            nurse_profile = user.nurse_profile
+        except AttributeError:
+            return Response(
+                {"detail": _("ملف الممرضة غير موجود.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            offer = DispatchOffer.objects.get(id=offer_id, nurse=nurse_profile)
+        except DispatchOffer.DoesNotExist:
+            return Response(
+                {"detail": _("العرض غير موجود أو لا ينتمي لك.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Check if offer has expired
+        if offer.status == OfferStatus.EXPIRED:
+            return Response(
+                {"detail": _("العرض منتهي الصلاحية.")},
+                status=status.HTTP_410_GONE,
+            )
+
+        if offer.status != OfferStatus.PENDING:
+            return Response(
+                {"detail": _("العرض تم الرد عليه بالفعل.")},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Check if offer has timed out
+        now = timezone.now()
+        if now > offer.expires_at:
+            offer.status = OfferStatus.EXPIRED
+            offer.save(update_fields=["status"])
+            return Response(
+                {"detail": _("العرض منتهي الصلاحية.")},
+                status=status.HTTP_410_GONE,
+            )
+
+        if action == "reject":
+            offer.status = OfferStatus.REJECTED
+            offer.responded_at = now
+            offer.save(update_fields=["status", "responded_at"])
+            return Response(
+                {"detail": _("تم رفض العرض.")},
+                status=status.HTTP_200_OK,
+            )
+
+        # ── ACCEPT flow with race condition guard ──
+        try:
+            with transaction.atomic():
+                # Lock the offer row
+                locked_offer = (
+                    DispatchOffer.objects.select_for_update()
+                    .get(id=offer_id, status=OfferStatus.PENDING)
+                )
+
+                # Accept this offer
+                locked_offer.status = OfferStatus.ACCEPTED
+                locked_offer.responded_at = now
+                locked_offer.save(update_fields=["status", "responded_at"])
+
+                # Transition the visit
+                visit = locked_offer.visit
+                visit.nurse = nurse_profile
+                visit.status = VisitStatus.ACCEPTED
+                visit.save(update_fields=["nurse", "status", "updated_at"])
+
+                # Expire all other offers for this visit
+                DispatchOffer.objects.filter(
+                    visit=visit, status=OfferStatus.PENDING
+                ).exclude(id=offer_id).update(status=OfferStatus.EXPIRED)
+
+        except DispatchOffer.DoesNotExist:
+            # Another nurse already accepted — race condition handled
+            return Response(
+                {"detail": _("العرض لم يعد متاحاً. ممرضة أخرى قبلت الزيارة.")},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        # Notify agency admin via WebSocket
+        try:
+            from asgiref.sync import async_to_sync
+            from channels.layers import get_channel_layer
+
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                f"agency_{visit.agency_id}",
+                {
+                    "type": "visit.update",
+                    "data": {
+                        "visit_id": str(visit.id),
+                        "status": "ACCEPTED",
+                        "nurse_id": str(nurse_profile.id),
+                        "nurse_name": user.get_full_name(),
+                    },
+                },
+            )
+        except Exception as e:
+            logger.error("Failed to notify agency of offer acceptance: %s", e)
+
+        return Response({
+            "detail": _("تم قبول العرض بنجاح."),
+            "visit_id": str(visit.id),
+            "status": visit.status,
+        }, status=status.HTTP_200_OK)
+
+
+class VisitStatusView(APIView):
+    """
+    GET /api/v1/visits/<uuid:visit_id>/status/
+
+    T030: REST polling fallback for visit status.
+    Returns current status, nurse location, and last update timestamp.
+    Used when WebSocket connection is unavailable.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, visit_id):
+        from visits.models import Visit
+
+        try:
+            visit = Visit.objects.select_related(
+                "nurse", "nurse__user", "agency"
+            ).get(id=visit_id)
+        except Visit.DoesNotExist:
+            return Response(
+                {"detail": _("الزيارة غير موجودة.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Permission: patient who owns the visit, or the assigned nurse, or agency admin
+        user = request.user
+        is_patient = hasattr(user, "patient_profile") and visit.patient_id == user.patient_profile.id
+        is_nurse = hasattr(user, "nurse_profile") and visit.nurse_id == getattr(user.nurse_profile, "id", None)
+        is_agency = hasattr(user, "agency") and visit.agency_id == getattr(user, "agency_id", None)
+
+        if not (is_patient or is_nurse or is_agency or user.is_staff):
+            return Response(
+                {"detail": _("ليس لديك صلاحية لعرض هذه الزيارة.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        data = {
+            "visit_id": str(visit.id),
+            "status": visit.status,
+            "updated_at": visit.updated_at.isoformat() if visit.updated_at else None,
+        }
+
+        # Include nurse location if visit is active and nurse is assigned
+        if visit.nurse and visit.status in ("EN_ROUTE", "IN_PROGRESS", "ACCEPTED"):
+            nurse = visit.nurse
+            data["nurse"] = {
+                "id": str(nurse.id),
+                "name": nurse.user.get_full_name() if nurse.user else "",
+                "latitude": nurse.last_location.y if getattr(nurse, "last_location", None) else None,
+                "longitude": nurse.last_location.x if getattr(nurse, "last_location", None) else None,
+            }
+
+            # Try to get ETA from cache
+            try:
+                from django.core.cache import cache
+                eta = cache.get(f"nurse_eta:{nurse.id}:{visit.id}")
+                if eta:
+                    data["nurse"]["eta_minutes"] = eta
+            except Exception:
+                pass
+
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class VisitTransitionView(APIView):
+    """
+    POST /api/v1/visits/<uuid:visit_id>/transition/
+
+    T046: Nurse transitions a visit to the next status stage.
+    Valid transitions: ACCEPTED → EN_ROUTE → IN_PROGRESS → COMPLETED
+    Permission: Only the assigned nurse can transition.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, visit_id):
+        from visits.models import Visit
+
+        new_status = request.data.get("new_status")
+        if not new_status:
+            return Response(
+                {"detail": _("الحالة الجديدة مطلوبة.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            visit = Visit.objects.select_related("nurse", "nurse__user").get(id=visit_id)
+        except Visit.DoesNotExist:
+            return Response(
+                {"detail": _("الزيارة غير موجودة.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Only the assigned nurse can transition
+        if not (hasattr(request.user, "nurse_profile") and
+                visit.nurse_id == request.user.nurse_profile.id):
+            return Response(
+                {"detail": _("غير مصرح لك بتحديث هذه الزيارة.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        try:
+            visit.transition_to(new_status)
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Broadcast visit update via WebSocket
+        try:
+            from channels.layers import get_channel_layer
+            from asgiref.sync import async_to_sync
+            channel_layer = get_channel_layer()
+            if channel_layer:
+                async_to_sync(channel_layer.group_send)(
+                    f"patient_{visit.patient_id}",
+                    {
+                        "type": "visit_update",
+                        "data": {
+                            "visit_id": str(visit.id),
+                            "status": visit.status,
+                            "updated_at": str(visit.updated_at),
+                        },
+                    },
+                )
+        except Exception:
+            pass  # Non-blocking
+
+        return Response({
+            "visit_id": str(visit.id),
+            "status": visit.status,
+            "detail": _("تم تحديث حالة الزيارة بنجاح."),
+        }, status=status.HTTP_200_OK)

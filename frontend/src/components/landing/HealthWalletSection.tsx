@@ -71,7 +71,7 @@ export function HealthWalletSection() {
 
   return (
     <div 
-      className="absolute inset-0 w-full h-full flex items-center bg-[#050B14] overflow-hidden rounded-2xl md:rounded-[2.5rem] select-none shadow-[0_0_120px_-20px_rgba(79,70,229,0.15)] ring-1 ring-white/5"
+      className="absolute inset-0 w-full h-full flex items-center bg-[#050B14] overflow-y-auto overflow-x-hidden md:overflow-hidden rounded-xl sm:rounded-2xl md:rounded-[2.5rem] select-none shadow-[0_0_120px_-20px_rgba(79,70,229,0.15)] ring-1 ring-white/5"
       style={{ transformStyle: "preserve-3d" }}
     >
       {/* Ambient Glow */}
@@ -86,25 +86,25 @@ export function HealthWalletSection() {
         style={{ transform: "translateZ(-20px)" }} 
       />
 
-      <div className="w-full h-full mx-auto px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-28 relative z-10 flex items-center" style={{ transformStyle: "preserve-3d" }}>
+      <div className="w-full h-full mx-auto px-3 sm:px-4 md:px-8 lg:px-12 xl:px-20 2xl:px-28 relative z-10 flex items-center py-4 md:py-0" style={{ transformStyle: "preserve-3d" }}>
         <div className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-6 md:gap-10 xl:gap-20 w-full" style={{ transformStyle: "preserve-3d" }}>
           
           {/* Right Column: Typography + Pillars */}
           <motion.div 
-            className="flex flex-col space-y-5 lg:space-y-7"
+            className="flex flex-col space-y-3 sm:space-y-4 lg:space-y-7"
             variants={containerVariants}
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
           >
             {/* Header */}
-            <div className="space-y-3.5">
+            <div className="space-y-2 sm:space-y-3.5">
               <motion.div variants={itemVariants} className="inline-flex items-center space-x-2 space-x-reverse bg-indigo-500/10 border border-indigo-500/20 rounded-full px-3 py-1.5 w-fit backdrop-blur-md">
                 <Network className="w-3 h-3 text-indigo-400" />
                 <span className="text-xs font-semibold text-indigo-300 tracking-wide">{t.healthWallet.badge}</span>
               </motion.div>
 
-              <motion.h2 variants={itemVariants} className="text-3xl md:text-4xl lg:text-5xl xl:text-[3.5rem] 2xl:text-[4rem] font-bold text-white tracking-tight leading-snug pb-2">
+              <motion.h2 variants={itemVariants} className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-[3.5rem] 2xl:text-[4rem] font-bold text-white tracking-tight leading-snug pb-1 sm:pb-2">
                 {t.healthWallet.title1}
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-l from-indigo-400 via-white to-slate-400">
@@ -112,7 +112,7 @@ export function HealthWalletSection() {
                 </span>
               </motion.h2>
 
-              <motion.p variants={itemVariants} className="text-sm md:text-base xl:text-lg text-slate-400 max-w-xl leading-relaxed mt-4">
+              <motion.p variants={itemVariants} className="text-xs sm:text-sm md:text-base xl:text-lg text-slate-400 max-w-xl leading-relaxed mt-2 sm:mt-4">
                 {t.healthWallet.description.split(/(مصر|Egypt)/).map((part, i) => 
                   part === "مصر" || part === "Egypt" ? (
                     <span key={i} className="egypt-gradient">{part}</span>
@@ -131,7 +131,7 @@ export function HealthWalletSection() {
                   <motion.div 
                     key={idx}
                     variants={itemVariants}
-                    className={`group relative p-3.5 rounded-xl bg-white/[0.015] border ${pillar.borderColor} hover:border-white/15 transition-all duration-500 overflow-hidden`}
+                    className={`group relative p-2.5 sm:p-3.5 rounded-xl bg-white/[0.015] border ${pillar.borderColor} hover:border-white/15 transition-all duration-500 overflow-hidden`}
                   >
                     {/* Hover gradient */}
                     <div className={`absolute inset-0 bg-gradient-to-br ${pillar.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`} />
@@ -154,14 +154,14 @@ export function HealthWalletSection() {
             </motion.div>
 
             {/* Trust Stats Strip */}
-            <motion.div variants={itemVariants} className="flex items-center gap-3 pt-1">
+            <motion.div variants={itemVariants} className="flex items-center gap-2 sm:gap-3 pt-1">
               {STATS.map((stat, i) => (
                 <div 
                   key={i} 
-                  className="flex-1 text-center py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm"
+                  className="flex-1 text-center py-2 sm:py-3 rounded-xl bg-white/[0.02] border border-white/[0.05] backdrop-blur-sm"
                 >
-                  <div className="text-base md:text-lg font-bold text-white font-mono tracking-tight">{stat.value}</div>
-                  <div className="text-[10px] text-slate-500 font-medium mt-0.5">{stat.label}</div>
+                  <div className="text-sm sm:text-base md:text-lg font-bold text-white font-mono tracking-tight">{stat.value}</div>
+                  <div className="text-[9px] sm:text-[10px] text-slate-500 font-medium mt-0.5">{stat.label}</div>
                 </div>
               ))}
             </motion.div>

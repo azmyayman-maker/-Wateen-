@@ -12,6 +12,7 @@ Usage in views:
 """
 
 from rest_framework.permissions import BasePermission
+from users.models import AgencyStatus
 
 
 class IsSuperAdmin(BasePermission):
@@ -52,7 +53,7 @@ class IsAgencyAdmin(BasePermission):
         if agency is None:
             return False
         
-        return agency.status == 'verified'
+        return agency.status == AgencyStatus.VERIFIED
 
 
 class IsAgencyAdminAnyStatus(BasePermission):
@@ -105,7 +106,7 @@ class IsAgencyAdminOrSuperAdmin(BasePermission):
         if agency is None:
             return False
         
-        return agency.status == 'verified'
+        return agency.status == AgencyStatus.VERIFIED
 
 
 class IsNurseOrAbove(BasePermission):
