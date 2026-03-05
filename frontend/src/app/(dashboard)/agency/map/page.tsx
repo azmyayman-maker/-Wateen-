@@ -3,7 +3,17 @@
 import React from 'react';
 import { ArrowLeft, Filter, Layers, Navigation } from 'lucide-react';
 import Link from 'next/link';
-import DispatchMap from '@/components/map/DispatchMap';
+import dynamic from 'next/dynamic';
+
+const DispatchMap = dynamic(() => import('@/components/map/DispatchMap'), { 
+  ssr: false,
+  loading: () => (
+    <div className="w-full h-full flex items-center justify-center bg-slate-900 animate-pulse">
+      <div className="text-slate-500 font-bold">جاري تحميل خريطة الأسطول...</div>
+    </div>
+  )
+});
+
 import { useLanguage } from '@/lib/i18n';
 
 export default function AgencyMapPage() {

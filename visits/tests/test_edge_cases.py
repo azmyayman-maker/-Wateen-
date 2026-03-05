@@ -110,7 +110,7 @@ class TestEdgeCases(unittest.TestCase):
         # Assuming VisitService or specific form validation handles this.
         # I'll check a hypothetical validation function or model clean.
 
-        past_time = datetime.now() - timedelta(days=1)
+        # past_time = datetime.now() - timedelta(days=1)  # Removed: was unused
 
         # If I can't import Visit serializer/form, I verify the logic directly if I can find it.
         # If not, I'll mock a scenario.

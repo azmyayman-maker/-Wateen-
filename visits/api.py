@@ -9,6 +9,7 @@ import logging
 from django.utils import timezone
 import dataclasses
 from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
@@ -182,3 +183,135 @@ class MockPaymentWebhookView(APIView):
                     exc_info=True,
                 )
                 return "failed"
+
+
+class PaymentIntentView(APIView):
+    """
+    T032: Create a Paymob payment intent for a visit.
+
+    POST /api/v1/payments/intent/
+
+    Called by the patient frontend before rendering the payment form.
+    Returns a Paymob payment key and iframe URL.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        from visits.models import Visit, VisitStatus, Transaction, TransactionStatus
+        from visits.services.paymob_service import PaymobService
+        from django.utils.translation import gettext_lazy as _
+
+        visit_id = request.data.get("visit_id")
+        if not visit_id:
+            return Response(
+                {"detail": _("visit_id is required.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            visit = Visit.objects.get(id=visit_id, patient__user=request.user)
+        except Visit.DoesNotExist:
+            return Response(
+                {"detail": _("الزيارة غير موجودة.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if visit.status != VisitStatus.ACCEPTED:
+            return Response(
+                {"detail": _("لا يمكن الدفع لهذه الزيارة في حالتها الحالية.")},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            result = PaymobService.create_payment_intent(
+                visit_id=str(visit.id),
+                amount_egp=visit.final_price,
+                patient_name=request.user.get_full_name() or "Patient",
+                patient_email=getattr(request.user, "email", ""),
+                patient_phone=getattr(request.user, "phone_number", ""),
+            )
+        except Exception as e:
+            logger.error("Failed to create Paymob payment intent: %s", e)
+            return Response(
+                {"detail": _("فشل في إنشاء عملية الدفع. حاول مرة أخرى.")},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+        # Update or create transaction in ESCROWED state
+        txn, _ = Transaction.objects.update_or_create(
+            visit=visit,
+            defaults={
+                "amount_paid": visit.final_price,
+                "status": TransactionStatus.ESCROWED,
+                "paymob_order_id": result.order_id,
+                "agency": visit.agency,
+            },
+        )
+
+        return Response({
+            "payment_key": result.payment_key,
+            "iframe_url": result.iframe_url,
+            "order_id": result.order_id,
+            "amount": str(visit.final_price),
+            "currency": "EGP",
+        }, status=status.HTTP_201_CREATED)
+
+
+class PaymobWebhookView(APIView):
+    """
+    T033: Paymob HMAC-verified webhook callback.
+
+    POST /api/v1/webhooks/paymob/
+
+    Verifies HMAC SHA-512 signature, then processes payment result.
+    """
+    permission_classes = []  # Paymob sends no auth header — HMAC is the auth
+    authentication_classes = []
+
+    def post(self, request):
+        from visits.services.paymob_service import PaymobService
+        from visits.models import Transaction, TransactionStatus
+
+        # Verify HMAC
+        received_hmac = request.query_params.get("hmac", "")
+        if not PaymobService.verify_webhook_hmac(request.data, received_hmac):
+            logger.warning("Paymob webhook HMAC verification failed")
+            return Response(
+                {"detail": "Invalid HMAC signature."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        obj = request.data.get("obj", request.data)
+        paymob_order_id = str(obj.get("order", {}).get("id", ""))
+        success = obj.get("success", False)
+        transaction_id = str(obj.get("id", ""))
+
+        if not paymob_order_id:
+            return Response(
+                {"detail": "Missing order ID."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            txn = Transaction.objects.get(paymob_order_id=paymob_order_id)
+        except Transaction.DoesNotExist:
+            logger.warning("Paymob webhook: no transaction for order %s", paymob_order_id)
+            return Response(
+                {"detail": "Transaction not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Store the Paymob transaction ID for future refunds
+        txn.paymob_transaction_id = transaction_id
+
+        if success:
+            txn.status = TransactionStatus.SETTLED
+            txn.save(update_fields=["status", "paymob_transaction_id"])
+            logger.info("Paymob payment confirmed for order %s", paymob_order_id)
+        else:
+            txn.status = TransactionStatus.FAILED
+            txn.save(update_fields=["status", "paymob_transaction_id"])
+            logger.warning("Paymob payment failed for order %s", paymob_order_id)
+
+        return Response({"status": "ok"}, status=status.HTTP_200_OK)
+

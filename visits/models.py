@@ -324,6 +324,7 @@ class Visit(models.Model):
                 params={"current": self.status, "new": new_status},
             )
 
+        self._previous_status = self.status  # Stash for post_save signal (C2 fix)
         self.status = new_status
         self.save(update_fields=["status", "updated_at"])
 
@@ -512,4 +513,62 @@ class TransactionLegacyBackup(models.Model):
 
 
     def __str__(self):
-        return f"Transaction({self.id}) - {self.status}"
+        return f"LegacyBackup(transaction={self.transaction_id})"
+
+
+class OfferStatus(models.TextChoices):
+    PENDING = "PENDING", _("قيد الانتظار")
+    ACCEPTED = "ACCEPTED", _("مقبول")
+    REJECTED = "REJECTED", _("مرفوض")
+    EXPIRED = "EXPIRED", _("منتهي الصلاحية")
+
+
+class DispatchOffer(models.Model):
+    """
+    Represents a time-limited offer sent to a nurse for a visit.
+    
+    Lifecycle:
+      1. Created with status=PENDING, expires_at=now()+60s
+      2. Nurse accepts → ACCEPTED (other offers for same visit → EXPIRED)
+      3. Nurse rejects → REJECTED
+      4. Celery task fires at expires_at → EXPIRED (if still PENDING)
+    
+    Race condition guard: Only one offer per visit can be ACCEPTED,
+    enforced via select_for_update() + unique constraint on (visit, status=ACCEPTED).
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    visit = models.ForeignKey(
+        Visit, on_delete=models.CASCADE, related_name="dispatch_offers"
+    )
+    nurse = models.ForeignKey(
+        "users.NurseProfile", on_delete=models.CASCADE, related_name="dispatch_offers"
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=OfferStatus.choices,
+        default=OfferStatus.PENDING,
+    )
+    offered_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField(
+        help_text=_("العرض ينتهي بعد 60 ثانية")
+    )
+    responded_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-offered_at"]
+        indexes = [
+            models.Index(fields=["visit", "status"]),
+            models.Index(fields=["nurse", "status"]),
+            models.Index(fields=["expires_at"]),
+        ]
+        constraints = [
+            # Only one ACCEPTED offer per visit (race condition guard)
+            models.UniqueConstraint(
+                fields=["visit"],
+                condition=models.Q(status="ACCEPTED"),
+                name="unique_accepted_offer_per_visit",
+            ),
+        ]
+
+    def __str__(self):
+        return f"Offer({self.id!s:.8}) → Nurse({self.nurse_id!s:.8}) [{self.status}]"

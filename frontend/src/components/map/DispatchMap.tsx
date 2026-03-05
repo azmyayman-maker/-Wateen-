@@ -102,8 +102,9 @@ export default function DispatchMap({ agencyId }: DispatchMapProps) {
         attributionControl={true}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          attribution='&copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
 
         {/* Nurse Markers */}
@@ -131,7 +132,9 @@ export default function DispatchMap({ agencyId }: DispatchMapProps) {
         {selectedVisit && (
           <Popup
             position={[selectedVisit.lat, selectedVisit.lng]}
-            onClose={() => setSelectedVisit(null)}
+            eventHandlers={{
+              remove: () => setSelectedVisit(null)
+            }}
           >
             <div className="p-3 min-w-[200px] bg-slate-900 text-white rounded-lg border border-white/10 shadow-2xl">
               <div className="flex items-center gap-2 mb-2">

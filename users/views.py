@@ -6,6 +6,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError, InvalidToken
+from django.conf import settings
+from django.contrib.auth import authenticate
 from django.utils.translation import gettext_lazy as _
 import logging
 
@@ -89,14 +91,105 @@ class LogoutView(APIView):
                 token = RefreshToken(refresh_token)
                 token.blacklist()
             
-            return Response({
+            response = Response({
                 'message': _('تم تسجيل الخروج بنجاح')
             }, status=status.HTTP_200_OK)
         
         except (TokenError, InvalidToken):
-            return Response({
+            response = Response({
                 'message': _('تم تسجيل الخروج بنجاح')
             }, status=status.HTTP_200_OK)
+            
+        response.delete_cookie(getattr(settings, 'JWT_AUTH_COOKIE', 'access_token'))
+        response.delete_cookie(getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'refresh_token'))
+        
+        return response
+
+
+class LoginView(APIView):
+    """
+    POST /api/v1/auth/login/
+
+    Authenticates a user with national_id + password.
+    Returns user profile data + JWT tokens.
+    Used by the React Admin authProvider.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+
+        national_id = request.data.get('national_id')
+        password = request.data.get('password')
+
+        if not national_id or not password:
+            return Response(
+                {'detail': _('الرقم القومي وكلمة المرور مطلوبان.')},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = authenticate(request, national_id=national_id, password=password)
+
+        if user is None:
+            return Response(
+                {'detail': _('بيانات الدخول غير صحيحة.')},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        if not user.is_active:
+            return Response(
+                {'detail': _('الحساب معطّل.')},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Generate JWT tokens
+        refresh = RefreshToken.for_user(user)
+
+        # Build user data
+        user_data = {
+            'id': str(user.id),
+            'national_id': user.national_id,
+            'phone_number': user.phone_number,
+            'first_name_ar': user.first_name_ar or '',
+            'last_name_ar': user.last_name_ar or '',
+            'role': user.role,
+            'agency': None,
+        }
+
+        # Include agency info if user is AGENCY_ADMIN
+        if user.role == UserRole.AGENCY_ADMIN and hasattr(user, 'agency') and user.agency:
+            user_data['agency'] = {
+                'id': str(user.agency.id),
+                'name': user.agency.manager_name,
+            }
+
+        response = Response({
+            'user': user_data,
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+        }, status=status.HTTP_200_OK)
+
+        cookie_max_age = getattr(settings, 'SIMPLE_JWT', {}).get('ACCESS_TOKEN_LIFETIME', 3600*24).total_seconds()
+        
+        response.set_cookie(
+            getattr(settings, 'JWT_AUTH_COOKIE', 'access_token'),
+            str(refresh.access_token),
+            max_age=int(cookie_max_age),
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite='Lax'
+        )
+        response.set_cookie(
+            getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'refresh_token'),
+            str(refresh),
+            max_age=3600 * 24 * 7,
+            httponly=True,
+            secure=not settings.DEBUG,
+            samesite='Lax'
+        )
+        
+        return response
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
@@ -109,7 +202,25 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         if response.status_code == 200:
             serializer = TokenObtainPairResponseSerializer(data=response.data)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            res = Response(serializer.data, status=status.HTTP_200_OK)
+            
+            res.set_cookie(
+                getattr(settings, 'JWT_AUTH_COOKIE', 'access_token'),
+                response.data.get('access', ''),
+                max_age=int(getattr(settings, 'SIMPLE_JWT', {}).get('ACCESS_TOKEN_LIFETIME', 3600*24).total_seconds()),
+                httponly=True,
+                secure=not settings.DEBUG,
+                samesite='Lax'
+            )
+            res.set_cookie(
+                getattr(settings, 'JWT_AUTH_REFRESH_COOKIE', 'refresh_token'),
+                response.data.get('refresh', ''),
+                max_age=3600 * 24 * 7,
+                httponly=True,
+                secure=not settings.DEBUG,
+                samesite='Lax'
+            )
+            return res
         
         return response
 
@@ -121,7 +232,17 @@ class CustomTokenRefreshView(TokenRefreshView):
         if response.status_code == 200:
             serializer = TokenRefreshResponseSerializer(data=response.data)
             serializer.is_valid(raise_exception=True)
-            return Response(serializer.data, status=status.HTTP_200_OK)
+            res = Response(serializer.data, status=status.HTTP_200_OK)
+            
+            res.set_cookie(
+                getattr(settings, 'JWT_AUTH_COOKIE', 'access_token'),
+                response.data.get('access', ''),
+                max_age=int(getattr(settings, 'SIMPLE_JWT', {}).get('ACCESS_TOKEN_LIFETIME', 3600*24).total_seconds()),
+                httponly=True,
+                secure=not settings.DEBUG,
+                samesite='Lax'
+            )
+            return res
         
         return response
 

@@ -446,7 +446,7 @@ stateDiagram-v2
 | **5. Face Capture**            | PWA MediaStream API          | Liveness detection AI      |
 | **6. Face Matching**           | Face recognition (dlib)      | Deep learning models       |
 | **7. Blockchain Verification** | Smart contracts              | Immutable credential check |
-| **8. Decision**                | Business logic               | AI confidence scoring      |
+| **8. Decision**                | B2B logic               | AI confidence scoring      |
 
 ### 3.5 Wearables Integration — Real-time Health Monitoring
 
@@ -2060,7 +2060,7 @@ graph TB
 - **Transmission**: TLS 1.3 with certificate pinning for mobile apps
 - **Consent Management**: Explicit per-visit consent with granular data sharing controls
 - **Data Retention**: Automatic purging of raw vitals after 30 days, aggregated data retained for 1 year
-- **HIPAA Compliance**: Business Associate Agreement with cloud providers
+- **HIPAA Compliance**: B2B Associate Agreement with cloud providers
 
 ### 8.2.4 API Endpoints
 
@@ -3360,7 +3360,7 @@ Zero Hiring: No external engineers required.
 | **Map Tile Load Time**          | < 300ms         | Performance monitoring     |
 | **Mobile App Crashes**          | < 0.5% sessions | Crash reporting            |
 
-### 8.13.3 Business Impact Metrics
+### 8.13.3 B2B Impact Metrics
 
 | Metric                    | Target (Year 1)   | Measurement Method   |
 | ------------------------- | ----------------- | -------------------- |
@@ -3525,7 +3525,7 @@ You are an expert AI software engineer building "Wateen", a Django Modular Monol
 ## Architectural Enforcement
 
 1.  **Modular Monolith:** Functionality is grouped by Django Apps (e.g., `visits`, `users`, `billing`). Do not create circular dependencies between apps.
-2.  **Business Logic:** Keep views thin. Put complex logic in `services.py` or `selectors.py` within the app.
+2.  **B2B Logic:** Keep views thin. Put complex logic in `services.py` or `selectors.py` within the app.
 3.  **Tickets:** Always implement code based on the specific requirements of the active Engineering Ticket. Do not implement features not requested.
 
 ## Critical Rules

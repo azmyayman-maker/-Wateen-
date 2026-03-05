@@ -158,6 +158,14 @@ export interface Translations {
     healthWalletDesc: string;
     intrusionPrevention: string;
     intrusionPreventionDesc: string;
+    trustedPartners: string;
+    trustedPartnersDesc: string;
+    topAgencies: string;
+    topAgenciesDesc: string;
+    certifiedNurses: string;
+    certifiedNursesDesc: string;
+    qualityCare: string;
+    qualityCareDesc: string;
     navAbout: string;
     navServices: string;
     navSupport: string;

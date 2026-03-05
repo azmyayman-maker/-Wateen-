@@ -99,21 +99,18 @@ class VisitRequestView(generics.CreateAPIView):
         eligible_agencies = AgencyProfile.objects.filter(
             status=AgencyStatus.VERIFIED,
             coverage_polygon__intersects=location_point
-        ).order_by('-rating') # Prefer higher rated agencies first
+        )
         
         if not eligible_agencies.exists():
             return Response(
                 {"detail": "عذراً، لا توجد شركات تمريض تغطي هذه المنطقة الجغرافية حالياً."},
                 status=status.HTTP_404_NOT_FOUND
             )
-            
-        # For MVP Auto-Dispatch (T022 part 1), pick the best active agency.
-        # In the full B2B2C architecture, we might create the visit without an assigned agency first,
-        # broadcast a websocket message to all eligible agencies, and the first to accept wins (Uber-style pool).
-        # Or round-robin it.
-        # For simplicity based on the spec "Agency Dispatch Protocol" let's assign it to 
-        # the top-rated eligible agency and set state to PENDING_AGENCY.
-        assigned_agency = eligible_agencies.first()
+        
+        # T022: Use QualityScore ranking instead of simple rating sort
+        from .services.matching import rank_agencies
+        ranked = rank_agencies(eligible_agencies, patient_location=location_point)
+        assigned_agency = ranked[0]["agency"] if ranked else eligible_agencies.first()
         
         with transaction.atomic():
             visit = Visit.objects.create(
@@ -133,8 +130,12 @@ class VisitRequestView(generics.CreateAPIView):
                 dispatch_engine = DispatchEngine()
                 dispatch_engine.trigger_dispatch(visit)
                 
+                # Schedule auto-dispatch to nurses via Celery (DispatchOffer flow)
+                from .tasks import re_route_visit, auto_dispatch_to_nurses
+                auto_dispatch_to_nurses.apply_async(
+                    (str(visit.id), str(assigned_agency.id)), countdown=2
+                )
                 # Schedule timeout re-routing task (5 minutes)
-                from .tasks import re_route_visit
                 re_route_visit.apply_async((str(visit.id),), countdown=300)
                 
                 # Initialize Transaction (T027)
@@ -146,5 +147,6 @@ class VisitRequestView(generics.CreateAPIView):
         return Response({
             "detail": "Visit request registered and assigned to an agency for review.",
             "visit": serializer.data,
-            "assigned_agency": assigned_agency.manager_name
+            "assigned_agency": assigned_agency.manager_name,
+            "agency_score": ranked[0]["score"] if ranked else None,
         }, status=status.HTTP_201_CREATED)
