@@ -127,9 +127,14 @@ class TokenBucketRateLimiter(BaseRateLimiter):
                 # Atomic increment — prevents TOCTOU race condition
                 new_count = cache.incr(cache_key)
             except ValueError:
-                # Key doesn't exist — initialize atomically with TTL
-                cache.set(cache_key, 1, self.window_seconds)
-                new_count = 1
+                # Key doesn't exist — use cache.add() for atomic initialization.
+                # cache.add() is a no-op if another thread inserted first,
+                # preventing the race where two threads both set count to 1.
+                if cache.add(cache_key, 1, self.window_seconds):
+                    new_count = 1
+                else:
+                    # Another thread won the race — safely increment
+                    new_count = cache.incr(cache_key)
             
             return new_count <= self.max_requests
         except Exception:

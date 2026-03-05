@@ -498,7 +498,7 @@ class NurseInvitation(models.Model):
         verbose_name=_("الوكالة"),
     )
     phone = models.CharField(_("الهاتف"), max_length=20)
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, db_index=True)
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     status = models.CharField(
         _("الحالة"),
         max_length=15,

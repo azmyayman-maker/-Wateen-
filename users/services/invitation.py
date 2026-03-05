@@ -166,6 +166,15 @@ class InvitationService:
             f"phone {phone[:3]}***{phone[-4:]}, expires at {expires_at}"
         )
         
+        # Schedule reminder task 24h before expiry
+        from ..tasks import send_invitation_reminder_task
+        reminder_eta = expires_at - timedelta(hours=24)
+        if reminder_eta > timezone.now():
+            send_invitation_reminder_task.apply_async(
+                (str(invitation.id),),
+                eta=reminder_eta
+            )
+        
         return invitation
     
     @classmethod

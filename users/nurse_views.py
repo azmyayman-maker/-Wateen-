@@ -22,7 +22,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import SimpleRateThrottle
 
 from .models import NurseInvitation, InvitationStatus
 from .permissions import IsAgencyAdmin
@@ -46,14 +46,22 @@ from .tasks import send_nurse_invitation_task
 logger = logging.getLogger(__name__)
 
 
-class AcceptInvitationThrottle(AnonRateThrottle):
+class AcceptInvitationThrottle(SimpleRateThrottle):
     """
     Throttle for the public accept-invitation endpoint.
     
     Prevents brute-force token guessing by limiting requests per IP.
-    10 requests per minute per anonymous IP address.
+    Always keys on client IP regardless of authentication status,
+    so attackers cannot bypass by sending an Authorization header.
+    10 requests per minute per IP address.
     """
     rate = '10/min'
+    
+    def get_cache_key(self, request, view):
+        return self.cache_format % {
+            'scope': self.scope or 'accept_invitation',
+            'ident': self.get_ident(request),
+        }
 
 
 class InviteNurseView(APIView):

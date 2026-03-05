@@ -19,15 +19,10 @@ import {
     DialogContent,
     DialogActions,
     Alert,
-    Snackbar,
-    IconButton,
-    Tooltip,
 } from '@mui/material';
 import {
     Cancel as CancelIcon,
     Refresh as RefreshIcon,
-    Link as LinkIcon,
-    ContentCopy as CopyIcon,
 } from '@mui/icons-material';
 
 // API base URL — use env variable for staging/production
@@ -192,43 +187,6 @@ export const ResendInvitationButton: React.FC = () => {
         >
             {translate('resources.invitations.actions.resend')}
         </Button>
-    );
-};
-
-/**
- * Copy Invitation Link Button
- * 
- * Copies the invitation link to clipboard.
- */
-export const CopyInvitationLinkButton: React.FC = () => {
-    const [copied, setCopied] = React.useState(false);
-    const translate = useTranslate();
-    const notify = useNotify();
-    const record = useRecordContext();
-    
-    if (!record || !record.token) {
-        return null;
-    }
-    
-    const invitationUrl = `${window.location.origin}/accept-invitation?token=${record.token}`;
-    
-    const handleCopy = async () => {
-        try {
-            await navigator.clipboard.writeText(invitationUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
-        } catch {
-            // Clipboard API may fail in non-HTTPS contexts
-            notify(translate('resources.invitations.notifications.error'), { type: 'error' });
-        }
-    };
-    
-    return (
-        <Tooltip title={translate('resources.invitations.actions.copy_link')}>
-            <IconButton size="small" onClick={handleCopy}>
-                {copied ? <LinkIcon /> : <CopyIcon />}
-            </IconButton>
-        </Tooltip>
     );
 };
 
