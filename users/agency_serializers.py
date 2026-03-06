@@ -10,6 +10,7 @@ from rest_framework_gis.serializers import GeoFeatureModelSerializer
 
 from .models import AgencyProfile, CustomUser, UserRole, KYCDocument, KYCDocumentType, KYCAuditLog
 from .validators import validate_kyc_file_extension_and_size
+from visits.services.geo_service import validate_polygon_area_in_km2
 
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,9 @@ class AgencyProfileSerializer(GeoFeatureModelSerializer):
             if poly.empty:
                 raise serializers.ValidationError(_("The polygon cannot be empty."))
 
+            if not poly.valid:
+                raise serializers.ValidationError(_(f"The polygon is invalid (e.g., self-intersecting): {poly.valid_reason}"))
+
             # 2. The polygon is closed (linear ring)
             # 3. The polygon has at least 3 distinct vertices (4 coordinates including the closing point)
             exterior_ring = poly.exterior_ring
@@ -64,6 +68,10 @@ class AgencyProfileSerializer(GeoFeatureModelSerializer):
 
             if len(exterior_ring.coords) < 4:
                 raise serializers.ValidationError(_("The polygon must have at least 3 distinct vertices."))
+
+        # Area validation against max allowed (5000 km^2)
+        if not validate_polygon_area_in_km2(value, max_km2=5000.0):
+            raise serializers.ValidationError(_("The coverage area exceeds the maximum allowed limit of 5000 square kilometers."))
 
         return value
 

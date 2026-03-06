@@ -143,3 +143,28 @@ def find_agencies_covering_point(point: Point):
     )
 
     return agencies
+
+def validate_polygon_area_in_km2(geom, max_km2: float = 5000.0, srid: Optional[int] = None) -> bool:
+    """
+    Validates that the area of the polygon(s) does not exceed max_km2.
+    Works for both Polygon and MultiPolygon geometries.
+    Transforms to Web Mercator (3857) or a suitable equal area projection to estimate.
+    For Egypt, UTM Zone 36N (SRID 32636) is highly accurate.
+    """
+    from django.conf import settings
+    
+    if not geom:
+        return True
+    
+    target_srid = srid or getattr(settings, 'WATEEN_DEFAULT_UTM_SRID', 32636)
+    try:
+        # Clone to avoid mutating the original
+        geom_proj = geom.clone()
+        # Transform to target UTM zone for accurate area in square meters
+        geom_proj.transform(target_srid)
+        area_sq_meters = geom_proj.area
+        area_km2 = area_sq_meters / 1_000_000.0
+        return area_km2 <= max_km2
+    except Exception as e:
+        logger.error(f"Area validation transform failed: {e}")
+        raise ValueError(f"Cannot validate polygon area: {e}") from e
