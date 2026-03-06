@@ -29,15 +29,20 @@ function GeomanIntegration({ onSave }: { onSave: (feature: Feature<Polygon | Mul
     map.pm.setGlobalOptions({ allowSelfIntersection: false });
 
     // Handle create event
-    const handleCreate = (e: any) => {
-      const layer = e.layer as any;
-      const geojson = layer.toGeoJSON() as Feature<Polygon | MultiPolygon>;
+    interface PmCreateEvent {
+      layer: import('leaflet').Layer & {
+        toGeoJSON: () => Feature<Polygon | MultiPolygon>;
+      };
+    }
+    
+    const handleCreate = (e: PmCreateEvent) => {
+      const geojson = e.layer.toGeoJSON();
       
       const validation = validateCoveragePolygon(geojson);
       if (!validation.valid) {
         setError(validation.error || 'Invalid shape');
         // Delete invalid shape immediately
-        map.removeLayer(layer);
+        map.removeLayer(e.layer);
         return;
       }
       
@@ -55,7 +60,7 @@ function GeomanIntegration({ onSave }: { onSave: (feature: Feature<Polygon | Mul
   }, [map, onSave]);
 
   return (
-    <div className="absolute top-4 right-4 z-[1000] w-64 max-w-full">
+    <div className="absolute top-4 end-4 z-[1000] w-64 max-w-full">
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
           <strong className="font-bold">خطأ! </strong>

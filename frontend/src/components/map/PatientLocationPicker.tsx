@@ -126,7 +126,7 @@ export default function PatientLocationPicker({ defaultCenter, defaultZoom = 15,
   return (
     <div className="relative w-full h-full flex flex-col gap-2" dir="rtl">
       
-      <div className="absolute top-4 left-0 right-0 z-[1000] px-12 flex flex-col gap-2">
+      <div className="absolute top-4 start-0 end-0 z-[1000] px-12 flex flex-col gap-2">
         <div className="flex gap-2 bg-white p-2 rounded-lg shadow-md border border-gray-200">
           <input 
             type="text" 
@@ -179,7 +179,7 @@ export default function PatientLocationPicker({ defaultCenter, defaultZoom = 15,
         </WateenMapInner>
       </div>
 
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[1000]">
+      <div className="absolute bottom-6 inset-x-0 flex justify-center z-[1000]">
          <button 
            className="bg-[#0A0A1A] text-white px-8 py-3 rounded-full shadow-lg font-bold text-lg hover:bg-gray-900 transition-colors"
            onClick={submitLocation}

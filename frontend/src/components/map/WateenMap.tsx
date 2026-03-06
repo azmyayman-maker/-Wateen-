@@ -2,6 +2,7 @@
 
 import React from 'react';
 import dynamic from 'next/dynamic';
+import type L from 'leaflet';
 
 const WateenMapInner = dynamic<WateenMapProps>(
   () => import('./WateenMapInner'),
@@ -23,7 +24,7 @@ export interface WateenMapProps {
   zoom: number;
   className?: string;
   children?: React.ReactNode;
-  onLoad?: (mapInstance: any) => void;
+  onLoad?: (mapInstance: L.Map) => void;
 }
 
 export default function WateenMap(props: WateenMapProps) {

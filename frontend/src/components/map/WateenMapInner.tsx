@@ -31,7 +31,8 @@ export default function WateenMapInner({
   useEffect(() => {
     // Fix Leaflet's default icon missing issue in Webpack/Next.js
     // By default, Leaflet tries to load marker icons via CSS url() which Next.js can mangle or fail to resolve.
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    const iconProto = L.Icon.Default.prototype as unknown as { _getIconUrl?: string };
+    delete iconProto._getIconUrl;
     L.Icon.Default.mergeOptions({
       iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
       iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',

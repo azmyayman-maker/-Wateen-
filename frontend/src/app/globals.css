@@ -134,16 +134,12 @@ body {
 
 /* === Leaflet RTL Overrides === */
 [dir="rtl"] .wateen-map-container .leaflet-control-container .leaflet-left {
-  right: auto !important;
   inset-inline-start: 10px !important;
   inset-inline-end: auto !important;
-  left: auto !important;
 }
 [dir="rtl"] .wateen-map-container .leaflet-control-container .leaflet-right {
-  left: auto !important;
   inset-inline-end: 10px !important;
   inset-inline-start: auto !important;
-  right: auto !important;
 }
 [dir="rtl"] .wateen-map-container .leaflet-popup-content-wrapper {
   text-align: right;
