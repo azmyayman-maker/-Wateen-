@@ -1,0 +1,37 @@
+diff --git a/frontend/src/app/globals.css b/frontend/src/app/globals.css
+index 0c491cc..13a2e07 100644
+--- a/frontend/src/app/globals.css
++++ b/frontend/src/app/globals.css
+@@ -1,4 +1,4 @@
+-@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap');
++@import url("https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Fira+Sans:wght@300;400;500;600;700&display=swap");
+ 
+ @tailwind base;
+ @tailwind components;
+@@ -131,3 +131,26 @@ body {
+ .animate-wateen-breathe {
+   animation: wateen-breathe 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+ }
++
++/* === Leaflet RTL Overrides === */
++[dir="rtl"] .wateen-map-container .leaflet-control-container .leaflet-left {
++  right: auto !important;
++  inset-inline-start: 10px !important;
++  inset-inline-end: auto !important;
++  left: auto !important;
++}
++[dir="rtl"] .wateen-map-container .leaflet-control-container .leaflet-right {
++  left: auto !important;
++  inset-inline-end: 10px !important;
++  inset-inline-start: auto !important;
++  right: auto !important;
++}
++[dir="rtl"] .wateen-map-container .leaflet-popup-content-wrapper {
++  text-align: right;
++  font-family: "Inter", "Amiri", sans-serif;
++}
++[dir="rtl"] .wateen-map-container .leaflet-tooltip {
++  direction: rtl;
++  text-align: right;
++  font-family: "Inter", "Amiri", sans-serif;
++}
