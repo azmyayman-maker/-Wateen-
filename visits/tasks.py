@@ -8,6 +8,22 @@ from .services.matching import GeoMatchingService
 logger = logging.getLogger(__name__)
 
 
+@shared_task(name="visits.tasks.re_evaluate_pending_visits")
+def re_evaluate_pending_visits(agency_id: str):
+    """
+    Background task triggered when an agency updates its coverage polygon.
+    Re-evaluates any visits strictly in PENDING_AGENCY state that might now
+    fall inside or outside the new coverage area.
+    """
+    try:
+        agency = AgencyProfile.objects.get(id=agency_id)
+        logger.info(f"Re-evaluating pending visits for agency {agency_id} after coverage update.")
+        # TODO: Implement full re-evaluation logic (Issue #XXX, Phase 4)
+        # Currently stubbed - needs to query PENDING_AGENCY visits and re-run spatial matching.
+    except AgencyProfile.DoesNotExist:
+        logger.error(f"Task re_evaluate_pending_visits failed: Agency {agency_id} not found.")
+
+
 @shared_task(name="visits.tasks.re_route_visit")
 def re_route_visit(visit_id: str):
     """
