@@ -12,7 +12,8 @@ export interface NominatimResponse {
 export async function searchAddress(query: string): Promise<NominatimResponse[]> {
   if (!query || query.trim() === '') return [];
   
-  const url = new URL('https://nominatim.openstreetmap.org/search');
+  const endpoint = process.env.NEXT_PUBLIC_NOMINATIM_API_URL || 'https://nominatim.openstreetmap.org/search';
+  const url = new URL(endpoint);
   url.searchParams.append('q', query);
   url.searchParams.append('format', 'jsonv2');
   url.searchParams.append('addressdetails', '1');
