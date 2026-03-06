@@ -78,7 +78,7 @@ def geocode_address(address: str) -> Optional[Point]:
     # 1. Check Cache
     cache_key = f"geo:geocode:{urllib.parse.quote(address)}"
     cached = get_cached_geo_data(cache_key)
-    if cached:
+    if cached and isinstance(cached, dict) and 'lat' in cached and 'lng' in cached:
         return Point(cached['lng'], cached['lat'], srid=4326)
 
     # 2. Query Nominatim

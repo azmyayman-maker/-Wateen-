@@ -7,6 +7,7 @@ import requests
 import logging
 from django.core.cache import cache
 from users.permissions import IsSuperAdmin
+from users.models import AgencyProfile
 
 logger = logging.getLogger(__name__)
 
@@ -33,9 +34,9 @@ class GeoDiagnosticsView(APIView):
         try:
             with connection.cursor() as cursor:
                 # Check for GIST indexes on AgencyProfile
-                cursor.execute("""
+                cursor.execute(f"""
                     SELECT indexname FROM pg_indexes 
-                    WHERE tablename = 'users_agency_profile' AND indexdef LIKE '%gist%';
+                    WHERE tablename = '{AgencyProfile._meta.db_table}' AND indexdef LIKE '%gist%';
                 """)
                 indexes = [row[0] for row in cursor.fetchall()]
                 return {
@@ -68,7 +69,8 @@ class GeoDiagnosticsView(APIView):
         try:
             # We don't want to spam, just a quick health check or last known status
             # For now, we simulate a check to the root which is usually allowed
-            response = requests.get("https://nominatim.openstreetmap.org/status.php", timeout=5)
+            headers = {'User-Agent': 'WateenBackend/1.0 (contact@wateen.sa)'}
+            response = requests.get("https://nominatim.openstreetmap.org/status.php", headers=headers, timeout=5)
             result = {
                 "status": "UP" if response.status_code == 200 else "DEGRADED",
                 "http_code": response.status_code
