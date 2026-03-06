@@ -12,10 +12,14 @@ from .views import (
 from .request_views import VisitRequestView
 from .dispatch_views import ManualDispatchView
 from .dashboard_views import AgencyDashboardOverviewView
+from .geo_views import GeoDiagnosticsView
 
 app_name = "visits"
 
 urlpatterns = [
+    # Geo diagnostics (SuperAdmin only)
+    path("geo/diagnostics/", GeoDiagnosticsView.as_view(), name="geo-diagnostics"),
+    
     # Patient endpoints
     path("request/", VisitRequestView.as_view(), name="visit_request"),
     path("estimate/", EstimateView.as_view(), name="estimate"),
