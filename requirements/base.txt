@@ -90,6 +90,12 @@ djangorestframework-gis==1.2.0
 # Stripe SDK for payments
 stripe==8.0.0
 
+# Requests library for external API calls (OSRM, ORS)
+requests==2.31.0
+
+# Geohash algorithm for proximity-based caching (pure Python implementation)
+# python-geohash requires C compilation; using custom implementation instead
+
 # -----------------------------------------------------------------------------
 # KYC / Document Processing (Computer Vision + OCR)
 # -----------------------------------------------------------------------------
