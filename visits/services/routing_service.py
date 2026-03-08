@@ -6,14 +6,13 @@ automatic failover and Redis caching.
 
 Usage:
     from visits.services.routing_service import get_route, calculate_nurse_eta
-    
+
     result = get_route(30.0444, 31.2357, 30.0626, 31.2497)
     # RouteResult(distance_km=5.2, duration_minutes=12.3, polyline_geometry="...")
 """
 
 from __future__ import annotations
 
-import hashlib
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -26,9 +25,75 @@ from django.core.cache import cache
 logger = logging.getLogger(__name__)
 
 
+GEOHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+GEOHASH_PRECISION = 7
+
+
+def _encode_geohash(
+    latitude: float, longitude: float, precision: int = GEOHASH_PRECISION
+) -> str:
+    """
+    Encode coordinates into a geohash string using pure Python implementation.
+
+    Precision levels:
+    - 7: ~153m x 153m bounds (suitable for caching route queries)
+    - 8: ~38m x 19m bounds
+
+    This implementation avoids the C-extension dependency of python-geohash.
+    """
+    lat_interval = [-90.0, 90.0]
+    lon_interval = [-180.0, 180.0]
+
+    geohash = []
+    bits = [16, 8, 4, 2, 1]
+    bit = 0
+    ch = 0
+    is_lon = True
+
+    while len(geohash) < precision:
+        if is_lon:
+            mid = (lon_interval[0] + lon_interval[1]) / 2
+            if longitude >= mid:
+                ch |= bits[bit]
+                lon_interval[0] = mid
+            else:
+                lon_interval[1] = mid
+        else:
+            mid = (lat_interval[0] + lat_interval[1]) / 2
+            if latitude >= mid:
+                ch |= bits[bit]
+                lat_interval[0] = mid
+            else:
+                lat_interval[1] = mid
+
+        is_lon = not is_lon
+
+        if bit < 4:
+            bit += 1
+        else:
+            geohash.append(GEOHASH_BASE32[ch])
+            bit = 0
+            ch = 0
+
+    return "".join(geohash)
+
+
+def _geohash_key(lat1: float, lng1: float, lat2: float, lng2: float) -> str:
+    """
+    Generate a cache key from coordinates using true geohash encoding.
+
+    Uses precision 7 for ~153m bounds, suitable for route caching.
+    Format: route:<origin_geohash>:<destination_geohash>
+    """
+    origin_hash = _encode_geohash(lat1, lng1, GEOHASH_PRECISION)
+    dest_hash = _encode_geohash(lat2, lng2, GEOHASH_PRECISION)
+    return f"route:{origin_hash}:{dest_hash}"
+
+
 @dataclass(frozen=True)
 class RouteResult:
     """Immutable result of a routing query."""
+
     distance_km: float
     duration_minutes: float
     polyline_geometry: Optional[str] = None
@@ -129,12 +194,6 @@ class ORSProvider(RoutingProvider):
         )
 
 
-def _geohash_key(lat1: float, lng1: float, lat2: float, lng2: float) -> str:
-    """Generate a cache key from coordinates with 4-decimal precision (~11m)."""
-    raw = f"{lat1:.4f},{lng1:.4f}:{lat2:.4f},{lng2:.4f}"
-    return f"route:{hashlib.md5(raw.encode()).hexdigest()}"
-
-
 def get_route(
     origin_lat: float,
     origin_lng: float,
@@ -173,11 +232,15 @@ def get_route(
             # Cache the result
             if not bypass_cache:
                 ttl = getattr(settings, "ROUTE_CACHE_TTL", 900)
-                cache.set(cache_key, {
-                    "distance_km": result.distance_km,
-                    "duration_minutes": result.duration_minutes,
-                    "polyline_geometry": result.polyline_geometry,
-                }, ttl)
+                cache.set(
+                    cache_key,
+                    {
+                        "distance_km": result.distance_km,
+                        "duration_minutes": result.duration_minutes,
+                        "polyline_geometry": result.polyline_geometry,
+                    },
+                    ttl,
+                )
 
             return result
         except Exception as e:
