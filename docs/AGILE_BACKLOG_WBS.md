@@ -201,7 +201,7 @@
 **Context:** When a patient submits a visit request, the system must capture their location, calculate the price, find eligible agencies, and create the Visit record with an immutable pricing snapshot — all within a single atomic transaction.
 
 - **Task 1:** Implement `POST /api/v1/visits/request/` in `visits/request_views.py`. Accept: `service_type_id`, `latitude`, `longitude`, `urgency` (low/medium/high), `notes`. Wrap the entire operation in `transaction.atomic()`. If no agencies cover the patient's point, return `404` with "No agencies available in your area."
-- **Task 2:** Build the pricing engine function `calculate_visit_price(service_type, distance_km, time_of_day, demand_ratio)` in `visits/services/pricing_service.py`. Implement the formula: `P = (B × T) + (D × R_km) + S_ai`. Freeze all components into the Visit's snapshot fields at creation time.
+- **Task 2:** Build the pricing engine function `calculate_cognitive_price(...)` in `visits/services/pricing_service.py`. Implement the Cognitive Pricing Engine formula (`P_final`). Freeze all components into the Visit's snapshot fields at creation time.
 - **Task 3:** On successful visit creation, trigger the dispatch pipeline via Celery: `dispatch_visit.delay(visit_id)`. The task calls `find_agencies_covering_point()`, ranks results, and routes to the top-ranked agency. Set visit status to `PENDING_AGENCY`.
 - **Task 4:** Create `ServiceType` model: `name` (CharField), `name_ar` (CharField for Arabic), `base_price` (Decimal), `icon` (CharField for frontend icon key), `requires_prescription` (Boolean), `estimated_duration_minutes` (Integer). Seed with initial service types: General Nursing, Wound Care, IV Therapy, Post-Op Care, Elderly Care.
 
@@ -211,7 +211,7 @@
 
 **Context:** When multiple agencies cover a patient's location (overlapping polygons), the system must rank them using a weighted scoring algorithm that considers rating, capacity, and historical response time.
 
-- **Task 1:** Implement `rank_agencies(agencies_queryset, patient_location)` in `visits/services/matching_service.py`. For each agency, compute: `QualityScore = (Rating × 0.4) + (NormalizedCapacity × 0.3) + (ResponseRate × 0.3)`. `NormalizedCapacity` = ratio of online nurses to total nurses. `ResponseRate` = percentage of requests accepted within timeout window (last 30 days).
+- **Task 1:** Implement `rank_agencies(agencies_queryset, patient_location, urgency)` in `visits/services/ranking_service.py`. For each agency, compute: `Score = (W_q * Q) + (W_r * R) + (W_p * P)`. `W` = urgency weights, `Q` = clinical quality, `R` = operational reliability, `P` = spatial proximity.
 - **Task 2:** Add `response_rate` computed property to `AgencyProfile` — query the last 100 visits for the agency and calculate `accepted_count / total_count`. Cache this value in Redis with 1-hour TTL to avoid repeated DB queries during high-traffic periods.
 - **Task 3:** Implement the ETA-enhanced ranking variant: `M_a = (R_a × 0.5) + (1/E_a × 0.3) + (C_a × 0.2)`. When OSRM is available, ETA is used instead of raw capacity. This provides distance-aware ranking that favors agencies whose nearest nurse is physically closer.
 - **Task 4:** Create an admin-facing `GET /api/v1/admin/dispatch-analytics/` endpoint that returns: average QualityScore by agency, dispatch success rate, average time-to-first-response, and re-route frequency. This powers the SuperAdmin's operational dashboard.
@@ -517,7 +517,7 @@
 **Context:** The AI Copilot's second function is demand prediction — forecasting high-demand periods and geographic hotspots to enable proactive nurse positioning and dynamic surge pricing.
 
 - **Task 1:** Implement `DemandPredictionService` in `ai_copilot/services/demand_service.py` — analyze historical visit data (time-of-day, day-of-week, district, service type) to predict demand for the next 24 hours. Output: demand heatmap (GeoHash-level) with confidence scores.
-- **Task 2:** Connect demand prediction to the surge pricing coefficient (`S_ai` in the pricing formula). When predicted demand exceeds supply in a GeoHash cell, `S_ai` increases (capped at 3.0x). When supply exceeds demand, `S_ai` drops to 1.0x (no surge). Update the coefficient every 15 minutes via Celery periodic task.
+- **Task 2:** Connect demand prediction to the surge pricing coefficient (`Phi_surge` in the Cognitive Pricing Engine formula). When predicted demand exceeds supply in a GeoHash cell, `Phi_surge` increases (capped at 3.0x). When supply exceeds demand, `Phi_surge` drops to 1.0x (no surge). Update the coefficient every 15 minutes via Celery periodic task.
 - **Task 3:** Build the demand heatmap visualization for Agency Admins — overlay on the coverage polygon map showing predicted demand intensity by color (green → yellow → red). Agencies can use this to proactively position nurses in high-demand areas.
 - **Task 4:** Implement "Smart Nudge" notifications for agencies — when predicted demand spikes in their coverage area, send a push notification: "High demand expected in {district} between {time_range}. Consider having {N} additional nurses online." Track nudge effectiveness (did the agency increase capacity?).
 
