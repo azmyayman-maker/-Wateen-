@@ -7,6 +7,7 @@ from visits.models import Visit, VisitStatus, ServiceType
 from visits.services.pricing import RuleBasedPricingStrategy
 from django.db import transaction
 from django.utils import timezone
+from decimal import Decimal
 
 class NoCoverageError(Exception):
     pass
@@ -42,7 +43,6 @@ class RequestVisitService:
             raise NotImplementedError("Real distance calculation via OSRM/ORS must be implemented (Phase 5). Stubbed for MVP.")
         
         # Determine Surge
-        from decimal import Decimal
         ai_surge = Decimal("0.00")
         
         price_result = self.pricing_strategy.calculate_price(

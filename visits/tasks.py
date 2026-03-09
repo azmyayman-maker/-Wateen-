@@ -2,6 +2,9 @@ from celery import shared_task
 from django.db import transaction
 import logging
 
+from visits.models import Visit, VisitStatus
+from users.models import AgencyProfile
+
 logger = logging.getLogger(__name__)
 
 # NOTE (Phase 2): Legacy tasks such as `re_evaluate_pending_visits`, `re_route_visit`,
@@ -22,8 +25,6 @@ def dispatch_visit(self, visit_id: str):
     Locates the best-fit covering agency and routes the ticket to them.
     If multiple agencies match, it could iterate or fan out.
     """
-    from visits.models import Visit, VisitStatus
-    from users.models import AgencyProfile
 
     try:
         visit = Visit.objects.get(id=visit_id)
