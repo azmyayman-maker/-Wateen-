@@ -23,9 +23,11 @@ class VisitRequestSerializer(serializers.Serializer):
         allow_null=True,
         help_text=_("UUID of the service type"),
     )
-    distance_km = serializers.FloatField(
+    distance_km = serializers.DecimalField(
+        max_digits=6,
+        decimal_places=2,
         required=False,
-        default=5.00,
+        default="5.00",
         help_text=_("Estimated distance in km"),
     )
 

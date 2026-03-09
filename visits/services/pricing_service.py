@@ -2,9 +2,10 @@
 Wateen Cognitive Pricing Engine.
 Implements MoH-compliant pricing algorithm.
 """
-from decimal import Decimal, ROUND_HALF_UP
+from decimal import Decimal, ROUND_HALF_UP, InvalidOperation
 from django.utils import timezone
 from django.contrib.gis.geos import Point
+from zoneinfo import ZoneInfo
 
 from visits.models import ServiceType
 from users.models import AgencyProfile
@@ -55,7 +56,6 @@ def calculate_cognitive_price(
     M_urgency = urgency_map.get(urgency.lower(), Decimal("1.0"))
 
     # 3. Time Multiplier (M_time)
-    from zoneinfo import ZoneInfo
     CAIRO_TZ = ZoneInfo("Africa/Cairo")
     now = timezone.now().astimezone(CAIRO_TZ)
     if now.hour >= 22 or now.hour < 6:
@@ -108,10 +108,12 @@ def calculate_cognitive_price(
 
     # 7. Quality Premium (Gamma, R_a)
     Gamma = Decimal("0.10")
-    agency_rating = getattr(agency, "rating", None)
-    if agency_rating is None:
+    agency_rating_raw = getattr(agency, "rating", None)
+    try:
+        agency_rating = Decimal(str(agency_rating_raw))
+    except (TypeError, ValueError, InvalidOperation) as e:
         agency_rating = Decimal("5.0")
-    R_a = Decimal(str(agency_rating))
+    R_a = agency_rating
     
     # 8. Mathematics Setup
     base_calc = B * M_time * M_urgency

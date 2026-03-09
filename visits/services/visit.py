@@ -42,7 +42,8 @@ class RequestVisitService:
             raise NotImplementedError("Real distance calculation via OSRM/ORS must be implemented (Phase 5). Stubbed for MVP.")
         
         # Determine Surge
-        ai_surge = 0.00
+        from decimal import Decimal
+        ai_surge = Decimal("0.00")
         
         price_result = self.pricing_strategy.calculate_price(
             base_price=service_type.base_price,

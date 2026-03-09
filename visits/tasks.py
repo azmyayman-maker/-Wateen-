@@ -37,14 +37,15 @@ def dispatch_visit(self, visit_id: str):
             is_active=True
         )
 
-        if not agencies.exists():
-            # In a real system, might flag for manual review or cancel
-            logger.error(f"No active agencies found for Visit {visit_id} at {visit.location}.")
-            return
-
         # Distribute logic (For now, just pick the first or create an offer layer)
         # Using simple DispatchOffer logic if it exists, or update status
         agency = agencies.first()
+        
+        if not agency:
+            # In a real system, might flag for manual review or cancel
+            logger.error(f"No active agencies found for Visit {visit_id} at {visit.location}.")
+            return
+            
         visit.agency = agency
         visit.status = VisitStatus.PENDING_NURSE
         visit.save(update_fields=["agency", "status", "updated_at"])
