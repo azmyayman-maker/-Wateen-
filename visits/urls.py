@@ -8,8 +8,8 @@ from .views import (
     NurseRespondOfferView,
     VisitStatusView,
     VisitTransitionView,
+    PatientRequestVisitView,
 )
-from .request_views import VisitRequestView
 from .dispatch_views import ManualDispatchView
 from .dashboard_views import AgencyDashboardOverviewView
 from .geo_views import GeoDiagnosticsView
@@ -21,7 +21,7 @@ urlpatterns = [
     path("geo/diagnostics/", GeoDiagnosticsView.as_view(), name="geo-diagnostics"),
     
     # Patient endpoints
-    path("request/", VisitRequestView.as_view(), name="visit_request"),
+    path("request/", PatientRequestVisitView.as_view(), name="visit_request"),
     path("estimate/", EstimateView.as_view(), name="estimate"),
     path(
         "payments/webhook/mock/", MockPaymentWebhookView.as_view(), name="mock_webhook"

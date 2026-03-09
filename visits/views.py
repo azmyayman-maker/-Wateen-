@@ -7,16 +7,88 @@ from django.utils.translation import gettext_lazy as _
 from django.db import transaction
 
 from users.models import UserRole, NurseProfile
-from .models import Visit, VisitStatus
+from .models import Visit, VisitStatus, ServiceType
 from .serializers import (
     NurseToggleSerializer,
     NurseRespondSerializer,
     NursePendingVisitSerializer,
+    VisitRequestSerializer,
+    VisitResponseSerializer,
 )
+from django.contrib.gis.geos import Point
+from visits.services.visit import RequestVisitService, NoCoverageError
 
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# ─── Patient-Side Views ───────────────────────────────────────────────────────
+
+class PatientRequestVisitView(APIView):
+    """
+    POST /api/v1/visits/request/
+    
+    Accepts patient visit request, executes atomic generation and triggers Celery dispatch task.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if request.user.role != UserRole.PATIENT:
+            return Response(
+                {"detail": _("فقط المرضى يمكنهم طلب زيارة.")},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        serializer = VisitRequestSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        try:
+            patient_profile = request.user.patient_profile
+        except AttributeError:
+            return Response(
+                {"detail": _("ملف المريض غير موجود.")},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+            
+        location = Point(
+            serializer.validated_data["longitude"],
+            serializer.validated_data["latitude"],
+            srid=4326
+        )
+        
+        service_type = serializer.validated_data.get("service_type")
+        if not service_type:
+            service_type = ServiceType.objects.first()
+            if not service_type:
+                return Response(
+                    {"detail": _("لا توجد أنواع خدمات متاحة بشكل افتراضي.")},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+        service = RequestVisitService()
+
+        distance_km = serializer.validated_data.get("distance_km")
+        
+        try:
+            visit = service.execute(
+                patient=patient_profile,
+                service_type=service_type,
+                location=location,
+                distance_km=distance_km  # Fetched from request or defaults to 5.0km
+            )
+        except NoCoverageError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except ValidationError as e:
+            return Response(
+                {"detail": list(e.messages) if hasattr(e, 'messages') else str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        return Response(VisitResponseSerializer(visit).data, status=status.HTTP_201_CREATED)
 
 
 # ─── Nurse-Side Views ─────────────────────────────────────────────────────────

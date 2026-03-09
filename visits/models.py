@@ -42,6 +42,11 @@ class ServiceType(models.Model):
         default="",
         help_text=_("وصف الخدمة"),
     )
+    expected_duration = models.PositiveIntegerField(
+        _("المدة المتوقعة (بالدقائق)"),
+        default=60,
+        help_text=_("المدة الزمنية المتوقعة لتقديم الخدمة بالدقائق"),
+    )
     is_active = models.BooleanField(
         _("نشط"),
         default=True,

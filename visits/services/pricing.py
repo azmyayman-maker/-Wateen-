@@ -194,28 +194,44 @@ class RuleBasedPricingStrategy(PricingStrategy):
         Returns:
             PriceResult with full breakdown of the calculation.
         """
-        # Coerce all numeric inputs to Decimal to avoid Decimal*float TypeError
+        # Coerce all numeric inputs to Decimal
         base_price = Decimal(str(base_price))
         distance_km = Decimal(str(distance_km))
+        
         if ai_surge_coefficient is not None:
             ai_surge_coefficient = Decimal(str(ai_surge_coefficient))
         else:
             ai_surge_coefficient = Decimal("1.0")
 
+        # Impose rigorous bounds
+        if base_price <= Decimal("0"):
+            raise ValueError("Base price must be strictly positive.")
+        if distance_km < Decimal("0"):
+            raise ValueError("Distance cannot be negative.")
+        if ai_surge_coefficient < Decimal("0"):
+            raise ValueError("Surge coefficient cannot be negative.")
+
         # Get pricing factors
         per_km_rate = self.get_factor("per_km_rate")
+        if per_km_rate < Decimal("0"):
+            raise ValueError("Per kilometer rate cannot be negative.")
 
         # Determine time multiplier based on day/night
         if self._is_night_hours(request_time):
             time_multiplier = self.get_factor("night_multiplier")
         else:
             time_multiplier = self.get_factor("day_multiplier")
+            
+        if time_multiplier <= Decimal("0"):
+            raise ValueError("Time multiplier must be strictly positive.")
 
-        # Calculate distance fee
+        # Calculate distance fee (D * R_km)
         distance_fee = (distance_km * per_km_rate).quantize(Decimal("0.01"))
 
-        # Calculate final price
+        # Calculate base (B + D*R_km)
         subtotal = base_price + distance_fee
+
+        # Calculate final price precisely: P = (B + D × R_km) * T * S_ai
         final_price = (subtotal * time_multiplier * ai_surge_coefficient).quantize(
             Decimal("0.01")
         )
