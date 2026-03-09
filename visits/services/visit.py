@@ -2,8 +2,76 @@ from django.contrib.gis.geos import Point
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from users.models import PatientProfile
+from users.models import PatientProfile, AgencyProfile
 from visits.models import Visit, VisitStatus, ServiceType
+from visits.services.pricing import RuleBasedPricingStrategy
+from django.db import transaction
+from django.utils import timezone
+
+class NoCoverageError(Exception):
+    pass
+
+class RequestVisitService:
+    """Service dedicated to orchestrating the visit request transaction safely."""
+
+    def __init__(self):
+        self.pricing_strategy = RuleBasedPricingStrategy()
+
+    def _dispatch_async(self, visit_id: str) -> None:
+        from visits.tasks import dispatch_visit
+        dispatch_visit.delay(visit_id)
+
+    @transaction.atomic
+    def execute(
+        self,
+        patient: PatientProfile,
+        service_type: ServiceType,
+        location: Point,
+        distance_km: float | None = None
+    ) -> Visit:
+        # Pre-emptive concurrency lock (or duplicate check)
+        if Visit.objects.filter(patient=patient, status__in=[VisitStatus.PENDING_AGENCY, VisitStatus.PENDING_NURSE]).select_for_update().exists():
+            raise ValidationError("Patient already has an active pending visit.")
+
+        # 1. Validate geographical coverage utilizing PostGIS spatial indexing
+        if not AgencyProfile.objects.filter(coverage_polygon__contains=location, is_active=True).exists():
+            raise NoCoverageError("لا توجد وكالات تغطي هذه المنطقة الجغرافية في الوقت الحالي.")
+
+        # 2. Calculate Pricing via the exact algorithmic formula
+        if distance_km is None:
+            raise NotImplementedError("Real distance calculation via OSRM/ORS must be implemented (Phase 5). Stubbed for MVP.")
+        
+        # Determine Surge
+        ai_surge = 0.00
+        
+        price_result = self.pricing_strategy.calculate_price(
+            base_price=service_type.base_price,
+            distance_km=distance_km,
+            request_time=timezone.now(),
+            ai_surge_coefficient=ai_surge
+        )
+
+        # 3. Create the Visit snapshot immutably
+        visit = Visit(
+            patient=patient,
+            status=VisitStatus.PENDING_AGENCY,
+            location=location,
+            service_type=service_type,
+            # Snapshot pricing explicitly
+            base_price=service_type.base_price,
+            distance_fee=price_result.distance_fee,
+            distance_km=distance_km,
+            distance_rate=self.pricing_strategy.get_factor("per_km_rate"),
+            time_multiplier=price_result.time_multiplier,
+            ai_surge_coefficient=ai_surge,
+            final_price=price_result.final_price
+        )
+        visit.save() # Mutates ID and enforces immutable checks instantly
+
+        # 4. Asynchronous Task Dispatch (Triggered ONLY if DB commits without error)
+        transaction.on_commit(lambda: self._dispatch_async(visit.id))
+
+        return visit
 
 
 def create_visit_request(
