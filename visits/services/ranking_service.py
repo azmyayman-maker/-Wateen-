@@ -8,6 +8,7 @@ from uuid import UUID
 
 from django.core.cache import cache
 from django.db.models import QuerySet, Count, Q
+from django.contrib.gis.geos import Point
 
 from users.models import AgencyProfile, NurseProfile
 from users.services.agency_stats_service import get_agency_operational_stats
@@ -82,7 +83,7 @@ def _compute_spatial_proximity(
     return capacity * math.exp(-lambda_decay * max(0.0, eta_minutes - eta_optimal))
 
 
-def _find_nearest_nurse_eta(agency: AgencyProfile, patient_location) -> Optional[float]:
+def _find_nearest_nurse_eta(agency: AgencyProfile, patient_location: Point) -> Optional[float]:
     """
     Finds the minimum ETA from available nurses to the patient.
 
@@ -127,6 +128,8 @@ def _find_nearest_nurse_eta(agency: AgencyProfile, patient_location) -> Optional
             if minutes is not None and (min_eta is None or minutes < min_eta):
                 min_eta = minutes
         except Exception as e:
+            # Graceful degradation: A routing API failure for one nurse shouldn't crash the entire ranking process.
+            # We log the warning and fallback to ignoring this nurse's ETA. The algorithm handles missing ETA gracefully.
             logger.warning(f"Failed to calculate ETA for nurse {nurse.id}: {e}")
 
     return min_eta
@@ -178,7 +181,6 @@ def rank_agencies(
             .annotate(
                 total=Count("id"), available=Count("id", filter=Q(is_available=True))
             )
-            .index_using("agency")
         )
         nurse_counts = {item["agency"]: item for item in nurse_counts}
 
