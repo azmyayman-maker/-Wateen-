@@ -268,75 +268,40 @@ class GeoMatchingService:
             return False
 
 
-def rank_agencies(agencies_qs, patient_location=None) -> list:
+def rank_agencies(agencies_qs, patient_location=None, **kwargs) -> list:
     """
-    Rank overlapping agencies by QualityScore for Tier 1 dispatch selection.
-    
-    QualityScore = (rating × 0.4) + (normalized_capacity × 0.3) + (response_rate × 0.3)
-    
+    Rank overlapping agencies for Tier 1 dispatch selection.
+    Delegates to the Dynamic Vector-Based ranking_service.
+    Score = (W_q * Clinical_Quality) + (W_r * Operational_Reliability) + (W_p * Spatial_Proximity)
+
     Args:
         agencies_qs: QuerySet of AgencyProfile instances (already filtered by coverage)
-        patient_location: Optional Point for distance bonus (future enhancement)
-    
+        patient_location: Optional Point for distance bonus
+        **kwargs: Optional 'urgency' (VisitUrgency). Defaults to MEDIUM.
+
     Returns:
-        List of dicts: [{"agency": AgencyProfile, "score": float}, ...]
+        List of dicts: [{"agency": AgencyProfile, "score": float, "debug_info": dict}, ...]
         Sorted by score descending (best agency first)
     """
-    from users.models import VerificationStatus
-    from django.core.cache import cache
-    from django.db.models import Count, Q
+    from visits.services.ranking_service import rank_agencies as _vector_rank
+    from visits.models import VisitUrgency
 
-    # Annotate nurse counts in a single query (eliminates N+1)
-    annotated_agencies = agencies_qs.select_related("user").annotate(
-        total_nurses=Count("nurses"),
-        available_nurses=Count(
-            "nurses",
-            filter=Q(
-                nurses__is_available=True,
-                nurses__verification_status=VerificationStatus.VERIFIED,
-            ),
-        ),
-    )
+    urgency = kwargs.get('urgency', VisitUrgency.MEDIUM)
 
-    # Batch cache lookup for response rates (W4 fix — eliminates N+1 on cache)
-    agency_list = list(annotated_agencies)
-    cache_keys = {a.id: f"agency_response_rate:{a.id}" for a in agency_list}
-    cached_rates = cache.get_many(list(cache_keys.values()))
+    # Delegate to the new Dynamic Vector-Based algorithm
+    ranked_scores = _vector_rank(agencies_qs, patient_location, urgency)
+
+    # Build agency lookup for backward-compatible dict format
+    agency_map = {a.id: a for a in agencies_qs}
 
     scored_agencies = []
+    for ag_score in ranked_scores:
+        agency = agency_map.get(ag_score.agency_id)
+        if agency is not None:
+            scored_agencies.append({
+                "agency": agency,
+                "score": round(ag_score.score, 4),
+                "debug_info": ag_score.debug_info,
+            })
 
-    for agency in agency_list:
-        # 1. Rating component (0-5 scale, normalized to 0-1)
-        rating = float(agency.rating or 0) / 5.0
-
-        # 2. Capacity component — available nurses / total nurses
-        capacity = agency.available_nurses / max(agency.total_nurses, 1)
-
-        # 3. Response rate — batch-cached for 1 hour
-        cache_key = cache_keys[agency.id]
-        response_rate = cached_rates.get(cache_key)
-        if response_rate is None:
-            from visits.models import Visit, VisitStatus
-            last_100 = Visit.objects.filter(agency=agency).order_by("-created_at")[:100]
-            total = last_100.count()
-            if total > 0:
-                accepted = last_100.filter(
-                    status__in=[
-                        VisitStatus.ACCEPTED,
-                        VisitStatus.EN_ROUTE,
-                        VisitStatus.IN_PROGRESS,
-                        VisitStatus.COMPLETED,
-                    ]
-                ).count()
-                response_rate = accepted / total
-            else:
-                response_rate = 0.5  # Default for new agencies
-            cache.set(cache_key, response_rate, 3600)  # 1 hour
-
-        # Compute QualityScore
-        score = (rating * 0.4) + (capacity * 0.3) + (response_rate * 0.3)
-        scored_agencies.append({"agency": agency, "score": round(score, 4)})
-
-    # Sort by score descending
-    scored_agencies.sort(key=lambda x: x["score"], reverse=True)
     return scored_agencies

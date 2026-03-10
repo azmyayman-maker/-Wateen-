@@ -13,10 +13,14 @@ from .views import (
 from .dispatch_views import ManualDispatchView
 from .dashboard_views import AgencyDashboardOverviewView
 from .geo_views import GeoDiagnosticsView
+from .admin_views import DispatchAnalyticsAPIView
 
 app_name = "visits"
 
 urlpatterns = [
+    # Admin endpoints
+    path("admin/dispatch-analytics/", DispatchAnalyticsAPIView.as_view(), name="dispatch_analytics"),
+
     # Geo diagnostics (SuperAdmin only)
     path("geo/diagnostics/", GeoDiagnosticsView.as_view(), name="geo-diagnostics"),
     
@@ -44,4 +48,3 @@ urlpatterns = [
     path("<uuid:visit_id>/status/", VisitStatusView.as_view(), name="visit_status"),
     path("<uuid:visit_id>/transition/", VisitTransitionView.as_view(), name="visit_transition"),
 ]
-

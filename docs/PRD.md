@@ -7,6 +7,7 @@
 > **Date:** February 2026  
 > **Status:** APPROVED / IN-DEVELOPMENT  
 > **Execution Model:** Hyper-Pair Programming (Solo Dev + AI
+
 ---
 
 ## 🏗️ 1. EXECUTIVE SUMMARY & STRATEGIC VISION
@@ -143,7 +144,7 @@ To ensure extreme cost-efficiency and avoid vendor lock-in, Wateen utilizes a st
 ### 5.1 Two-Tier Spatial Matching
 
 1.  **Stage 1 (Polygon Check):** System executes `ST_Intersects(patient_location, agency_coverage_polygon)`.
-2.  **Stage 2 (Ranking):** Eligible agencies are ranked using a `QualityScore = (Rating * 0.4) + (Capacity * 0.3) + (ResponseRate * 0.3)`.
+2.  **Stage 2 (Ranking):** Eligible agencies are ranked using a `Score = (W_q * Clinical_Quality) + (W_r * Operational_Reliability) + (W_p * Spatial_Proximity)`. Weights dynamically adjust based on Visit Urgency.
 
 ### 5.2 Dispatch Modes
 
@@ -433,18 +434,25 @@ All agencies must be verified against the Egyptian General Authority for Investm
 
 ## 🧮 20. PRICING ENGINE & ALGORITHMIC MATCHING
 
-### 20.1 The Price Equation
+### 20.1 The Price Equation (Cognitive Pricing Engine)
 
-Total Price ($P$) is calculated as follows:
-$$P = (B \times T) + (D \times R_{km}) + S_{ai}$$
+The Wateen Cognitive Pricing Engine implements the following MoH-compliant formula to calculate the final price ($P_{final}$):
+
+$$P_{final} = [ (B \times M_{time} \times M_{urgency}) + (D_{osrm} \times R_{zone} \times (1 + E_{traffic})) ] \times \Phi_{surge} + (B \times \Gamma \times (\frac{R_a}{5.0}))$$
 
 Where:
 
-- $B$: Base Service Price (e.g., General Nursing = 200 EGP).
-- $T$: Time Multiplier (Night shift = 1.2x, Holiday = 1.5x).
-- $D$: Haversine distance from the Agency to the Patient.
-- $R_{km}$: Rate per kilometer (dynamic per city).
-- $S_{ai}$: AI-driven Surge Coefficient (calculated via demand/supply ratio in a given GeoHash).
+- $B$: Base Price of the service (`service_type.base_price`).
+- $M_{time}$: Time Multiplier (1.2 for night hours 22:00 - 06:00 Cairo Time / holidays, else 1.0).
+- $M_{urgency}$: Urgency Multiplier (1.0 for low, 1.2 for high, 1.5 for SOS/critical).
+- $D_{osrm}$: Routing distance in km via internal OSRM/ORS wrapper.
+- $R_{zone}$: Zone base rate (fallback 5.00 EGP).
+- $E_{traffic}$: Traffic extreme penalty (0.1 if traffic delays are high, else 0.0).
+- $\Phi_{surge}$: Dynamic surge multiplier fetched via `DemandPredictionService` (max 3.0).
+- $\Gamma$: Premium quality cap (10% max tier premium).
+- $R_a$: Agency rating (1.0 to 5.0).
+
+> **Architectural Note:** All financial calculations strictly use `decimal.Decimal` and `ROUND_HALF_UP` to prevent floating-point loss.
 
 ### 20.2 The "Uber-Style" Matching Score ($M$)
 

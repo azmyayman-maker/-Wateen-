@@ -112,6 +112,14 @@ class PricingFactor(models.Model):
         return f"{self.key}={self.value}"
 
 
+class VisitUrgency(models.TextChoices):
+    LOW = "LOW", _("منخفضة")
+    MEDIUM = "MEDIUM", _("متوسطة")
+    HIGH = "HIGH", _("عالية")
+    CRITICAL = "CRITICAL", _("حرجة")
+    SOS = "SOS", _("طوارئ")
+
+
 class VisitStatus(models.TextChoices):
     PENDING_AGENCY = "pending_agency", _("في انتظار الوكالة")
     PENDING_NURSE = "pending_nurse", _("في انتظار الممرض")
@@ -162,12 +170,18 @@ class Visit(models.Model):
         blank=True,
     )
     nurse = models.ForeignKey(
-        "users.NurseProfile",
-        on_delete=models.PROTECT,
+        NurseProfile,
+        on_delete=models.SET_NULL,
         null=True,
         blank=True,
         related_name="visits",
         verbose_name=_("الممرض/ة"),
+    )
+    nurse_assigned_at = models.DateTimeField(
+        _("وقت تعيين الممرض/ة"),
+        null=True,
+        blank=True,
+        help_text=_("الوقت الذي تم فيه تعيين الممرض/ة للزيارة"),
     )
     status = models.CharField(
         _("الحالة"),
@@ -175,6 +189,14 @@ class Visit(models.Model):
         choices=VisitStatus.choices,
         default=VisitStatus.PENDING_AGENCY,
         db_index=True,
+    )
+    urgency = models.CharField(
+        _("مستوى الأهمية"),
+        max_length=10,
+        choices=VisitUrgency.choices,
+        default=VisitUrgency.MEDIUM,
+        db_index=True,
+        help_text=_("مستوى أهمية/سرعة الزيارة"),
     )
     location = gis_models.PointField(
         _("موقع الزيارة"),
@@ -283,9 +305,8 @@ class Visit(models.Model):
 
     def save(self, *args, **kwargs) -> None:
         update_fields = kwargs.get("update_fields", None)
-        pricing_fields_touched = (
-            update_fields is not None
-            and set(update_fields) & set(self.IMMUTABLE_PRICING_FIELDS)
+        pricing_fields_touched = update_fields is not None and set(update_fields) & set(
+            self.IMMUTABLE_PRICING_FIELDS
         )
         if self.pk is not None and (
             update_fields is None
@@ -503,19 +524,27 @@ class TransactionLegacyBackup(models.Model):
     Backup table to safely store legacy financial columns before their removal
     from the main Transaction table. Preserves historical data integrity.
     """
+
     transaction = models.OneToOneField(
         Transaction, on_delete=models.CASCADE, related_name="legacy_backup"
     )
-    agency_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    take_rate_percent = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
-    take_rate_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    agency_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    take_rate_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True
+    )
+    take_rate_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
+    total_amount = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True
+    )
     stripe_payment_intent_id = models.CharField(max_length=255, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         db_table = "visits_transaction_legacy_backup"
-
 
     def __str__(self):
         return f"LegacyBackup(transaction={self.transaction_id})"
@@ -531,16 +560,17 @@ class OfferStatus(models.TextChoices):
 class DispatchOffer(models.Model):
     """
     Represents a time-limited offer sent to a nurse for a visit.
-    
+
     Lifecycle:
       1. Created with status=PENDING, expires_at=now()+60s
       2. Nurse accepts → ACCEPTED (other offers for same visit → EXPIRED)
       3. Nurse rejects → REJECTED
       4. Celery task fires at expires_at → EXPIRED (if still PENDING)
-    
+
     Race condition guard: Only one offer per visit can be ACCEPTED,
     enforced via select_for_update() + unique constraint on (visit, status=ACCEPTED).
     """
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     visit = models.ForeignKey(
         Visit, on_delete=models.CASCADE, related_name="dispatch_offers"
@@ -554,9 +584,7 @@ class DispatchOffer(models.Model):
         default=OfferStatus.PENDING,
     )
     offered_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(
-        help_text=_("العرض ينتهي بعد 60 ثانية")
-    )
+    expires_at = models.DateTimeField(help_text=_("العرض ينتهي بعد 60 ثانية"))
     responded_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
