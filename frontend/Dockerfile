@@ -25,8 +25,8 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
 
 # Create non-root user
-RUN addgroup -g 1002 nextjs && \
-    adduser -D -u 1002 -G nextjs nextjs
+RUN addgroup -g 1001 nextjs && \
+    adduser -D -u 1001 -G nextjs nextjs
 
 # Copy from builder
 COPY --from=builder --chown=nextjs:nextjs /app/node_modules ./node_modules

@@ -2,6 +2,9 @@
 # Wateen Database Initialization Script
 set -e
 
+# Read password from environment (Docker Compose injects POSTGRES_PASSWORD)
+DB_PASSWORD="${POSTGRES_PASSWORD:?POSTGRES_PASSWORD environment variable is required}"
+
 # Create the wateen_admin user and database if they don't exist
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
   -- Create wateen_admin role
@@ -10,7 +13,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     IF NOT EXISTS (
       SELECT FROM pg_roles WHERE rolname = 'wateen_admin'
     ) THEN
-      CREATE ROLE wateen_admin WITH LOGIN PASSWORD 'wateen_secure_password_123';
+      CREATE ROLE wateen_admin WITH LOGIN PASSWORD '${DB_PASSWORD}';
       ALTER ROLE wateen_admin CREATEDB;
       ALTER ROLE wateen_admin CREATEROLE;
     END IF;
