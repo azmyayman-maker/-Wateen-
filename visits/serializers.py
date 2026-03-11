@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils.translation import gettext_lazy as _
 
-from visits.models import ServiceType
+from visits.models import ServiceType, DispatchOffer
 
 
 class VisitRequestSerializer(serializers.Serializer):
@@ -141,7 +141,14 @@ class MockPaymentResponseSerializer(serializers.Serializer):
     previous_status = serializers.CharField()
 
 
-# ─── Agency Dashboard Serializers ─────────────────────────────────────────────
+class DispatchOfferSerializer(serializers.ModelSerializer):
+    """T036: Serializer for DispatchOffer to be used in agency dashboard."""
+    
+    nurse_name = serializers.CharField(source='nurse.user.get_full_name', read_only=True)
+    
+    class Meta:
+        model = DispatchOffer
+        fields = ['id', 'nurse_name', 'status', 'offered_at', 'responded_at', 'expires_at']
 
 
 class VisitQueueSerializer(serializers.Serializer):
@@ -155,6 +162,13 @@ class VisitQueueSerializer(serializers.Serializer):
     final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     remaining_seconds = serializers.SerializerMethodField()
     created_at = serializers.DateTimeField(read_only=True)
+    dispatch_offers = serializers.SerializerMethodField()
+
+    def get_dispatch_offers(self, obj):
+        # T037: Return serialized dispatch offers for auto-dispatched visits
+        offers = DispatchOffer.objects.filter(visit=obj).select_related('nurse__user').order_by('-created_at')
+        return DispatchOfferSerializer(offers, many=True).data
+
 
     def get_patient_district(self, obj) -> str:
         """Return a masked location (district or generic placeholder)."""
