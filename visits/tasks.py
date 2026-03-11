@@ -70,6 +70,38 @@ def dispatch_visit(self, visit_id: str):
         raise self.retry(exc=exc)
 
 
+@shared_task(bind=True, max_retries=3, default_retry_delay=10, queue="dispatch")
+def check_dispatch_timeout(self, visit_id: str):
+    from django.db import transaction
+    from visits.models import Visit, VisitStatus, DispatchOffer, OfferStatus
+    from visits.tasks import re_route_visit
+
+    try:
+        with transaction.atomic():
+            visit = Visit.objects.select_for_update().get(id=visit_id)
+            
+            if visit.status != VisitStatus.PENDING_AGENCY:
+                logger.info(f"Timeout check ignored for visit {visit_id}: status is {visit.status}.")
+                return
+
+            if DispatchOffer.objects.filter(visit=visit, status=OfferStatus.ACCEPTED).exists():
+                logger.info(f"Timeout check ignored for visit {visit_id}: ACCEPTED offer exists.")
+                return
+
+            pending_offers = DispatchOffer.objects.filter(visit=visit, status=OfferStatus.PENDING)
+            count = pending_offers.update(status=OfferStatus.EXPIRED)
+            
+            logger.info(f"Expired {count} pending offers for visit {visit_id} due to timeout.")
+
+            if count > 0:
+                re_route_visit.delay(str(visit.id), str(visit.agency_id))
+                
+    except Visit.DoesNotExist:
+        pass
+    except Exception as exc:
+        raise self.retry(exc=exc)
+
+
 @shared_task(bind=True, max_retries=3, default_retry_delay=30, queue="dispatch")
 def re_route_visit(self, visit_id: str, agency_id: str):
     from django.utils import timezone
@@ -90,10 +122,15 @@ def re_route_visit(self, visit_id: str, agency_id: str):
             visit.reroute_attempts += 1
             
             from visits.services.matching import rank_agencies
+            from visits.models import DispatchOffer
+            
+            # Exclude currently assigned agency AND any historically offered agencies
+            tried_agency_ids = list(DispatchOffer.objects.filter(visit_id=visit_id).values_list('nurse__agency_id', flat=True).distinct())
+            
             candidates = AgencyProfile.objects.filter(
                 coverage_polygon__contains=visit.location,
                 is_active=True,
-            ).exclude(id=old_agency_id)
+            ).exclude(id=old_agency_id).exclude(id__in=tried_agency_ids)
             
             ranked = rank_agencies(candidates, visit.location, urgency=visit.urgency)
             
@@ -110,6 +147,12 @@ def re_route_visit(self, visit_id: str, agency_id: str):
                         args=[str(visit.id), str(next_agency.id)],
                         countdown=300
                     )
+                elif next_agency.dispatch_mode == DispatchMode.AUTO:
+                    from visits.services.dispatch_service import auto_dispatch_to_nurses
+                    success = auto_dispatch_to_nurses(visit.id, next_agency.id)
+                    if not success:
+                        logger.warning(f"Rerouting Visit {visit.id} to {next_agency.id} (AUTO) found no nurses. Bouncing to next.")
+                        re_route_visit.delay(str(visit.id), str(next_agency.id))
                 
                 # Notify new agency
                 try:

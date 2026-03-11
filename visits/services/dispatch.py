@@ -37,77 +37,24 @@ class DispatchEngine:
 
     def _handle_auto_dispatch(self, visit: Visit):
         """
-        Finds all eligible nurses within the agency and broadcasts the request to them.
+        Uses PostGIS spatial engine to find the 5 nearest nurses and create auto-dispatch offers.
         """
-        agency = visit.agency
+        from django.utils import timezone
+        from visits.services.dispatch_service import auto_dispatch_to_nurses
+        from visits.tasks import re_route_visit
         
-        # 1. Find all active and verified nurses belonging to this agency
-        # We also filter by those who are "is_available"
-        eligible_nurses = NurseProfile.objects.filter(
-            agency=agency,
-            is_available=True,
-            verification_status=VerificationStatus.VERIFIED
-        )
+        # Set the routing timestamp
+        visit.routed_at = timezone.now()
+        visit.save(update_fields=['routed_at', 'updated_at'])
 
-        if not eligible_nurses.exists():
-            logger.warning("No eligible nurses found for agency %s to handle visit %s", agency.id, visit.id)
-            # In a real system, we might notify the agency admin that no nurses are available
-            self._notify_agency_admin(visit, "no_nurses_available")
-            return
-
-        # 2. Optionally filter by proximity using GeoMatchingService
-        # For Tier 2 B2B2C, we broadcast to ALL agency nurses in the area.
-        if not visit.location:
-            logger.warning("Visit %s has no location set. Skipping geo-filtering.", visit.id)
-            candidate_ids = eligible_nurses.values_list('id', flat=True)
-            final_nurses = eligible_nurses.filter(id__in=candidate_ids)
-        else:
-            # We'll use the patient's location.
-            lat, lng = visit.location.y, visit.location.x
-            
-            # We can limit to a reasonable radius (e.g. 15km) even if they are in the agency polygon
-            candidates = self.geo_service.find_candidates(lat, lng, radius_km=15.0)
-            candidate_ids = [c['nurse_id'] for c in candidates]
-            
-            # Intersect agency nurses with nearby nurses
-            final_nurses = eligible_nurses.filter(id__in=candidate_ids)
-            
-            if not final_nurses.exists():
-                # Fallback to all agency staff if none are in the "immediate" radius? 
-                # Or just use the nearest one.
-                final_nurses = eligible_nurses[:5] # Notify top 5 as fallback
-
-        # 3. Broadcast to nurses via WebSockets
-        from visits.serializers import VisitResponseSerializer
-        data = {
-            "type": "visit_request",
-            "data": {
-                "visit": VisitResponseSerializer(visit).data,
-                "expires_in": 60 # 60 seconds to accept
-            }
-        }
-
-        for nurse in final_nurses:
-            group_name = f"nurse_{nurse.id}"
-            try:
-                async_to_sync(self.channel_layer.group_send)(
-                    group_name,
-                    {
-                        "type": "visit.request",
-                        "data": data["data"]
-                    }
-                )
-                logger.debug("Broadcasted visit %s to nurse %s", visit.id, nurse.id)
-            except Exception as e:
-                # Log but don't fail the dispatch if WebSocket fails
-                logger.error(
-                    "Failed to broadcast visit %s to nurse %s via WebSocket: %s",
-                    visit.id, nurse.id, str(e)
-                )
-                continue  # Continue with other nurses
-
-        # 4. Also notify agency admin that auto-dispatch is in progress
+        success = auto_dispatch_to_nurses(visit.id, visit.agency_id)
+        
+        # Notify agency admin
         self._notify_agency_admin(visit, "auto_dispatch_started")
+
+        if not success:
+            logger.warning("Auto-dispatch found zero nurses for visit %s. Triggering immediate re-route.", visit.id)
+            re_route_visit.delay(str(visit.id), str(visit.agency_id))
 
     def _handle_manual_dispatch(self, visit: Visit):
         """

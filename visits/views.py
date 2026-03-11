@@ -4,7 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
-from django.db import transaction
+from django.db import transaction, OperationalError
 
 from users.models import UserRole, NurseProfile
 from .models import Visit, VisitStatus, ServiceType
@@ -405,6 +405,14 @@ class NurseRespondOfferView(APIView):
             offer.status = OfferStatus.REJECTED
             offer.responded_at = now
             offer.save(update_fields=["status", "responded_at"])
+            
+            # EARLY RE-ROUTE: If no more PENDING offers, re-route immediately
+            from visits.tasks import re_route_visit
+            visit = offer.visit
+            if not DispatchOffer.objects.filter(visit=visit, status=OfferStatus.PENDING).exists():
+                logger.info(f"All offers rejected/expired for visit {visit.id}. Immediate re-route triggered.")
+                re_route_visit.delay(str(visit.id), str(visit.agency_id))
+                
             return Response(
                 {"detail": _("تم رفض العرض.")},
                 status=status.HTTP_200_OK,
@@ -413,9 +421,9 @@ class NurseRespondOfferView(APIView):
         # ── ACCEPT flow with race condition guard ──
         try:
             with transaction.atomic():
-                # Lock the offer row
+                # Lock the offer row with nowait=True to instantly reject concurrent requests
                 locked_offer = (
-                    DispatchOffer.objects.select_for_update()
+                    DispatchOffer.objects.select_for_update(nowait=True)
                     .get(id=offer_id, status=OfferStatus.PENDING)
                 )
 
@@ -427,7 +435,7 @@ class NurseRespondOfferView(APIView):
                 # Transition the visit
                 visit = locked_offer.visit
                 visit.nurse = nurse_profile
-                visit.status = VisitStatus.ACCEPTED
+                visit.transition_to(VisitStatus.ACCEPTED)
                 visit.save(update_fields=["nurse", "status", "updated_at"])
 
                 # Expire all other offers for this visit
@@ -439,6 +447,12 @@ class NurseRespondOfferView(APIView):
             # Another nurse already accepted — race condition handled
             return Response(
                 {"detail": _("العرض لم يعد متاحاً. ممرضة أخرى قبلت الزيارة.")},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except OperationalError:
+            # Lock could not be acquired instantly due to nowait=True
+            return Response(
+                {"detail": _("عفواً، ممرضة أخرى تقوم بقبول هذا العرض الآن.")},
                 status=status.HTTP_409_CONFLICT,
             )
 

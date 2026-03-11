@@ -1,8 +1,17 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
 
-from .models import EstimateLog, PricingFactor, ServiceType, Transaction, Visit
+from .models import EstimateLog, PricingFactor, ServiceType, Transaction, Visit, DispatchOffer
 
+
+class DispatchOfferInline(admin.TabularInline):
+    model = DispatchOffer
+    extra = 0
+    readonly_fields = ("nurse", "status", "expires_at", "responded_at", "created_at")
+    can_delete = False
+
+    def has_add_permission(self, request, obj=None):
+        return False
 
 @admin.register(Visit)
 class VisitAdmin(admin.ModelAdmin):
@@ -21,6 +30,8 @@ class VisitAdmin(admin.ModelAdmin):
         "id",
         "created_at",
         "updated_at",
+        "routed_at",
+        "reroute_attempts",
         "base_price",
         "time_multiplier",
         "distance_km",
@@ -29,6 +40,7 @@ class VisitAdmin(admin.ModelAdmin):
         "final_price",
     )
     raw_id_fields = ("patient", "nurse", "agency")
+    inlines = [DispatchOfferInline]
     ordering = ("-created_at",)
 
     fieldsets = (
@@ -63,7 +75,7 @@ class VisitAdmin(admin.ModelAdmin):
         (
             _("Metadata"),
             {
-                "fields": ("id", "reroute_attempts", "created_at", "updated_at"),
+                "fields": ("id", "routed_at", "reroute_attempts", "created_at", "updated_at"),
                 "classes": ("collapse",),
             },
         ),
