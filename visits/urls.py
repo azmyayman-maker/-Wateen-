@@ -10,7 +10,7 @@ from .views import (
     VisitTransitionView,
     PatientRequestVisitView,
 )
-from .dispatch_views import ManualDispatchView
+from .dispatch_views import ManualDispatchView, VisitQueueView, AvailableNursesView
 from .dashboard_views import AgencyDashboardOverviewView
 from .geo_views import GeoDiagnosticsView
 from .admin_views import DispatchAnalyticsAPIView
@@ -37,6 +37,8 @@ urlpatterns = [
     path("nurse/respond-offer/", NurseRespondOfferView.as_view(), name="nurse_respond_offer"),
     
     # Agency/Dispatch endpoints
+    path("agency/visit-queue/", VisitQueueView.as_view(), name="agency_visit_queue"),
+    path("agency/available-nurses/", AvailableNursesView.as_view(), name="agency_available_nurses"),
     path("agency/<uuid:agency_id>/dispatch/manual/", ManualDispatchView.as_view(), name="agency_dispatch_manual"),
     path("agency/<uuid:agency_id>/dashboard/overview/", AgencyDashboardOverviewView.as_view(), name="agency_dashboard_overview"),
 

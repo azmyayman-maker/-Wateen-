@@ -141,8 +141,84 @@ class MockPaymentResponseSerializer(serializers.Serializer):
     previous_status = serializers.CharField()
 
 
-# ─── Nurse-Side Serializers ───────────────────────────────────────────────────
+# ─── Agency Dashboard Serializers ─────────────────────────────────────────────
 
+
+class VisitQueueSerializer(serializers.Serializer):
+    """Output serializer for agency visit queue."""
+
+    id = serializers.UUIDField(read_only=True)
+    patient_district = serializers.SerializerMethodField()
+    service_type_name = serializers.SerializerMethodField()
+    urgency = serializers.CharField(read_only=True)
+    urgency_order = serializers.SerializerMethodField()
+    final_price = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
+    remaining_seconds = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(read_only=True)
+
+    def get_patient_district(self, obj) -> str:
+        """Return a masked location (district or generic placeholder)."""
+        if getattr(obj, "patient", None) and obj.patient.address_text:
+            # Return the first line/part of the address as a masked district
+            return str(obj.patient.address_text.split("\n")[0].split(",")[0])
+        return str(_("منطقة غير محددة"))
+
+    def get_service_type_name(self, obj) -> str:
+        """Return service type name."""
+        if getattr(obj, "service_type", None):
+            return str(obj.service_type.name)
+        return str(_("خدمة طبية"))
+
+    def get_remaining_seconds(self, obj) -> int:
+        """Calculate remaining seconds for manual dispatch."""
+        if getattr(obj, "routed_at", None) is None:
+            return 0
+        from django.utils import timezone
+
+        elapsed = (timezone.now() - obj.routed_at).total_seconds()
+        return max(0, int(300 - elapsed))
+
+    def get_urgency_order(self, obj) -> int:
+        """Map urgency string to a numerical value for sorting in frontend."""
+        urgency_val = str(getattr(obj, "urgency", "")).upper()
+        mapping = {
+            "SOS": 1,
+            "CRITICAL": 2,
+            "HIGH": 3,
+            "MEDIUM": 4,
+            "LOW": 5
+        }
+        return mapping.get(urgency_val, 99)
+
+
+class ManualDispatchRequestSerializer(serializers.Serializer):
+    """Input serializer for manual dispatch action."""
+
+    visit_id = serializers.UUIDField(
+        required=True,
+        help_text=_("معرّف الزيارة"),
+    )
+    nurse_id = serializers.UUIDField(
+        required=True,
+        help_text=_("معرّف الممرض/ة"),
+    )
+
+
+class AvailableNurseSerializer(serializers.Serializer):
+    """Output serializer for available nurses in agency."""
+
+    user_id = serializers.UUIDField(source="user.id", read_only=True)
+    full_name = serializers.SerializerMethodField()
+    specializations = serializers.JSONField(read_only=True)
+    is_available = serializers.BooleanField(read_only=True)
+
+    def get_full_name(self, obj) -> str:
+        if getattr(obj, "user", None):
+            return str(obj.user.get_full_name())
+        return str(_("ممرض غير معروف"))
+
+
+# ─── Nurse-Side Serializers ───────────────────────────────────────────────────
 
 class NurseToggleSerializer(serializers.Serializer):
     """Input serializer for toggling nurse availability."""

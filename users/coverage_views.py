@@ -9,7 +9,6 @@ from rest_framework.exceptions import ValidationError
 from .models import AgencyProfile
 from .permissions import IsAgencyAdminOrSuperAdmin
 from .agency_serializers import AgencyProfileSerializer
-from visits.tasks import re_evaluate_pending_visits
 from visits.models import Visit, VisitStatus
 
 class AgencyCoverageUpdateView(generics.GenericAPIView):
@@ -109,7 +108,6 @@ class AgencyCoverageUpdateView(generics.GenericAPIView):
         with transaction.atomic():
             agency.coverage_polygon = geom
             agency.save(update_fields=['coverage_polygon', 'updated_at'])
-            transaction.on_commit(lambda aid=str(agency.id): re_evaluate_pending_visits.delay(aid))
             
         return Response(
             {"detail": "Coverage area updated successfully."}, 
@@ -148,6 +146,5 @@ class AgencyCoverageUpdateView(generics.GenericAPIView):
                 
             agency.coverage_polygon = None
             agency.save(update_fields=['coverage_polygon', 'updated_at'])
-            transaction.on_commit(lambda aid=str(agency.id): re_evaluate_pending_visits.delay(aid))
             
         return Response(status=status.HTTP_204_NO_CONTENT)
