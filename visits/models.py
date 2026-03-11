@@ -6,6 +6,8 @@ from django.core.exceptions import ValidationError
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from users.models import NurseProfile
+
 
 
 class ServiceType(models.Model):
@@ -282,6 +284,12 @@ class Visit(models.Model):
         _("محاولات إعادة التوجيه"),
         default=0,
         help_text=_("عدد محاولات إعادة توجيه الزيارة إلى وكالات أخرى"),
+    )
+    routed_at = models.DateTimeField(
+        _("وقت التوجيه للوكالة"),
+        null=True,
+        blank=True,
+        help_text=_("الوقت الذي تم فيه توجيه الزيارة إلى الوكالة الحالية"),
     )
 
     class Meta:

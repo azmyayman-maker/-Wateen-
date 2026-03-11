@@ -4,9 +4,13 @@ from rest_framework.permissions import IsAuthenticated
 from django.db import transaction
 
 from visits.models import Visit, VisitStatus
-from users.models import NurseProfile
+from users.models import NurseProfile, VerificationStatus
 from users.permissions import IsAgencyAdminOrSuperAdmin
-from .serializers import VisitResponseSerializer
+from .serializers import (
+    VisitResponseSerializer, 
+    VisitQueueSerializer,
+    AvailableNurseSerializer
+)
 
 class ManualDispatchView(generics.GenericAPIView):
     """
@@ -86,3 +90,62 @@ class ManualDispatchView(generics.GenericAPIView):
             "detail": "Nurse assigned successfully.",
             "visit_status": visit.status
         })
+
+
+class VisitQueueView(generics.ListAPIView):
+    """
+    GET /api/v1/visits/queue/
+    """
+    permission_classes = [IsAuthenticated, IsAgencyAdminOrSuperAdmin]
+    serializer_class = VisitQueueSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        # SuperAdmin can optionally filter by agency or see all if not filtering
+        if user.is_superadmin:
+            agency_id = self.request.query_params.get('agency_id')
+            if agency_id:
+                return Visit.objects.filter(agency_id=agency_id, status=VisitStatus.PENDING_AGENCY)
+            return Visit.objects.filter(status=VisitStatus.PENDING_AGENCY)
+        
+        # Regular Agency Admin
+        user_agency = getattr(user, 'agency', None)
+        if not user_agency:
+            return Visit.objects.none()
+            
+        return Visit.objects.filter(agency=user_agency, status=VisitStatus.PENDING_AGENCY)
+
+
+class AvailableNursesView(generics.ListAPIView):
+    """
+    GET /api/v1/visits/available-nurses/
+    """
+    permission_classes = [IsAuthenticated, IsAgencyAdminOrSuperAdmin]
+    serializer_class = AvailableNurseSerializer
+
+    def get_queryset(self):
+        user = self.request.user
+        
+        if user.is_superadmin:
+            agency_id = self.request.query_params.get('agency_id')
+            if agency_id:
+                return NurseProfile.objects.filter(
+                    agency_id=agency_id, 
+                    is_available=True, 
+                    verification_status=VerificationStatus.VERIFIED
+                )
+            return NurseProfile.objects.filter(
+                is_available=True, 
+                verification_status=VerificationStatus.VERIFIED
+            )
+            
+        user_agency = getattr(user, 'agency', None)
+        if not user_agency:
+            return NurseProfile.objects.none()
+            
+        return NurseProfile.objects.filter(
+            agency=user_agency, 
+            is_available=True, 
+            verification_status=VerificationStatus.VERIFIED
+        )

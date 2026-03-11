@@ -113,6 +113,23 @@ class DispatchEngine:
         """
         Notifies the agency admin that a new visit is awaiting manual nurse assignment.
         """
+        from django.utils import timezone
+        from visits.tasks import re_route_visit
+
+        # Set the routing timestamp
+        visit.routed_at = timezone.now()
+        visit.save(update_fields=['routed_at', 'updated_at'])
+
+        # Schedule the escalation timer (300 seconds)
+        re_route_visit.apply_async(
+            args=[str(visit.id), str(visit.agency_id)],
+            countdown=300
+        )
+        logger.info(
+            "Scheduled escalation timer for visit %s at agency %s (300s countdown)",
+            visit.id, visit.agency_id
+        )
+
         self._notify_agency_admin(visit, "manual_assignment_required")
 
     def _notify_agency_admin(self, visit: Visit, alert_type: str):
