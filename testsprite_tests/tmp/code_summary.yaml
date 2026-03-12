@@ -3,37 +3,38 @@ type: backend
 tech_stack:
   - Python
   - Django
-  - Django REST Framework
   - PostGIS
+  - Celery
+  - Redis
 routes:
+  - path: /api/v1/visits/request/
+    file: visits/request_views.py
+    auth_required: true
+    description: Create visit request
   - path: /api/v1/visits/estimate/
     file: visits/api.py
     auth_required: false
-    description: Get price estimate for a service visit
-  - path: /api/v1/payments/webhook/mock/
-    file: visits/api.py
-    auth_required: false
-    description: Mock payment webhook for testing
+    description: Get price estimate
+  - path: /api/v1/visits/nurse/respond-offer/
+    file: visits/views.py
+    auth_required: true
+    description: Respond to dispatch offer
 features:
-  - name: Validating Pricing Engine Calculation
-    description: Calculate price breakdown based on base_price, distance_fee, and time_multiplier
+  - name: Auto-Dispatch
+    description: Spatial matching and offer-based dispatching
     files:
-      - visits/api.py
-      - visits/services/pricing.py
-    entry_route: /api/v1/visits/estimate/
-    user_interactions: []
+      - visits/services/dispatch.py
+      - visits/tasks.py
     api_calls:
       - method: POST
-        endpoint: /api/v1/visits/estimate/
-    auth_required: false
-  - name: Visit Lifecycle
-    description: Validating visit lifecycle state transitions from PENDING to COMPLETED
+        endpoint: /api/v1/visits/request/
+    auth_required: true
+  - name: Price Immutability
+    description: Locked pricing fields in Visit model
     files:
       - visits/models.py
-    entry_route: /api/v1/payments/webhook/mock/
-    user_interactions: []
-    api_calls:
-      - method: POST
-        endpoint: /api/v1/payments/webhook/mock/
-    auth_required: false
-known_limitations: []
+    auth_required: true
+known_limitations:
+  - issue: Environment terminal delays
+    location: system
+    impact: Background commands take longer to return output

@@ -150,30 +150,34 @@ class TestVisits:
     def test_estimate_visit_price(self, api_client, auth_tokens, service_type):
         """TC007: Test visit price estimation"""
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {auth_tokens['access']}")
-        payload = {
-            "service_id": str(service_type.id),
+        estimate_payload = {
+            "service_type_id": str(service_type.id),
             "latitude": 30.0444,
-            "longitude": 31.2357
+            "longitude": 31.2357,
+            "urgency": "low"
         }
-        response = api_client.post('/api/v1/visits/estimate/', payload)
+        response = api_client.post("/api/v1/visits/estimate/", estimate_payload, format="json")
         assert response.status_code == status.HTTP_200_OK
-        assert 'total' in response.data
-        assert 'breakdown' in response.data
+        assert "breakdown" in response.data
+        assert "final_price" in response.data["breakdown"]
 
     def test_create_visit_request(self, api_client, auth_tokens, service_type):
         """TC008: Test visit request creation"""
         api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {auth_tokens['access']}")
-        payload = {
-            "service_type": str(service_type.id),
+        request_payload = {
+            "service_type_id": str(service_type.id),
             "latitude": 30.0444,
             "longitude": 31.2357,
-            "notes": "Urgent visit",
-            "vitals_consent": True
+            "urgency": "low",
+            "notes": "Test visit request"
         }
-        response = api_client.post('/api/v1/visits/request/', payload, format='json')
+        response = api_client.post("/api/v1/visits/request/", request_payload, format="json")
         assert response.status_code == status.HTTP_201_CREATED
-        assert 'id' in response.data
-        assert response.data['status'] == 'PENDING'
+        assert "visit" in response.data
+        assert response.data["visit"]["id"] is not None
+        assert response.data["visit"]["status"].lower() == "pending_agency"
+        # Store visit_id for potential subsequent tests if needed, though not used in this snippet
+        # visit_id = response.data["visit"]["id"]
 
     def test_payment_webhook_mock(self, api_client, auth_tokens, service_type, patient_user):
         """TC009: Test mock payment webhook"""
