@@ -2,7 +2,7 @@ import subprocess
 import sys
 import os
 
-LOG_PATH = r"C:\Users\AdminOS\.gemini\antigravity\brain\c520f195-4693-4ecd-9a3e-1fef7eba3bb1\diag_report.txt"
+LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "diag_report.txt")
 
 def log(msg):
     with open(LOG_PATH, "a", encoding="utf-8") as f:

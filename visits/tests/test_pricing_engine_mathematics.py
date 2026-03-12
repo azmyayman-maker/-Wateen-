@@ -130,8 +130,7 @@ class TestP4T5SurgeCapEnforcement:
         
         strategy = RuleBasedPricingStrategy()
         
-        # Test with high surge value - the service should handle it
-        # Note: Current implementation doesn't cap, but this test validates behavior
+        # Test with high surge value - the service should handle it and cap it at 3.0
         dt = timezone.now().replace(hour=14)  # Daytime
         
         result = strategy.calculate_price(
@@ -141,12 +140,12 @@ class TestP4T5SurgeCapEnforcement:
             ai_surge_coefficient=Decimal("5.0")
         )
         
-        # The calculation should complete without error
+        # The calculation should complete securely and cap the multiplier at 3.0
         assert result.final_price > Decimal("0")
         
         # Manual calculation for verification:
-        # P = (200 + 10*50) * 1.0 * 5.0 = 700
-        expected = (Decimal("200") + Decimal("10") * Decimal("50")) * Decimal("1.0") * Decimal("5.0")
+        # P = (200 + 10*50) * 1.0 * 3.0 = 2100 (since 5.0 is capped to 3.0)
+        expected = (Decimal("200") + Decimal("10") * Decimal("50")) * Decimal("1.0") * Decimal("3.0")
         assert result.final_price == expected.quantize(Decimal("0.01"))
 
     def test_surge_below_cap_unchanged(self, db):
@@ -176,7 +175,7 @@ class TestP4T5SurgeCapEnforcement:
 
 
 class TestP4T5NightMultiplier:
-    """P4-T5 US3: Validates night shift multiplier (1.2x) between 22:00-06:00 Cairo time."""
+    """P4-T5 US3: Validates night shift multiplier (1.5x) between 22:00-06:00 Cairo time."""
 
     def test_night_multiplier_at_23_00_via_service(self, db):
         """US3 AC6: Night premium applies at 23:00 Cairo time via actual pricing service."""

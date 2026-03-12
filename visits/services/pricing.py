@@ -200,6 +200,9 @@ class RuleBasedPricingStrategy(PricingStrategy):
         
         if ai_surge_coefficient is not None:
             ai_surge_coefficient = Decimal(str(ai_surge_coefficient))
+            if ai_surge_coefficient > Decimal("3.0"):
+                logger.warning("Surge coefficient %.2f exceeds max 3.0. Capping.", ai_surge_coefficient)
+                ai_surge_coefficient = Decimal("3.0")
         else:
             ai_surge_coefficient = Decimal("1.0")
 
