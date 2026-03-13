@@ -43,3 +43,48 @@ def allow_gis_exceptions(request):
         marker = request.node.get_closest_marker("gis")
         if marker is not None:
             pytest.skip("GIS tests require GDAL library")
+
+
+# ============================================================================
+# P4-T5: Dispatch & Pricing QA Fixtures
+# ============================================================================
+
+
+@pytest.fixture
+def api_client():
+    """DRF API client for testing API endpoints."""
+    from rest_framework.test import APIClient
+
+    return APIClient()
+
+
+@pytest.fixture
+def overlapping_agencies():
+    """Fixture providing 3 agencies with overlapping coverage polygons."""
+    from tests.fixtures.dispatch_pricing_fixtures import create_overlapping_agencies
+
+    return create_overlapping_agencies()
+
+
+@pytest.fixture
+def concurrent_offers(num_nurses=10):
+    """Fixture providing visit with multiple pending offers for concurrency tests."""
+    from tests.fixtures.dispatch_pricing_fixtures import create_concurrent_offers
+
+    return create_concurrent_offers(num_nurses=num_nurses)
+
+
+@pytest.fixture
+def pricing_test_matrix():
+    """Fixture providing known input/output pairs for pricing formula tests."""
+    from tests.fixtures.dispatch_pricing_fixtures import PRICING_TEST_MATRIX
+
+    return PRICING_TEST_MATRIX
+
+
+@pytest.fixture
+def quality_score_weights():
+    """Fixture providing QualityScore formula weights."""
+    from tests.fixtures.dispatch_pricing_fixtures import QUALITY_SCORE_WEIGHTS
+
+    return QUALITY_SCORE_WEIGHTS

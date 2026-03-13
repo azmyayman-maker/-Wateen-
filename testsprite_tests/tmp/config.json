@@ -2,5 +2,15 @@
   "status": "commited",
   "type": "frontend",
   "scope": "codebase",
-  "localEndpoint": "http://localhost:3000"
+  "localEndpoint": "http://localhost:3000",
+  "executionArgs": {
+    "projectName": "Wateen",
+    "projectPath": "d:\\projects\\Wateen",
+    "testIds": [],
+    "additionalInstruction": "Run the existing tests in d:\\projects\\Wateen\\testsprite_tests\\test_testsprite_backend.py. I have already fixed the payload and status mismatches. Ensure you use the current file contents.",
+    "serverMode": "development",
+    "envs": {
+      "API_KEY": "${API_KEY}"
+    }
+  }
 }
