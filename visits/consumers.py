@@ -311,7 +311,7 @@ class AgencyDashboardConsumer(AsyncJsonWebsocketConsumer):
         except KeyError:
             url_agency_id = None
 
-        if not (user and user.is_authenticated and agency_id):
+        if not (user and getattr(user, 'is_authenticated', False) and getattr(user, 'is_agency_admin', False) and agency_id):
             await self.close(code=4401)
             return
 
@@ -436,7 +436,7 @@ class VisitConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _verify_visit_access(self, user: CustomUser, visit_id: str) -> bool:
         try:
-            visit = Visit.objects.get(id=visit_id)
+            visit = Visit.objects.select_related('patient', 'nurse', 'agency').get(id=visit_id)
         except Visit.DoesNotExist:
             return False
 

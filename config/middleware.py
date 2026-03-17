@@ -73,7 +73,7 @@ class JWTAuthMiddleware:
                 "jwt",
             ):
                 token = protocols[1]
-            elif len(protocols) == 1 and len(protocols[0]) > 20:
+            elif len(protocols) == 1 and len(protocols[0].split(".")) == 3:
                 token = protocols[0]
 
         if token:
