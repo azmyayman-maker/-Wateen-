@@ -13,7 +13,7 @@ from visits.consumers import AgencyDashboardConsumer, VisitConsumer
 def get_user_token(user):
     token = AccessToken.for_user(user)
     if getattr(user, "agency_id", None):
-        token["agency_id"] = str(user.agency_id)
+        token["agency_id"] = str(getattr(user, "agency_id", ""))
     return str(token)
 
 @pytest.fixture
@@ -65,7 +65,11 @@ async def test_jwt_auth_middleware_invalid_token():
         pass
     
     application = JWTAuthMiddleware(dummy_app)
-    communicator = WebsocketCommunicator(application, "/ws/test/?token=invalid.jwt.token")
+    communicator = WebsocketCommunicator(
+        application, 
+        "/ws/test/",
+        subprotocols=["access_token", "invalid.jwt.token"]
+    )
     connected, subprotocol = await communicator.connect()
     
     assert not connected
@@ -82,7 +86,11 @@ async def test_jwt_auth_middleware_valid_token(agency_admin_user):
         await send({"type": "websocket.accept"})
         
     application = JWTAuthMiddleware(dummy_app)
-    communicator = WebsocketCommunicator(application, f"/ws/test/?token={token}")
+    communicator = WebsocketCommunicator(
+        application, 
+        "/ws/test/",
+        subprotocols=["access_token", token]
+    )
     connected, subprotocol = await communicator.connect()
     
     assert connected
@@ -103,7 +111,11 @@ async def test_agency_dashboard_consumer_valid(agency_admin_user):
     ]))
     
     # User belongs to the agency requested in the URL
-    communicator = WebsocketCommunicator(application, f"/ws/agency/{agency.id}/dashboard/?token={token}")
+    communicator = WebsocketCommunicator(
+        application, 
+        f"/ws/agency/{agency.id}/dashboard/",
+        subprotocols=["access_token", token]
+    )
     connected, subprotocol = await communicator.connect()
     
     assert connected
@@ -121,7 +133,11 @@ async def test_agency_dashboard_consumer_cross_tenant_rejection(agency_admin_use
     ]))
     
     # User belongs to agency A, but attempts to connect to agency B
-    communicator = WebsocketCommunicator(application, f"/ws/agency/{other_agency_id}/dashboard/?token={token}")
+    communicator = WebsocketCommunicator(
+        application, 
+        f"/ws/agency/{other_agency_id}/dashboard/",
+        subprotocols=["access_token", token]
+    )
     connected, subprotocol = await communicator.connect()
     
     assert not connected
@@ -139,7 +155,11 @@ async def test_agency_dashboard_consumer_patient_rejection(patient_user, agency_
     ]))
     
     # Patient attempting to access B2B dashboard
-    communicator = WebsocketCommunicator(application, f"/ws/agency/{agency.id}/dashboard/?token={token}")
+    communicator = WebsocketCommunicator(
+        application, 
+        f"/ws/agency/{agency.id}/dashboard/",
+        subprotocols=["access_token", token]
+    )
     connected, subprotocol = await communicator.connect()
     
     assert not connected

@@ -28,21 +28,8 @@ def get_user_and_agency_from_token(token: str) -> Tuple[object, Optional[str]]:
         return AnonymousUser(), None
 
 
-def extract_token_from_query_string(query_string: bytes) -> Optional[str]:
-    """
-    Extract JWT token from WebSocket query string (ws://...?token=xxx).
-
-    SECURITY NOTE: Query string tokens are acceptable for WebSockets because
-    browsers cannot attach custom headers during the WebSocket handshake.
-    Token expiry is strictly enforced. Logging middleware should sanitize
-    URLs containing 'token' parameter before writing to disk.
-    """
-    decoded = query_string.decode("utf-8")
-    parsed = parse_qs(decoded)
-    for key in ("token", "access_token", "jwt"):
-        if key in parsed and parsed[key]:
-            return parsed[key][0]
-    return None
+# Removed extract_token_from_query_string due to medical privacy risks.
+# Tokens should exclusively be passed via headers (Authorization or Sec-WebSocket-Protocol)
 
 
 class JWTAuthMiddleware:
@@ -52,7 +39,6 @@ class JWTAuthMiddleware:
     Extracts token from:
     1. Authorization header (Bearer <token>)
     2. Sec-WebSocket-Protocol header
-    3. Query string (ws://...?token=xxx) - for browser WebSocket limitation
 
     Close Codes:
     - 4401: Authentication failure (missing/invalid/expired token)
@@ -70,8 +56,6 @@ class JWTAuthMiddleware:
 
         headers = dict(scope.get("headers", []))
         token = None
-
-        token = extract_token_from_query_string(scope.get("query_string", b""))
 
         if not token and b"authorization" in headers:
             auth_header = headers[b"authorization"].decode()

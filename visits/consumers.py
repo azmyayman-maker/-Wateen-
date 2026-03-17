@@ -434,25 +434,25 @@ class VisitConsumer(AsyncJsonWebsocketConsumer):
         await self.send_json({"type": "gps_update", "data": data})
 
     @database_sync_to_async
-    def _verify_visit_access(self, user, visit_id):
+    def _verify_visit_access(self, user: CustomUser, visit_id: str) -> bool:
         try:
             visit = Visit.objects.get(id=visit_id)
         except Visit.DoesNotExist:
             return False
 
-        if getattr(user, 'is_agency_admin', False) and str(getattr(user, 'agency_id', '')) == str(visit.agency_id):
+        if getattr(user, 'is_agency_admin', False) and visit.agency_id and str(getattr(user, 'agency_id', '')) == str(visit.agency_id):
             return True
 
         if getattr(user, 'is_patient', False):
             try:
-                if hasattr(user, 'patientprofile') and str(visit.patient_id) == str(user.patientprofile.id):
+                if hasattr(user, 'patient_profile') and str(visit.patient_id) == str(user.patient_profile.id):
                     return True
             except Exception:
                 pass
 
         if getattr(user, 'is_nurse', False):
             try:
-                if hasattr(user, 'nurseprofile') and str(visit.nurse_id) == str(user.nurseprofile.id):
+                if hasattr(user, 'nurse_profile') and str(visit.nurse_id) == str(user.nurse_profile.id):
                     return True
             except Exception:
                 pass
