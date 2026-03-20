@@ -12,6 +12,13 @@ logger = logging.getLogger(__name__)
 User = get_user_model()
 
 
+def _mask_token(token: str) -> str:
+    """Return a masked version of the token for safe logging."""
+    if token and len(token) > 8:
+        return f"{token[:8]}..."
+    return "[token_redacted]"
+
+
 @database_sync_to_async
 def get_user_and_agency_from_token(token: str) -> Tuple[object, Optional[str]]:
     """
@@ -24,7 +31,11 @@ def get_user_and_agency_from_token(token: str) -> Tuple[object, Optional[str]]:
         agency_id = access_token.get("agency_id", None)
         return user, agency_id
     except (TokenError, User.DoesNotExist, KeyError) as e:
-        logger.debug("WebSocket auth failed: %s", e)
+        logger.debug(
+            "WebSocket auth failed for token=%s: %s",
+            _mask_token(token) if token else "none",
+            e,
+        )
         return AnonymousUser(), None
 
 
@@ -79,7 +90,10 @@ class JWTAuthMiddleware:
         if token:
             user, agency_id = await get_user_and_agency_from_token(token)
             if isinstance(user, AnonymousUser):
-                logger.debug("WebSocket auth failed: invalid or expired token")
+                logger.debug(
+                    "WebSocket auth failed: invalid or expired token=%s",
+                    _mask_token(token),
+                )
                 scope["user"] = AnonymousUser()
                 scope["agency_id"] = None
                 return await self.app(scope, receive, send)
