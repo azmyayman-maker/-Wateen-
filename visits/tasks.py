@@ -1,9 +1,12 @@
 from celery import shared_task
 from django.db import transaction
+from django.contrib.gis.geos import Point
+from django.core.cache import cache
 import logging
+import json
 
 from visits.models import Visit, VisitStatus
-from users.models import AgencyProfile
+from users.models import AgencyProfile, NurseProfile
 
 logger = logging.getLogger(__name__)
 
@@ -13,12 +16,8 @@ logger = logging.getLogger(__name__)
 # Their advanced routing logic is deliberately deferred to Phase 5: Real-Time Sockets.
 # The current `dispatch_visit` acts as the simple Phase 2 MVP agency assignment.
 
-@shared_task(
-    bind=True,
-    max_retries=3,
-    default_retry_delay=60,
-    queue="dispatch"
-)
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60, queue="dispatch")
 def dispatch_visit(self, visit_id: str):
     """
     Celery task spawned asynchronously post-DB commit.
@@ -34,37 +33,41 @@ def dispatch_visit(self, visit_id: str):
 
         # Find agencies whose coverage_polygon encompasses the visit location
         agencies = AgencyProfile.objects.filter(
-            coverage_polygon__contains=visit.location,
-            is_active=True
+            coverage_polygon__contains=visit.location, is_active=True
         )
 
         # Distribute logic (For now, just pick the first or create an offer layer)
         # Using simple DispatchOffer logic if it exists, or update status
         agency = agencies.first()
-        
+
         if not agency:
             # In a real system, might flag for manual review or cancel
-            logger.error(f"No active agencies found for Visit {visit_id} at {visit.location}.")
+            logger.error(
+                f"No active agencies found for Visit {visit_id} at {visit.location}."
+            )
             return
-            
+
         visit.agency = agency
         visit.status = VisitStatus.PENDING_AGENCY
-        
+
         from django.utils import timezone
+
         visit.routed_at = timezone.now()
         visit.save(update_fields=["agency", "status", "routed_at", "updated_at"])
 
         from users.models import DispatchMode
+
         if agency.dispatch_mode == DispatchMode.MANUAL:
             re_route_visit.apply_async(
-                args=[str(visit.id), str(agency.id)],
-                countdown=300
+                args=[str(visit.id), str(agency.id)], countdown=300
             )
 
         logger.info(f"Dispatched Visit {visit_id} to Agency {agency.agency_name}.")
 
     except Visit.DoesNotExist:
-        logger.error(f"Visit {visit_id} NOT FOUND inside Celery Task! Atomic commit race condition breached.")
+        logger.error(
+            f"Visit {visit_id} NOT FOUND inside Celery Task! Atomic commit race condition breached."
+        )
     except Exception as exc:
         logger.error(f"Dispatch failed for Visit {visit_id}: {exc}")
         raise self.retry(exc=exc)
@@ -79,23 +82,33 @@ def check_dispatch_timeout(self, visit_id: str):
     try:
         with transaction.atomic():
             visit = Visit.objects.select_for_update().get(id=visit_id)
-            
+
             if visit.status != VisitStatus.PENDING_AGENCY:
-                logger.info(f"Timeout check ignored for visit {visit_id}: status is {visit.status}.")
+                logger.info(
+                    f"Timeout check ignored for visit {visit_id}: status is {visit.status}."
+                )
                 return
 
-            if DispatchOffer.objects.filter(visit=visit, status=OfferStatus.ACCEPTED).exists():
-                logger.info(f"Timeout check ignored for visit {visit_id}: ACCEPTED offer exists.")
+            if DispatchOffer.objects.filter(
+                visit=visit, status=OfferStatus.ACCEPTED
+            ).exists():
+                logger.info(
+                    f"Timeout check ignored for visit {visit_id}: ACCEPTED offer exists."
+                )
                 return
 
-            pending_offers = DispatchOffer.objects.filter(visit=visit, status=OfferStatus.PENDING)
+            pending_offers = DispatchOffer.objects.filter(
+                visit=visit, status=OfferStatus.PENDING
+            )
             count = pending_offers.update(status=OfferStatus.EXPIRED)
-            
-            logger.info(f"Expired {count} pending offers for visit {visit_id} due to timeout.")
+
+            logger.info(
+                f"Expired {count} pending offers for visit {visit_id} due to timeout."
+            )
 
             if count > 0:
                 re_route_visit.delay(str(visit.id), str(visit.agency_id))
-                
+
     except Visit.DoesNotExist:
         pass
     except Exception as exc:
@@ -108,52 +121,80 @@ def re_route_visit(self, visit_id: str, agency_id: str):
     from asgiref.sync import async_to_sync
     from channels.layers import get_channel_layer
     from users.models import DispatchMode
-    
+
     try:
         with transaction.atomic():
-            visit = Visit.objects.select_for_update().get(id=visit_id)
-            if visit.status != VisitStatus.PENDING_AGENCY or str(visit.agency_id) != agency_id:
-                logger.info("Escalation timer ignored for visit %s at agency %s (status=%s, current_agency=%s)", visit_id, agency_id, visit.status, visit.agency_id)
+            visit = Visit.objects.select_for_update().select_related("patient").get(id=visit_id)
+            if (
+                visit.status != VisitStatus.PENDING_AGENCY
+                or str(visit.agency_id) != agency_id
+            ):
+                logger.info(
+                    "Escalation timer ignored for visit %s at agency %s (status=%s, current_agency=%s)",
+                    visit_id,
+                    agency_id,
+                    visit.status,
+                    visit.agency_id,
+                )
                 return
 
-            logger.info("Escalation timer fired for visit %s at agency %s", visit_id, agency_id)
-            
+            logger.info(
+                "Escalation timer fired for visit %s at agency %s", visit_id, agency_id
+            )
+
             old_agency_id = visit.agency_id
             visit.reroute_attempts += 1
-            
+
             from visits.services.matching import rank_agencies
             from visits.models import DispatchOffer
-            
+
             # Exclude currently assigned agency AND any historically offered agencies
-            tried_agency_ids = list(DispatchOffer.objects.filter(visit_id=visit_id).values_list('nurse__agency_id', flat=True).distinct())
-            
-            candidates = AgencyProfile.objects.filter(
-                coverage_polygon__contains=visit.location,
-                is_active=True,
-            ).exclude(id=old_agency_id).exclude(id__in=tried_agency_ids)
-            
+            tried_agency_ids = list(
+                DispatchOffer.objects.filter(visit_id=visit_id)
+                .values_list("nurse__agency_id", flat=True)
+                .distinct()
+            )
+
+            candidates = (
+                AgencyProfile.objects.filter(
+                    coverage_polygon__contains=visit.location,
+                    is_active=True,
+                )
+                .exclude(id=old_agency_id)
+                .exclude(id__in=tried_agency_ids)
+            )
+
             ranked = rank_agencies(candidates, visit.location, urgency=visit.urgency)
-            
+
             channel_layer = get_channel_layer()
 
             if ranked:
                 next_agency = ranked[0]["agency"]
                 visit.agency = next_agency
                 visit.routed_at = timezone.now()
-                visit.save(update_fields=["agency", "routed_at", "reroute_attempts", "updated_at"])
-                
+                visit.save(
+                    update_fields=[
+                        "agency",
+                        "routed_at",
+                        "reroute_attempts",
+                        "updated_at",
+                    ]
+                )
+
                 if next_agency.dispatch_mode == DispatchMode.MANUAL:
                     re_route_visit.apply_async(
-                        args=[str(visit.id), str(next_agency.id)],
-                        countdown=300
+                        args=[str(visit.id), str(next_agency.id)], countdown=300
                     )
                 elif next_agency.dispatch_mode == DispatchMode.AUTO:
                     from visits.services.dispatch_service import auto_dispatch_to_nurses
+
                     success = auto_dispatch_to_nurses(visit.id, next_agency.id)
                     if not success:
-                        logger.warning(f"Rerouting Visit {visit.id} to {next_agency.id} (AUTO) found no nurses. Bouncing to next.")
+                        logger.warning(
+                            f"Rerouting Visit {visit.id} to {next_agency.id} (AUTO) found no nurses. Bouncing to next."
+                        )
                         re_route_visit.delay(str(visit.id), str(next_agency.id))
-                
+
                 # Notify new agency
                 try:
                     async_to_sync(channel_layer.group_send)(
@@ -162,19 +203,28 @@ def re_route_visit(self, visit_id: str, agency_id: str):
                             "type": "visit.new",
                             "data": {
                                 "alert_type": "manual_assignment_required",
-                                "visit_id": str(visit.id)
-                            }
-                        }
+                                "visit_id": str(visit.id),
+                            },
+                        },
                     )
                 except Exception as e:
-                    logger.error("Failed to notify new agency %s via websocket: %s", next_agency.id, e)
-                    
-                logger.info("Visit %s rerouted to agency %s (attempt #%d)", visit.id, next_agency.id, visit.reroute_attempts)
+                    logger.error(
+                        "Failed to notify new agency %s via websocket: %s",
+                        next_agency.id,
+                        e,
+                    )
+
+                logger.info(
+                    "Visit %s rerouted to agency %s (attempt #%d)",
+                    visit.id,
+                    next_agency.id,
+                    visit.reroute_attempts,
+                )
             else:
                 visit.agency = None
                 visit.save(update_fields=["agency", "reroute_attempts", "updated_at"])
                 visit.transition_to(VisitStatus.CANCELLED)
-                
+
                 # Notify patient
                 try:
                     async_to_sync(channel_layer.group_send)(
@@ -183,13 +233,17 @@ def re_route_visit(self, visit_id: str, agency_id: str):
                             "type": "visit.cancelled",
                             "data": {
                                 "visit_id": str(visit.id),
-                                "reason": "No agencies available"
-                            }
-                        }
+                                "reason": "No agencies available",
+                            },
+                        },
                     )
                 except Exception as e:
-                    logger.error("Failed to notify patient %s via websocket: %s", visit.patient.user_id, e)
-                    
+                    logger.error(
+                        "Failed to notify patient %s via websocket: %s",
+                        visit.patient.user_id,
+                        e,
+                    )
+
                 logger.info("Visit %s cancelled — no agencies remaining", visit.id)
 
             # Notify old agency
@@ -200,12 +254,14 @@ def re_route_visit(self, visit_id: str, agency_id: str):
                         "type": "visit.revoked",
                         "data": {
                             "alert_type": "visit_revoked",
-                            "visit_id": str(visit.id)
-                        }
-                    }
+                            "visit_id": str(visit.id),
+                        },
+                    },
                 )
             except Exception as e:
-                logger.error("Failed to notify old agency %s via websocket: %s", old_agency_id, e)
+                logger.error(
+                    "Failed to notify old agency %s via websocket: %s", old_agency_id, e
+                )
 
     except Visit.DoesNotExist:
         logger.error(f"Visit {visit_id} NOT FOUND inside re_route_visit Task.")
@@ -213,3 +269,96 @@ def re_route_visit(self, visit_id: str, agency_id: str):
         logger.error(f"Reroute failed for Visit {visit_id}: {exc}")
         raise self.retry(exc=exc)
 
+
+@shared_task(bind=True, queue="gps")
+def flush_nurse_locations(self):
+    """
+    T007: Celery Beat task to flush nurse GPS locations from Redis to PostGIS.
+
+    Runs every 60 seconds to bulk update NurseProfile.last_location fields.
+    This reduces PostgreSQL write pressure from ~5000/sec to ~167/sec.
+
+    Data flow:
+    1. NurseGPSConsumer writes to Redis key: nurse_gps:{nurse_id}
+    2. This task scans all nurse_gps:* keys
+    3. Bulk updates NurseProfile.last_location in PostGIS
+    4. Clears processed Redis keys
+    """
+    try:
+        redis_conn = cache.client.get_client()
+
+        # Use SCAN instead of KEYS to avoid blocking Redis server
+        keys = []
+        cursor = 0
+        while True:
+            cursor, partial_keys = redis_conn.scan(
+                cursor=cursor, match="nurse_gps:*", count=100
+            )
+            keys.extend(partial_keys)
+            if cursor == 0:
+                break
+
+        if not keys:
+            logger.debug("flush_nurse_locations: No GPS keys to process")
+            return
+
+        # Issue #6: Batch read using MGET instead of loop-get
+        raw_values = redis_conn.mget(keys)
+        
+        updates = []
+        nurse_ids = []
+
+        for key, raw_data in zip(keys, raw_values):
+            if not raw_data:
+                continue
+            try:
+                key_str = key.decode() if isinstance(key, bytes) else key
+                nurse_id = key_str.split(":")[-1]
+
+                # Handle potential pickling from Django cache or raw JSON
+                # Django's redis cache typically prefixes data. If raw_data is 
+                # still encoded, we try to deserialize it.
+                try:
+                    # Try to parse as JSON first (US3/signals style)
+                    data = json.loads(raw_data)
+                except (json.JSONDecodeError, TypeError):
+                    # If it fails, it might be the pickled dict from consumer.py cache.set
+                    # We'll use cache.get for the specific key to let Django handle it
+                    # OR we can improve consumer.py to always store as JSON.
+                    # For safety, we fall back to cache.get if mget result is not JSON
+                    data = cache.get(f"nurse_gps:{nurse_id}")
+
+                if not data:
+                    continue
+
+                lat = data.get("latitude")
+                lng = data.get("longitude")
+
+                if lat is None or lng is None:
+                    continue
+
+                point = Point(float(lng), float(lat), srid=4326)
+                updates.append(NurseProfile(id=nurse_id, last_location=point))
+                nurse_ids.append(nurse_id)
+
+            except Exception as e:
+                logger.warning(
+                    "flush_nurse_locations: Failed to parse key %s: %s", key, e
+                )
+                continue
+
+        if updates:
+            NurseProfile.objects.bulk_update(updates, fields=["last_location"])
+            logger.info(
+                "flush_nurse_locations: Updated %d nurse locations in PostGIS",
+                len(updates),
+            )
+
+        for nurse_id in nurse_ids:
+            cache.delete(f"nurse_gps:{nurse_id}")
+
+        logger.debug("flush_nurse_locations: Cleared %d Redis keys", len(nurse_ids))
+
+    except Exception as exc:
+        logger.error("flush_nurse_locations failed: %s", exc)
+        raise self.retry(exc=exc)

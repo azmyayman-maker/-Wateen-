@@ -25,12 +25,14 @@ logger = logging.getLogger(__name__)
 
 # ─── Patient-Side Views ───────────────────────────────────────────────────────
 
+
 class PatientRequestVisitView(APIView):
     """
     POST /api/v1/visits/request/
-    
+
     Accepts patient visit request, executes atomic generation and triggers Celery dispatch task.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -50,45 +52,44 @@ class PatientRequestVisitView(APIView):
                 {"detail": _("ملف المريض غير موجود.")},
                 status=status.HTTP_404_NOT_FOUND,
             )
-            
+
         location = Point(
             serializer.validated_data["longitude"],
             serializer.validated_data["latitude"],
-            srid=4326
+            srid=4326,
         )
-        
+
         service_type = serializer.validated_data.get("service_type")
         if not service_type:
             service_type = ServiceType.objects.first()
             if not service_type:
                 return Response(
                     {"detail": _("لا توجد أنواع خدمات متاحة بشكل افتراضي.")},
-                    status=status.HTTP_400_BAD_REQUEST
+                    status=status.HTTP_400_BAD_REQUEST,
                 )
 
         service = RequestVisitService()
 
         distance_km = serializer.validated_data.get("distance_km")
-        
+
         try:
             visit = service.execute(
                 patient=patient_profile,
                 service_type=service_type,
                 location=location,
-                distance_km=distance_km  # Fetched from request or defaults to 5.0km
+                distance_km=distance_km,  # Fetched from request or defaults to 5.0km
             )
         except NoCoverageError as e:
-            return Response(
-                {"detail": str(e)},
-                status=status.HTTP_404_NOT_FOUND
-            )
+            return Response({"detail": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except ValidationError as e:
             return Response(
-                {"detail": list(e.messages) if hasattr(e, 'messages') else str(e)},
-                status=status.HTTP_400_BAD_REQUEST
+                {"detail": list(e.messages) if hasattr(e, "messages") else str(e)},
+                status=status.HTTP_400_BAD_REQUEST,
             )
-            
-        return Response(VisitResponseSerializer(visit).data, status=status.HTTP_201_CREATED)
+
+        return Response(
+            VisitResponseSerializer(visit).data, status=status.HTTP_201_CREATED
+        )
 
 
 # ─── Nurse-Side Views ─────────────────────────────────────────────────────────
@@ -322,13 +323,16 @@ class NurseRespondVisitView(APIView):
 
         elif action == "decline":
             # Decline is a no-op — the visit stays PENDING for other nurses
-            return Response({
-                "detail": _("تم رفض الطلب."),
-                "visit": {
-                    "id": str(visit.id),
-                    "status": visit.status,
+            return Response(
+                {
+                    "detail": _("تم رفض الطلب."),
+                    "visit": {
+                        "id": str(visit.id),
+                        "status": visit.status,
+                    },
                 },
-            }, status=status.HTTP_200_OK)
+                status=status.HTTP_200_OK,
+            )
 
 
 class NurseRespondOfferView(APIView):
@@ -340,6 +344,7 @@ class NurseRespondOfferView(APIView):
     On ACCEPT: transitions visit → ACCEPTED, expires other offers.
     On REJECT: marks offer REJECTED.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
@@ -405,14 +410,19 @@ class NurseRespondOfferView(APIView):
             offer.status = OfferStatus.REJECTED
             offer.responded_at = now
             offer.save(update_fields=["status", "responded_at"])
-            
+
             # EARLY RE-ROUTE: If no more PENDING offers, re-route immediately
             from visits.tasks import re_route_visit
+
             visit = offer.visit
-            if not DispatchOffer.objects.filter(visit=visit, status=OfferStatus.PENDING).exists():
-                logger.info(f"All offers rejected/expired for visit {visit.id}. Immediate re-route triggered.")
+            if not DispatchOffer.objects.filter(
+                visit=visit, status=OfferStatus.PENDING
+            ).exists():
+                logger.info(
+                    f"All offers rejected/expired for visit {visit.id}. Immediate re-route triggered."
+                )
                 re_route_visit.delay(str(visit.id), str(visit.agency_id))
-                
+
             return Response(
                 {"detail": _("تم رفض العرض.")},
                 status=status.HTTP_200_OK,
@@ -422,9 +432,8 @@ class NurseRespondOfferView(APIView):
         try:
             with transaction.atomic():
                 # Lock the offer row with nowait=True to instantly reject concurrent requests
-                locked_offer = (
-                    DispatchOffer.objects.select_for_update(nowait=True)
-                    .get(id=offer_id, status=OfferStatus.PENDING)
+                locked_offer = DispatchOffer.objects.select_for_update(nowait=True).get(
+                    id=offer_id, status=OfferStatus.PENDING
                 )
 
                 # Accept this offer
@@ -477,30 +486,40 @@ class NurseRespondOfferView(APIView):
         except Exception as e:
             logger.error("Failed to notify agency of offer acceptance: %s", e)
 
-        return Response({
-            "detail": _("تم قبول العرض بنجاح."),
-            "visit_id": str(visit.id),
-            "status": visit.status,
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "detail": _("تم قبول العرض بنجاح."),
+                "visit_id": str(visit.id),
+                "status": visit.status,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class VisitStatusView(APIView):
     """
     GET /api/v1/visits/<uuid:visit_id>/status/
 
-    T030: REST polling fallback for visit status.
+    T040: REST polling fallback with Redis cache-first layer.
     Returns current status, nurse location, and last update timestamp.
     Used when WebSocket connection is unavailable.
     """
+
     permission_classes = [IsAuthenticated]
 
     def get(self, request, visit_id):
         from visits.models import Visit
+        from django.core.cache import cache
+        import json
 
+        user = request.user
+
+        # T041: Authorization check must still query DB for ownership verification
+        # even when serving cached status data
         try:
-            visit = Visit.objects.select_related(
-                "nurse", "nurse__user", "agency"
-            ).get(id=visit_id)
+            visit = Visit.objects.select_related("nurse", "nurse__user", "agency").get(
+                id=visit_id
+            )
         except Visit.DoesNotExist:
             return Response(
                 {"detail": _("الزيارة غير موجودة.")},
@@ -508,10 +527,16 @@ class VisitStatusView(APIView):
             )
 
         # Permission: patient who owns the visit, or the assigned nurse, or agency admin
-        user = request.user
-        is_patient = hasattr(user, "patient_profile") and visit.patient_id == user.patient_profile.id
-        is_nurse = hasattr(user, "nurse_profile") and visit.nurse_id == getattr(user.nurse_profile, "id", None)
-        is_agency = hasattr(user, "agency") and visit.agency_id == getattr(user, "agency_id", None)
+        is_patient = (
+            hasattr(user, "patient_profile")
+            and visit.patient_id == user.patient_profile.id
+        )
+        is_nurse = hasattr(user, "nurse_profile") and visit.nurse_id == getattr(
+            user.nurse_profile, "id", None
+        )
+        is_agency = hasattr(user, "agency") and visit.agency_id == getattr(
+            user, "agency_id", None
+        )
 
         if not (is_patient or is_nurse or is_agency or user.is_staff):
             return Response(
@@ -519,6 +544,21 @@ class VisitStatusView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
+        # T040: Try Redis cache first
+        cache_key = f"visit_status:{visit_id}"
+        cached_data = cache.get(cache_key)
+
+        if cached_data:
+            try:
+                if isinstance(cached_data, str):
+                    data = json.loads(cached_data)
+                else:
+                    data = cached_data
+                return Response(data, status=status.HTTP_200_OK)
+            except (json.JSONDecodeError, TypeError):
+                pass
+
+        # Cache miss - build response from DB
         data = {
             "visit_id": str(visit.id),
             "status": visit.status,
@@ -531,18 +571,27 @@ class VisitStatusView(APIView):
             data["nurse"] = {
                 "id": str(nurse.id),
                 "name": nurse.user.get_full_name() if nurse.user else "",
-                "latitude": nurse.last_location.y if getattr(nurse, "last_location", None) else None,
-                "longitude": nurse.last_location.x if getattr(nurse, "last_location", None) else None,
+                "latitude": nurse.last_location.y
+                if getattr(nurse, "last_location", None)
+                else None,
+                "longitude": nurse.last_location.x
+                if getattr(nurse, "last_location", None)
+                else None,
             }
 
             # Try to get ETA from cache
             try:
-                from django.core.cache import cache
                 eta = cache.get(f"nurse_eta:{nurse.id}:{visit.id}")
                 if eta:
                     data["nurse"]["eta_minutes"] = eta
             except Exception:
                 pass
+
+        # Repopulate cache for next request
+        try:
+            cache.set(cache_key, json.dumps(data, default=str), timeout=120)
+        except Exception:
+            pass
 
         return Response(data, status=status.HTTP_200_OK)
 
@@ -555,6 +604,7 @@ class VisitTransitionView(APIView):
     Valid transitions: ACCEPTED → EN_ROUTE → IN_PROGRESS → COMPLETED
     Permission: Only the assigned nurse can transition.
     """
+
     permission_classes = [IsAuthenticated]
 
     def post(self, request, visit_id):
@@ -568,7 +618,9 @@ class VisitTransitionView(APIView):
             )
 
         try:
-            visit = Visit.objects.select_related("nurse", "nurse__user").get(id=visit_id)
+            visit = Visit.objects.select_related("nurse", "nurse__user").get(
+                id=visit_id
+            )
         except Visit.DoesNotExist:
             return Response(
                 {"detail": _("الزيارة غير موجودة.")},
@@ -576,8 +628,10 @@ class VisitTransitionView(APIView):
             )
 
         # Only the assigned nurse can transition
-        if not (hasattr(request.user, "nurse_profile") and
-                visit.nurse_id == request.user.nurse_profile.id):
+        if not (
+            hasattr(request.user, "nurse_profile")
+            and visit.nurse_id == request.user.nurse_profile.id
+        ):
             return Response(
                 {"detail": _("غير مصرح لك بتحديث هذه الزيارة.")},
                 status=status.HTTP_403_FORBIDDEN,
@@ -595,6 +649,7 @@ class VisitTransitionView(APIView):
         try:
             from channels.layers import get_channel_layer
             from asgiref.sync import async_to_sync
+
             channel_layer = get_channel_layer()
             if channel_layer:
                 async_to_sync(channel_layer.group_send)(
@@ -611,8 +666,11 @@ class VisitTransitionView(APIView):
         except Exception:
             pass  # Non-blocking
 
-        return Response({
-            "visit_id": str(visit.id),
-            "status": visit.status,
-            "detail": _("تم تحديث حالة الزيارة بنجاح."),
-        }, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "visit_id": str(visit.id),
+                "status": visit.status,
+                "detail": _("تم تحديث حالة الزيارة بنجاح."),
+            },
+            status=status.HTTP_200_OK,
+        )

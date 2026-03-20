@@ -237,14 +237,16 @@ class DashboardMetricsConsumer(AsyncJsonWebsocketConsumer):
 
 class NurseGPSConsumer(AsyncJsonWebsocketConsumer):
     """
-    WebSocket consumer for nurse GPS location streaming (T028/US3).
-    Receives GPS pings from nurse PWA, updates Redis geo index.
+    WebSocket consumer for nurse GPS location streaming (T020-T025/US3).
+    Receives GPS pings from nurse PWA, validates, rate-limits,
+    writes to Redis only (PostGIS deferred to Celery Beat), and broadcasts to visit room.
     """
 
     async def connect(self):
         user = self.scope.get("user")
         if user and user.is_authenticated and hasattr(user, "nurse_profile"):
             self.nurse_id = user.nurse_profile.id
+            self._last_gps_time = 0.0  # T020: Rate limiting
             self.group_name = f"nurse_gps_{self.nurse_id}"
             await self.channel_layer.group_add(self.group_name, self.channel_name)
             await self.accept()
@@ -257,8 +259,27 @@ class NurseGPSConsumer(AsyncJsonWebsocketConsumer):
             await self.channel_layer.group_discard(self.group_name, self.channel_name)
 
     async def receive_json(self, content, **_kwargs):
-        """Handle GPS ping from nurse device."""
+        """T020-T025: Handle GPS ping from nurse device with validation."""
+        import time
+        import json
+        from decimal import Decimal
+        from django.core.cache import cache
+        from django.utils import timezone
+        from channels.db import database_sync_to_async
+
         if not isinstance(content, dict):
+            return
+
+        # T021: Payload size guard - reject payloads > 1KB
+        payload_size = len(json.dumps(content))
+        if payload_size > 1024:
+            await self.send_json(
+                {
+                    "type": "gps_ack",
+                    "success": False,
+                    "error": "Payload too large",
+                }
+            )
             return
 
         lat = content.get("latitude")
@@ -269,31 +290,121 @@ class NurseGPSConsumer(AsyncJsonWebsocketConsumer):
             return
 
         try:
-            lat = float(lat)
-            lng = float(lng)
+            lat_decimal = Decimal(str(lat)).quantize(Decimal("0.000001"))
+            lng_decimal = Decimal(str(lng)).quantize(Decimal("0.000001"))
+            
+            # T022.1: Bounds validation
+            if not (-90 <= lat_decimal <= 90 and -180 <= lng_decimal <= 180):
+                await self.send_json({"error": "Coordinates out of range"})
+                return
+                
+            lat = float(lat_decimal)
+            lng = float(lng_decimal)
         except (ValueError, TypeError):
             await self.send_json({"error": "Invalid coordinates"})
             return
 
-        # Update Redis geo index
-        from channels.db import database_sync_to_async
+        # T020: Rate limiting - max 1 ping per 2 seconds (Issue #2: Redis-based for safety)
+        rate_limit_key = f"gps_rate_limit:{self.nurse_id}"
+        if not cache.add(rate_limit_key, "1", timeout=2):
+            await self.send_json(
+                {
+                    "type": "gps_ack",
+                    "success": False,
+                    "rate_limited": True,
+                    "retry_after_ms": 2000,
+                }
+            )
+            return
+        # Removed instance-level self._last_gps_time check
 
-        @database_sync_to_async
-        def _update_location():
-            from visits.services.matching import GeoMatchingService
+        # T023: Redis-only write (no PostGIS)
+        timestamp = timezone.now().isoformat()
+        redis_key = f"nurse_gps:{self.nurse_id}"
+        cache.set(
+            redis_key,
+            {
+                "latitude": lat,
+                "longitude": lng,
+                "timestamp": timestamp,
+            },
+            timeout=120,
+        )
 
-            geo = GeoMatchingService()
-            return geo.update_nurse_location(self.nurse_id, lat, lng)
+        # T024: Broadcast to visit room
+        await self._broadcast_to_visit_room(lat, lng, timestamp)
 
-        success = await _update_location()
+        # T025: Update Redis cache with nurse coordinates
+        await self._update_visit_cache(lat, lng)
+
         await self.send_json(
             {
                 "type": "gps_ack",
-                "success": success,
+                "success": True,
                 "latitude": lat,
                 "longitude": lng,
             }
         )
+
+    async def _get_active_visit_id(self):
+        """Shared helper to get active visit ID for the nurse."""
+
+        @database_sync_to_async
+        def _query():
+            from visits.models import Visit, VisitStatus
+
+            return (
+                Visit.objects.filter(
+                    nurse_id=self.nurse_id,
+                    status__in=[VisitStatus.EN_ROUTE, VisitStatus.IN_PROGRESS],
+                )
+                .values_list("id", flat=True)
+                .first()
+            )
+
+        return await _query()
+
+    async def _broadcast_to_visit_room(self, lat: float, lng: float, timestamp: str):
+        """T024: Broadcast GPS to active visit room."""
+        try:
+            visit_id = await self._get_active_visit_id()
+            if visit_id:
+                await self.channel_layer.group_send(
+                    f"visit_{visit_id}",
+                    {
+                        "type": "gps_update",
+                        "data": {
+                            "visit_id": str(visit_id),
+                            "nurse_id": str(self.nurse_id),
+                            "latitude": lat,
+                            "longitude": lng,
+                            "timestamp": timestamp,
+                        },
+                    },
+                )
+        except Exception as e:
+            logger.warning("NurseGPSConsumer: Failed to broadcast to visit room: %s", e)
+
+    async def _update_visit_cache(self, lat: float, lng: float):
+        """T025: Update Redis cache with nurse coordinates."""
+        try:
+            visit_id = await self._get_active_visit_id()
+            if visit_id:
+                import json
+
+                cache_key = f"visit_status:{visit_id}"
+                cached = cache.get(cache_key)
+                if cached:
+                    if isinstance(cached, str):
+                        cached = json.loads(cached)
+                    if isinstance(cached, dict):
+                        if "nurse" not in cached:
+                            cached["nurse"] = {}
+                        cached["nurse"]["latitude"] = lat
+                        cached["nurse"]["longitude"] = lng
+                        cache.set(cache_key, json.dumps(cached), timeout=120)
+        except Exception as e:
+            logger.warning("NurseGPSConsumer: Failed to update visit cache: %s", e)
 
 
 class AgencyDashboardConsumer(AsyncJsonWebsocketConsumer):
@@ -311,7 +422,12 @@ class AgencyDashboardConsumer(AsyncJsonWebsocketConsumer):
         except KeyError:
             url_agency_id = None
 
-        if not (user and getattr(user, 'is_authenticated', False) and getattr(user, 'is_agency_admin', False) and agency_id):
+        if not (
+            user
+            and getattr(user, "is_authenticated", False)
+            and getattr(user, "is_agency_admin", False)
+            and agency_id
+        ):
             await self.close(code=4401)
             return
 
@@ -436,23 +552,33 @@ class VisitConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def _verify_visit_access(self, user: CustomUser, visit_id: str) -> bool:
         try:
-            visit = Visit.objects.select_related('patient', 'nurse', 'agency').get(id=visit_id)
+            visit = Visit.objects.select_related("patient", "nurse", "agency").get(
+                id=visit_id
+            )
         except Visit.DoesNotExist:
             return False
 
-        if getattr(user, 'is_agency_admin', False) and visit.agency_id and str(getattr(user, 'agency_id', '')) == str(visit.agency_id):
+        if (
+            getattr(user, "is_agency_admin", False)
+            and visit.agency_id
+            and str(getattr(user, "agency_id", "")) == str(visit.agency_id)
+        ):
             return True
 
-        if getattr(user, 'is_patient', False):
+        if getattr(user, "is_patient", False):
             try:
-                if hasattr(user, 'patient_profile') and str(visit.patient_id) == str(user.patient_profile.id):
+                if hasattr(user, "patient_profile") and str(visit.patient_id) == str(
+                    user.patient_profile.id
+                ):
                     return True
             except Exception:
                 pass
 
-        if getattr(user, 'is_nurse', False):
+        if getattr(user, "is_nurse", False):
             try:
-                if hasattr(user, 'nurse_profile') and str(visit.nurse_id) == str(user.nurse_profile.id):
+                if hasattr(user, "nurse_profile") and str(visit.nurse_id) == str(
+                    user.nurse_profile.id
+                ):
                     return True
             except Exception:
                 pass
