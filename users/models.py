@@ -120,6 +120,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
         help_text=_("دور المستخدم في النظام"),
     )
 
+    preferred_language = models.CharField(
+        _("اللغة المفضلة"),
+        max_length=5,
+        choices=[("ar", _("العربية")), ("en", _("English"))],
+        default="ar",
+        help_text=_("لغة الإشعارات المفضلة"),
+    )
+
     # B2B2C: Link users (especially AGENCY_ADMIN) to their agency. 
     # The ticket specifies AgencyProfile maps 1:1 to a CustomUser with the role AGENCY_ADMIN.
     # However, since one agency could theoretically have multiple admins, we follow the ticket strictly:

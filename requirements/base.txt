@@ -47,6 +47,11 @@ daphne==4.1.0
 
 # Redis channel layer backend for Django Channels
 channels-redis==4.2.0
+# -----------------------------------------------------------------------------
+# Firebase Cloud Messaging (Push Notifications)
+# -----------------------------------------------------------------------------
+# Firebase Admin SDK for FCM push notifications
+firebase-admin==6.0.0
 
 # -----------------------------------------------------------------------------
 # Configuration Management

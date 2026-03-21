@@ -429,3 +429,19 @@ ROUTE_CACHE_TTL = 900
 PAYMOB_API_KEY = config("PAYMOB_API_KEY", default="")
 PAYMOB_INTEGRATION_ID = config("PAYMOB_INTEGRATION_ID", default="")
 PAYMOB_HMAC_SECRET = config("PAYMOB_HMAC_SECRET", default="")
+
+# =============================================================================
+# Firebase Cloud Messaging (Push Notifications)
+# =============================================================================
+# Absolute path to Firebase service account key JSON file
+FIREBASE_CREDENTIALS_PATH = config("GOOGLE_APPLICATION_CREDENTIALS", default=None)
+# Firebase project ID (optional override)
+FIREBASE_PROJECT_ID = config("FIREBASE_PROJECT_ID", default=None)
+# Days after which inactive device tokens are cleaned up
+NOTIFICATION_STALE_TOKEN_DAYS = config("NOTIFICATION_STALE_TOKEN_DAYS", default=30, cast=int)
+
+# Guard: Require Firebase credentials in production
+if not FIREBASE_CREDENTIALS_PATH and not DEBUG:
+    raise ImproperlyConfigured(
+        "FIREBASE_CREDENTIALS_PATH must be set in production (set GOOGLE_APPLICATION_CREDENTIALS env var)"
+    )
