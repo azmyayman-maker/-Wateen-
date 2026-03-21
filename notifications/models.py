@@ -11,7 +11,7 @@ import uuid
 class Platform(models.TextChoices):
     WEB = "WEB", _("ويب")
     ANDROID = "ANDROID", _("أندرويد")
-    IOS = "IOS", _("آiphone")
+    IOS = "IOS", _("آي أو إس")
 
 
 class NotificationEventType(models.TextChoices):

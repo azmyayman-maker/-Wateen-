@@ -35,7 +35,10 @@ def _build_data_payload(context: dict) -> dict:
 
 def send_to_user(user_id: str, event_type: str, context: dict) -> list:
     from django.contrib.auth import get_user_model
-    from notifications.models import DeviceToken, NotificationLog, NotificationStatus, EVENT_CATEGORY_MAP
+    from notifications.models import (
+        DeviceToken, NotificationLog, NotificationStatus,
+        EVENT_CATEGORY_MAP, UserNotificationPrefs,
+    )
     from notifications.templates import render_template
     
     User = get_user_model()
@@ -60,7 +63,8 @@ def send_to_user(user_id: str, event_type: str, context: dict) -> list:
                 )
                 logs.append(log)
                 return logs
-        except:
+        except UserNotificationPrefs.DoesNotExist:
+            # Prefs not yet created — default is "all enabled", so continue
             pass
     
     language = getattr(user, "preferred_language", "ar")
@@ -70,9 +74,10 @@ def send_to_user(user_id: str, event_type: str, context: dict) -> list:
         logger.error("Template render error: %s", str(e))
         return logs
     
-    tokens = DeviceToken.objects.filter(user_id=user_id, is_active=True)
+    # Materialize once: avoids N+1 from separate .exists() + .count() + iteration
+    token_list = list(DeviceToken.objects.filter(user_id=user_id, is_active=True))
     
-    if not tokens.exists():
+    if not token_list:
         log = NotificationLog.objects.create(
             recipient=user, event_type=event_type, template_key=event_type,
             title=title, body=body, data_payload=_build_data_payload(context),
@@ -81,7 +86,7 @@ def send_to_user(user_id: str, event_type: str, context: dict) -> list:
         logs.append(log)
         return logs
     
-    logger.info("Push to user=%s event=%s tokens=%d", user_id, event_type, tokens.count())
+    logger.info("Push to user=%s event=%s tokens=%d", user_id, event_type, len(token_list))
     data_payload = _build_data_payload(context)
     
     try:
@@ -96,7 +101,7 @@ def send_to_user(user_id: str, event_type: str, context: dict) -> list:
         return logs
     
     messages = []
-    for token_obj in tokens:
+    for token_obj in token_list:
         message = messaging.Message(
             notification=messaging.Notification(title=title, body=body),
             data=data_payload, token=token_obj.token,
@@ -109,7 +114,7 @@ def send_to_user(user_id: str, event_type: str, context: dict) -> list:
         try:
             batch_response = messaging.send_each(batch)
             for idx, response in enumerate(batch_response.responses):
-                token_obj = list(tokens)[idx]
+                token_obj = token_list[i + idx]  # Global offset: batch start + response index
                 if response.success:
                     log = NotificationLog.objects.create(
                         recipient=user, event_type=event_type, template_key=event_type,
