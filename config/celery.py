@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
@@ -14,6 +15,10 @@ app.conf.beat_schedule = {
     "flush-nurse-locations": {
         "task": "visits.tasks.flush_nurse_locations",
         "schedule": 60.0,
+    },
+    "cleanup-stale-tokens": {
+        "task": "notifications.tasks.cleanup_stale_tokens",
+        "schedule": crontab(hour=3, minute=0),
     },
 }
 

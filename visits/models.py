@@ -504,6 +504,12 @@ class Transaction(models.Model):
     def save(self, *args, **kwargs) -> None:
         from django.utils import timezone
 
+        # Track if this is a new settlement
+        is_new_settlement = (
+            self.status == TransactionStatus.SETTLED and 
+            not self.settled_at
+        )
+
         if self.amount_paid is not None:
             self.agency_payout = self.amount_paid * (
                 Decimal("1") - self.wateen_take_rate / Decimal("100")
@@ -520,6 +526,17 @@ class Transaction(models.Model):
             kwargs["update_fields"] = list(update_fields_set)
 
         super().save(*args, **kwargs)
+        
+        # Dispatch payment settlement notification
+        if is_new_settlement:
+            try:
+                from notifications.signals import notify_payment_settled
+                notify_payment_settled(self)
+            except Exception as e:
+                import logging
+                logging.getLogger(__name__).error(
+                    f"Failed to dispatch payment notification: {e}"
+                )
 
     class Meta:
         verbose_name = _("عملية مالية")
