@@ -4,7 +4,7 @@ import { Map as MapIcon, ShieldAlert } from 'lucide-react';
 import { GlowingEffect } from '../../components/ui/glowing-effect';
 import dynamic from 'next/dynamic';
 
-const CoverageMap = dynamic(() => import('../../components/map/CoverageMap'), { 
+const CoverageMap = dynamic(() => import('../../components/maps/CoverageMap'), { 
     ssr: false,
     loading: () => (
         <div className="w-full h-full flex items-center justify-center bg-slate-900 animate-pulse">

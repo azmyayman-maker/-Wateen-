@@ -25,7 +25,8 @@ const STATUS_LABELS: Record<string, { label: string; color: string; emoji: strin
 };
 
 export default function ActiveVisitTracker({ visitId }: ActiveVisitTrackerProps) {
-  const { status, nurseLocation, eta, isConnected } = useVisitSocket(visitId);
+  const { status, nurseLocation, eta, connectionMode } = useVisitSocket(visitId);
+  const isConnected = connectionMode === 'live';
 
   const statusInfo = STATUS_LABELS[status || 'PENDING_AGENCY'] || STATUS_LABELS.PENDING_AGENCY;
 

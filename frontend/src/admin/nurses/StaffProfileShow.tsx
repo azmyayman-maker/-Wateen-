@@ -95,7 +95,7 @@ export const StaffProfileShow = () => {
                         <StatusIndicator status={staff.status} />
                         <button className="flex items-center gap-2 px-4 py-2 rounded-xl bg-red-500/10 text-red-400 border border-red-500/20 hover:bg-red-500/20 transition-colors w-full md:w-auto justify-center">
                             <Power className="w-4 h-4" />
-                            <span className="text-xs font-bold">فرض حالة "غير متصل"</span>
+                            <span className="text-xs font-bold">فرض حالة &quot;غير متصل&quot;</span>
                         </button>
                     </div>
                 </GlassPanel>

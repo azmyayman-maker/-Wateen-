@@ -5,7 +5,7 @@ import { ArrowLeft, Filter, Layers, Navigation } from 'lucide-react';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 
-const DispatchMap = dynamic(() => import('@/components/map/DispatchMap'), { 
+const DispatchMap = dynamic(() => import('@/components/maps/DispatchMap'), { 
   ssr: false,
   loading: () => (
     <div className="w-full h-full flex items-center justify-center bg-slate-900 animate-pulse">

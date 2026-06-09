@@ -278,7 +278,7 @@ export default function BookingFlow({ services, onComplete }: BookingFlowProps) 
                   <span className="text-slate-400">السعر الأساسي</span>
                   <span className="text-white">{estimate.breakdown?.base_price} ج.م</span>
                 </div>
-                {estimate.breakdown?.distance_fee > 0 && (
+                {(estimate.breakdown?.distance_fee ?? 0) > 0 && (
                   <div className="flex justify-between text-sm">
                     <span className="text-slate-400">رسوم المسافة</span>
                     <span className="text-white">{estimate.breakdown?.distance_fee} ج.م</span>
@@ -350,10 +350,10 @@ export default function BookingFlow({ services, onComplete }: BookingFlowProps) 
                 </div>
 
                 <div className={`flex items-center justify-center gap-2 text-xs ${
-                  visitSocket.isConnected ? 'text-emerald-400' : 'text-amber-400'
+                  visitSocket.connectionMode === 'live' ? 'text-emerald-400' : 'text-amber-400'
                 }`}>
-                  <span className={`w-2 h-2 rounded-full ${visitSocket.isConnected ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
-                  {visitSocket.isConnected ? 'متصل — تحديثات مباشرة' : 'وضع الاستعلام'}
+                  <span className={`w-2 h-2 rounded-full ${visitSocket.connectionMode === 'live' ? 'bg-emerald-400' : 'bg-amber-400'} animate-pulse`} />
+                  {visitSocket.connectionMode === 'live' ? 'متصل — تحديثات مباشرة' : 'وضع الاستعلام'}
                 </div>
               </div>
             </motion.div>

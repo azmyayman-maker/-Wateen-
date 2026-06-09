@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { WateenCanvasLogo } from '../../components/WateenCanvasLogo';
-import { PatientLocationPicker } from '../../components/PatientLocationPicker';
-import { NurseLiveTracker } from '../../components/NurseLiveTracker';
+
+const PatientLocationPicker = dynamic(() => import('../../components/maps/PatientLocationPicker'), { ssr: false });
+const NurseLiveTracker = dynamic(() => import('../../components/NurseLiveTracker').then(mod => mod.NurseLiveTracker), { ssr: false });
 
 export default function DemoHub() {
   const [activeTab, setActiveTab] = useState<'logo' | 'location' | 'tracker'>('logo');
@@ -42,7 +44,7 @@ export default function DemoHub() {
 
         {activeTab === 'location' && (
           <div className="absolute inset-0 w-full h-full overflow-hidden">
-            <PatientLocationPicker />
+            <PatientLocationPicker defaultCenter={[30.0444, 31.2357]} onConfirm={(f) => console.log(f)} />
           </div>
         )}
         

@@ -157,3 +157,6 @@ migration_err.txt
 ruff.txt
 Wateen'
 Wateenfrontend'
+
+# ── Wateen Cleanup Backup Vault ──
+.wateen_cleanup_backup/

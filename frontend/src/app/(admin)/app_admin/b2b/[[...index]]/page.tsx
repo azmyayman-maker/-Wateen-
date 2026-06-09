@@ -4,7 +4,7 @@ import dynamic from "next/dynamic";
 
 // Next.js App Router needs to load the React Admin SPA entirely on the client side.
 // We use dynamic import with ssr: false to guarantee this.
-const AdminApp = dynamic(() => import("../../../../admin/App"), {
+const AdminApp = dynamic(() => import("@/admin/App"), {
   ssr: false,
   loading: () => (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">

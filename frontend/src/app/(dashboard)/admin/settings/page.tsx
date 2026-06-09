@@ -3,7 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 
-const CoverageMap = dynamic(() => import('@/components/map/CoverageMap'), { ssr: false });
+const CoverageMap = dynamic(() => import('@/components/maps/CoverageMap'), { ssr: false });
 import { Save, Map } from 'lucide-react';
 import { getCookie } from '@/lib/api/cookies';
 import { authAPI } from '@/lib/api/auth';

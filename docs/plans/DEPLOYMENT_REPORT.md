@@ -39,15 +39,15 @@
 ╠══════════════════════════════════════════════════════════════════╣
 ║                                                                    ║
 ║  Django SECRET_KEY:                                                ║
-║  wK9#mP2$vL5nQ8xR3yT6wZ1cB4fH7jK0mN3pS6vY9aD2gE5hI8jL1nO4qR7tU0x ║
+║  <REDACTED — Configure in .env.production>                         ║
 ║                                                                    ║
 ║  PostgreSQL:                                                       ║
 ║    Database: wateen_prod                                          ║
 ║    Username: wateen_admin                                         ║
-║    Password: Wt$Pr0d!2026#S3cur3P@ssw0rd!Xk9#mN2                  ║
+║    Password: <REDACTED — Configure in .env.production>             ║
 ║                                                                    ║
 ║  Redis:                                                            ║
-║    Password: R3d1s$Pr0d!2026#S3cur3K3y!Lp8#nM4                    ║
+║    Password: <REDACTED — Configure in .env.production>             ║
 ║                                                                    ║
 ╚══════════════════════════════════════════════════════════════════╝
 ```

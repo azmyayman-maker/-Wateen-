@@ -32,6 +32,7 @@ interface MetricCardProps {
   accentColor: string;
   spotlightColors?: number[][];
   delay?: number;
+  link?: string;
 }
 
 // Helper: hex to RGB triplet for spotlight shader
@@ -165,19 +166,7 @@ function useAnimatedCounter(target: number, duration: number = 2, delay: number 
   return display;
 }
 
-// ─── MetricCard Component — CardSpotlight Edition ───────────────
-interface MetricCardProps {
-  title: string;
-  value: number;
-  suffix?: string;
-  prefix?: string;
-  subtitle: string;
-  icon: any;
-  accentColor: string;
-  spotlightColors?: [number, number, number][];
-  delay?: number;
-  link?: string;
-}
+
 
 const MetricCard = React.memo(function MetricCard({
   title,
